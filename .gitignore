@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+.azure/
+*.tfstate
+*.tfstate.backup
+.DS_Store
+Thumbs.db

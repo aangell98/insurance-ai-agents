@@ -1,0 +1,30 @@
+# ============================================================================
+# CODEOWNERS - Insurance AI Agents Repository
+# ============================================================================
+# Each agent domain is owned by its respective team.
+# All changes require review from the domain owner.
+# This enforces governance: no agent can change without team approval.
+# ============================================================================
+
+# Platform team owns infrastructure and orchestration
+/infra/                         @platform-team
+/agents/orchestrator/           @platform-team
+/.github/                       @platform-team
+/backend/                       @platform-team
+
+# Claims team owns the intake agent
+/agents/claims-intake/          @claims-team
+
+# Risk team owns the risk assessment agent
+/agents/risk-assessment/        @risk-team
+
+# Compliance team owns the compliance agent — CRITICAL for regulatory changes
+/agents/compliance/             @compliance-team
+
+# Dashboard is shared — any team lead can review
+/dashboard/                     @platform-team @claims-team
+
+# Root config files require platform team approval
+/*.yaml                         @platform-team
+/*.bicep                        @platform-team
+/Dockerfile*                    @platform-team
