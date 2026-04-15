@@ -64,6 +64,7 @@ class ClaimRequest(BaseModel):
     incident_type: str = Field(..., description="Type of incident", examples=["collision"])
     description: str = Field(..., description="Free-text claim description", min_length=10)
     estimated_amount: float = Field(..., gt=0, description="Estimated claim amount in EUR")
+    claim_id: str | None = Field(None, description="Optional pre-generated claim ID for WebSocket sync")
 
 
 class ClaimResponse(BaseModel):
@@ -146,7 +147,7 @@ async def evaluate_claim(request: ClaimRequest):
     3. Compliance Agent
     4. Final Decision
     """
-    claim_id = f"CLM-{uuid.uuid4().hex[:8].upper()}"
+    claim_id = request.claim_id or f"CLM-{uuid.uuid4().hex[:8].upper()}"
 
     claim_input = {
         "claim_id": claim_id,

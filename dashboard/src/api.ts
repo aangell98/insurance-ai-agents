@@ -6,6 +6,7 @@ export interface ClaimRequest {
   incident_type: string;
   description: string;
   estimated_amount: number;
+  claim_id?: string;
 }
 
 export interface ClaimResult {
@@ -69,15 +70,18 @@ export async function evaluateClaim(req: ClaimRequest): Promise<ClaimResult> {
 export function connectWebSocket(
   claimId: string,
   onUpdate: (update: PipelineUpdate) => void,
-): WebSocket {
+): { ws: WebSocket; ready: Promise<void> } {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = API_BASE ? new URL(API_BASE).host : window.location.host;
   const ws = new WebSocket(`${proto}//${host}/ws/claims/${claimId}`);
+  const ready = new Promise<void>((resolve) => {
+    ws.onopen = () => resolve();
+  });
   ws.onmessage = (ev) => {
     try {
       const data = JSON.parse(ev.data);
       if (data.type !== 'pong') onUpdate(data);
     } catch { /* ignore parse errors */ }
   };
-  return ws;
+  return { ws, ready };
 }

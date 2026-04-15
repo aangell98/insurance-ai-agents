@@ -4,6 +4,8 @@ import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
 import AuditTrail from './components/AuditTrail';
+import ActivityFeed from './components/ActivityFeed';
+import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate } from './api';
 import { evaluateClaim, connectWebSocket } from './api';
 
@@ -18,6 +20,7 @@ export default function App() {
     decision: 'pending',
   });
   const [stageData, setStageData] = useState<Record<string, unknown>>({});
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [result, setResult] = useState<ClaimResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,6 +28,7 @@ export default function App() {
   const resetPipeline = useCallback(() => {
     setStageStatuses({ intake: 'pending', risk_assessment: 'pending', compliance: 'pending', decision: 'pending' });
     setStageData({});
+    setActivityEvents([]);
     setResult(null);
     setError('');
   }, []);
@@ -33,23 +37,34 @@ export default function App() {
     resetPipeline();
     setLoading(true);
 
-    // Generate a temporary claim ID for WebSocket
-    const tempId = `CLM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    // Generate claim ID shared between WebSocket and REST call
+    const claimId = `CLM-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
 
-    // Connect WebSocket for real-time updates
-    const ws = connectWebSocket(tempId, (update: PipelineUpdate) => {
+    // Connect WebSocket FIRST for real-time stage updates
+    const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
       const stage = update.stage as Stage;
       const status = update.status === 'processing' ? 'processing' : update.status === 'completed' ? 'completed' : 'failed';
       setStageStatuses(prev => ({ ...prev, [stage]: status as StageStatus }));
       if (update.data && Object.keys(update.data).length > 0) {
         setStageData(prev => ({ ...prev, [stage]: update.data }));
       }
+      // Add to activity feed
+      setActivityEvents(prev => [...prev, {
+        stage: update.stage,
+        status: update.status,
+        timestamp: update.timestamp || new Date().toISOString(),
+        data: update.data,
+      }]);
     });
 
     try {
-      const res = await evaluateClaim(req);
+      // Wait for WebSocket to be ready before sending the HTTP request
+      await ready;
+      // Send claim_id so backend uses the same ID as the WebSocket
+      const res = await evaluateClaim({ ...req, claim_id: claimId });
       setResult(res);
-      setStageStatuses({ intake: 'completed', risk_assessment: 'completed', compliance: 'completed', decision: 'completed' });
+      // Ensure all stages show completed (WebSocket may have already set most)
+      setStageStatuses(prev => ({ ...prev, decision: 'completed' }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
@@ -93,6 +108,13 @@ export default function App() {
         {(loading || result) && (
           <section className="animate-slide-in">
             <Pipeline statuses={stageStatuses} />
+          </section>
+        )}
+
+        {/* Real-time Activity Feed */}
+        {activityEvents.length > 0 && (
+          <section>
+            <ActivityFeed events={activityEvents} />
           </section>
         )}
 
