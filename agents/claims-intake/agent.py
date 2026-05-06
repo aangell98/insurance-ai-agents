@@ -51,9 +51,16 @@ IMPORTANTE: Responde SIEMPRE en formato JSON con esta estructura:
         "witnesses": true/false,
         "documentation_provided": ["<docs>"]
     },
-    "image_analysis": "<si se adjuntó una imagen, describe en 2-4 frases qué se ve, daños visibles, y si la imagen es coherente con la descripción del cliente. Si no hay imagen, deja una cadena vacía>",
+    "image_analysis": "<si se adjuntó una imagen, describe en 2-4 frases qué se ve realmente. Si no hay imagen, deja una cadena vacía>",
+    "image_matches_description": true/false/null,
+    "image_concerns": "<si la imagen NO coincide con el siniestro descrito (ej: imagen de paisaje cuando se reporta colisión; foto sin vehículo cuando se reportan daños al coche; imagen genérica de internet; objeto totalmente ajeno al incidente), explica el problema en 1-2 frases. Si la imagen es coherente o no hay imagen, deja vacío>",
     "summary": "<resumen ejecutivo en 2-3 frases>"
-}"""
+}
+
+REGLAS PARA EL CAMPO image_matches_description:
+- true: la imagen muestra claramente el vehículo dañado, el lugar del siniestro, el parte, o evidencia coherente con la descripción.
+- false: la imagen NO tiene relación con el siniestro descrito (ej: foto de una ola, paisaje, animal, captura aleatoria, meme, objeto ajeno). En ese caso documenta la incoherencia en image_concerns y ÚSALA como señal fuerte de posible intento de fraude.
+- null: no se adjuntó imagen."""
 
 
 # --- Tool definitions ---
@@ -144,7 +151,7 @@ async def run(claim_input: dict) -> dict:
     # Build user message — with image if provided (GPT-4o vision)
     if claim_input.get("image_b64"):
         user_content = [
-            {"type": "text", "text": user_text + "\n\nAdemás, se ha adjuntado una imagen de evidencia del siniestro. Analízala y describe lo que ves, incluyendo daños visibles, coherencia con la descripción, y cualquier detalle relevante."},
+            {"type": "text", "text": user_text + "\n\nAdemás, se ha adjuntado una imagen como supuesta evidencia del siniestro. Analiza objetivamente si la imagen es COHERENTE con el incidente descrito (vehículo, daños, lugar). Si la imagen NO tiene relación con el siniestro (paisaje, ola, animal, objeto aleatorio, meme, etc.) debes marcarlo explícitamente como inconsistente: pon image_matches_description=false y describe el problema en image_concerns. NO asumas que cualquier imagen aportada es evidencia válida."},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{claim_input['image_b64']}", "detail": "low"}},
         ]
     else:
