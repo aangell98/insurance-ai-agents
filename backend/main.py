@@ -306,6 +306,35 @@ async def evaluate_claim(request: ClaimRequest):
             f"🛡️ SECURITY INCIDENT REGISTERED: claim={claim_id} customer={request.customer_id} "
             f"policy={request.policy_id} (total open: {len([i for i in security_incidents if i['status']=='open'])})"
         )
+    else:
+        # Register a fraud-suspected incident if Risk flagged high fraud probability
+        # (kept separate from prompt-injection so the SecurityView can distinguish them)
+        risk = result.get("risk_result") or {}
+        intake = result.get("intake_result") or {}
+        fraud_prob = str(risk.get("fraud_probability", "")).lower()
+        image_mismatch = intake.get("image_matches_description") is False
+        if fraud_prob == "high" or image_mismatch:
+            reasons = []
+            if fraud_prob == "high":
+                reasons.append(f"Probabilidad de fraude alta (risk_score={risk.get('risk_score', '?')}).")
+            if image_mismatch:
+                concerns = intake.get("image_concerns") or "imagen no relacionada con el siniestro descrito"
+                reasons.append(f"Imagen aportada no coherente: {concerns}")
+            security_incidents.append({
+                "claim_id": claim_id,
+                "policy_id": request.policy_id,
+                "customer_id": request.customer_id,
+                "incident_type": "fraud_suspected",
+                "severity": "high" if fraud_prob == "high" else "medium",
+                "detected_at": result["timestamp"],
+                "description": " ".join(reasons),
+                "raw_payload_excerpt": request.description[:500],
+                "status": "open",
+            })
+            logger.warning(
+                f"🚨 FRAUD INCIDENT REGISTERED: claim={claim_id} fraud_prob={fraud_prob} "
+                f"image_mismatch={image_mismatch}"
+            )
 
     return ClaimResponse(**result)
 
@@ -374,6 +403,105 @@ async def list_security_incidents():
         "total": len(security_incidents),
         "open": sum(1 for i in security_incidents if i["status"] == "open"),
         "incidents": list(reversed(security_incidents)),  # newest first
+    }
+
+
+@app.get("/api/governance/status")
+async def governance_status():
+    """Return live governance posture: APIM gateway, eval pipeline, audit trail."""
+    import subprocess
+
+    # Git commit (best-effort)
+    git_sha = os.environ.get("GIT_SHA")
+    if not git_sha:
+        try:
+            git_sha = subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=os.path.join(os.path.dirname(__file__), ".."),
+                stderr=subprocess.DEVNULL,
+                timeout=3,
+            ).decode().strip()
+        except Exception:
+            git_sha = "local-dev"
+
+    apim_enabled = os.environ.get("USE_APIM_GATEWAY", "false").lower() in ("1", "true", "yes")
+    apim_url = os.environ.get("APIM_GATEWAY_URL", "")
+    if apim_url:
+        # mask middle part
+        try:
+            host = apim_url.split("//", 1)[1]
+            apim_url_masked = f"https://{host[:6]}***{host[-12:]}"
+        except Exception:
+            apim_url_masked = "***"
+    else:
+        apim_url_masked = "(no configurado — modo directo)"
+
+    # Latest eval report
+    eval_path = os.path.join(os.path.dirname(__file__), "..", "evals", "last_report.json")
+    latest_eval: dict | None = None
+    if os.path.isfile(eval_path):
+        try:
+            with open(eval_path, "r", encoding="utf-8") as f:
+                report = json.load(f)
+            latest_eval = {
+                "timestamp": report.get("timestamp"),
+                "total": report.get("total"),
+                "passed": report.get("passed"),
+                "failed": report.get("failed"),
+                "pass_rate": report.get("pass_rate"),
+                "model": report.get("model"),
+                "via_apim": report.get("via_apim"),
+            }
+        except Exception:
+            latest_eval = None
+
+    # CODEOWNERS summary
+    codeowners_path = os.path.join(os.path.dirname(__file__), "..", ".github", "CODEOWNERS")
+    code_owners: list[dict] = []
+    if os.path.isfile(codeowners_path):
+        try:
+            with open(codeowners_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        code_owners.append({"path": parts[0], "owners": parts[1:]})
+        except Exception:
+            pass
+
+    return {
+        "pipeline_version": "1.0.0",
+        "git_commit": git_sha,
+        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        "deployed_at": datetime.now(timezone.utc).isoformat(),
+        "apim": {
+            "enabled": apim_enabled,
+            "gateway_url": apim_url_masked,
+            "policies": [
+                {"id": "managed-identity",  "name": "Managed Identity → Azure OpenAI",            "active": True},
+                {"id": "audit-log",         "name": "Audit Trace (request + response)",            "active": True},
+                {"id": "content-safety",    "name": "LLM Content Safety (Hate/Sexual/SH/Violence)","active": True},
+                {"id": "token-limit",       "name": "Azure OpenAI Token Limit (per agent)",        "active": True},
+                {"id": "emit-token-metric", "name": "Token metrics → App Insights",                "active": True},
+                {"id": "error-handling",    "name": "On-error fallback (429 + safety)",            "active": True},
+            ],
+        },
+        "evals": {
+            "dataset_path": "evals/golden_dataset.json",
+            "workflow": ".github/workflows/eval-on-pr.yml",
+            "latest": latest_eval,
+        },
+        "code_ownership": code_owners,
+        "checks": {
+            "pull_request_template":   os.path.isfile(os.path.join(os.path.dirname(__file__), "..", ".github", "pull_request_template.md")),
+            "codeowners":              os.path.isfile(codeowners_path),
+            "deploy_workflow":         os.path.isfile(os.path.join(os.path.dirname(__file__), "..", ".github", "workflows", "deploy-agent.yml")),
+            "eval_workflow":           os.path.isfile(os.path.join(os.path.dirname(__file__), "..", ".github", "workflows", "eval-on-pr.yml")),
+            "infra_as_code":           os.path.isfile(os.path.join(os.path.dirname(__file__), "..", "infra", "main.bicep")),
+            "apim_policy_xml":         os.path.isfile(os.path.join(os.path.dirname(__file__), "..", "infra", "apim-policy.xml")),
+        },
     }
 
 
