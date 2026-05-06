@@ -40,8 +40,28 @@ def _use_apim() -> bool:
     return os.environ.get("USE_APIM_GATEWAY", "false").lower() in ("1", "true", "yes")
 
 
+def _get_token_via_default_credential() -> str | None:
+    """Try azure-identity DefaultAzureCredential.
+
+    Works in CI (federated OIDC via azure/login) and on dev boxes with az CLI.
+    Returns None if azure-identity is not installed (fall back to az CLI).
+    """
+    try:
+        from azure.identity import DefaultAzureCredential  # type: ignore
+    except ImportError:
+        return None
+    try:
+        cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
+        token = cred.get_token("https://cognitiveservices.azure.com/.default")
+        logger.info("Got Azure token via DefaultAzureCredential")
+        return token.token
+    except Exception as e:  # noqa: BLE001
+        logger.warning("DefaultAzureCredential failed: %s", e)
+        return None
+
+
 def _get_token_via_cli() -> str:
-    """Get an Azure AD token by calling az CLI synchronously."""
+    """Get an Azure AD token by calling az CLI synchronously (local fallback)."""
     for az_path in [
         r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd",
         "az",
@@ -60,6 +80,14 @@ def _get_token_via_cli() -> str:
             continue
 
     raise RuntimeError("Could not get Azure token. Run 'az login' first.")
+
+
+def _get_token() -> str:
+    """Get an Azure AD token preferring DefaultAzureCredential, falling back to az CLI."""
+    token = _get_token_via_default_credential()
+    if token:
+        return token
+    return _get_token_via_cli()
 
 
 async def get_openai_client() -> AsyncAzureOpenAI:
@@ -97,7 +125,7 @@ async def get_openai_client() -> AsyncAzureOpenAI:
         return _client
 
     if _cached_token is None or time.time() > _token_expires:
-        _cached_token = _get_token_via_cli()
+        _cached_token = _get_token()
         _token_expires = time.time() + 3000
         _client = None  # force new client with fresh token
 
