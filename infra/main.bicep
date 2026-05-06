@@ -219,6 +219,93 @@ resource apimContentSafetyBackend 'Microsoft.ApiManagement/service/backends@2023
 }
 
 // ============================================================================
+// APIM API: Azure OpenAI passthrough — agents call /openai/* on the gateway
+// ============================================================================
+
+resource apimOpenAiApi 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
+  parent: apim
+  name: 'azure-openai'
+  properties: {
+    displayName: 'Azure OpenAI (governed)'
+    description: 'AI Gateway in front of Azure OpenAI: managed-identity auth, content safety, token rate-limit, audit log, token metrics.'
+    path: 'openai'
+    protocols: ['https']
+    serviceUrl: '${openAi.properties.endpoint}openai'
+    subscriptionRequired: true
+    apiType: 'http'
+  }
+}
+
+// Single passthrough operation matching every Azure OpenAI route (deployments/{id}/chat/completions, etc.)
+resource apimOpenAiOperation 'Microsoft.ApiManagement/service/apis/operations@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'openai-passthrough'
+  properties: {
+    displayName: 'Azure OpenAI passthrough'
+    method: 'POST'
+    urlTemplate: '/*'
+  }
+}
+
+// Apply the AI Gateway policy XML (loaded from infra/apim-policy.xml)
+resource apimOpenAiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('apim-policy.xml')
+  }
+}
+
+// One subscription per agent → token-limit & metrics are sliced per agent
+resource apimAgentProduct 'Microsoft.ApiManagement/service/products@2023-09-01-preview' = {
+  parent: apim
+  name: 'insurance-agents'
+  properties: {
+    displayName: 'Insurance AI Agents'
+    description: 'Product that groups subscriptions for the multi-agent pipeline (intake, risk, compliance, orchestrator).'
+    state: 'published'
+    subscriptionRequired: true
+    approvalRequired: false
+  }
+}
+
+resource apimAgentProductApi 'Microsoft.ApiManagement/service/products/apis@2023-09-01-preview' = {
+  parent: apimAgentProduct
+  name: apimOpenAiApi.name
+}
+
+resource apimSubscriptionIntake 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-claims-intake'
+  properties: {
+    displayName: 'Claims Intake Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionRisk 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-risk-assessment'
+  properties: {
+    displayName: 'Risk & Fraud Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionCompliance 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-compliance'
+  properties: {
+    displayName: 'Compliance Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+// ============================================================================
 // RBAC: APIM → Cognitive Services User on Azure OpenAI
 // ============================================================================
 

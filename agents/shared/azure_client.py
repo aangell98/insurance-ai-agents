@@ -1,4 +1,23 @@
-"""Shared Azure OpenAI client — gets token once at startup via az CLI subprocess."""
+"""Shared Azure OpenAI client.
+
+Two routing modes controlled by env var ``USE_APIM_GATEWAY``:
+
+1. ``false`` (default): direct call to Azure OpenAI using a bearer token
+   obtained via ``az account get-access-token``. Used for local dev when APIM
+   is not yet provisioned.
+
+2. ``true``: route through APIM AI Gateway (managed-identity auth, content
+   safety, token-limits, telemetry). The agent only carries an APIM
+   subscription key — secrets stay inside the gateway.
+
+Required env vars:
+- ``AZURE_OPENAI_ENDPOINT`` (always, even in APIM mode for legacy callers)
+- ``USE_APIM_GATEWAY``      (optional, default ``false``)
+- ``APIM_GATEWAY_URL``      (when APIM is on) — e.g. ``https://my-apim.azure-api.net``
+- ``APIM_SUBSCRIPTION_KEY`` (when APIM is on) — Ocp-Apim-Subscription-Key header
+- ``AGENT_ID``              (optional, default ``unknown``) — emitted as ``X-Agent-Id``
+                            so APIM can rate-limit and meter per agent
+"""
 
 import os
 import subprocess
@@ -15,6 +34,10 @@ logger = logging.getLogger(__name__)
 _cached_token: str | None = None
 _token_expires: float = 0
 _client: AsyncAzureOpenAI | None = None
+
+
+def _use_apim() -> bool:
+    return os.environ.get("USE_APIM_GATEWAY", "false").lower() in ("1", "true", "yes")
 
 
 def _get_token_via_cli() -> str:
@@ -40,8 +63,38 @@ def _get_token_via_cli() -> str:
 
 
 async def get_openai_client() -> AsyncAzureOpenAI:
-    """Get a configured AsyncAzureOpenAI client with a cached token."""
+    """Get a configured AsyncAzureOpenAI client.
+
+    Uses APIM AI Gateway when ``USE_APIM_GATEWAY=true``, otherwise calls
+    Azure OpenAI directly with a cached AAD token.
+    """
     global _cached_token, _token_expires, _client
+
+    if _use_apim():
+        if _client is None:
+            apim_url = os.environ.get("APIM_GATEWAY_URL", "").rstrip("/")
+            apim_key = os.environ.get("APIM_SUBSCRIPTION_KEY", "")
+            if not apim_url or not apim_key:
+                raise RuntimeError(
+                    "USE_APIM_GATEWAY=true requires APIM_GATEWAY_URL and "
+                    "APIM_SUBSCRIPTION_KEY environment variables."
+                )
+            agent_id = os.environ.get("AGENT_ID", "unknown")
+            apim_http = httpx.AsyncClient(
+                verify=False,
+                headers={
+                    "Ocp-Apim-Subscription-Key": apim_key,
+                    "X-Agent-Id": agent_id,
+                },
+            )
+            _client = AsyncAzureOpenAI(
+                azure_endpoint=apim_url,
+                api_key="apim-managed",  # ignored; subscription key is in header
+                api_version="2024-12-01-preview",
+                http_client=apim_http,
+            )
+            logger.info("OpenAI client routed through APIM gateway (agent=%s)", agent_id)
+        return _client
 
     if _cached_token is None or time.time() > _token_expires:
         _cached_token = _get_token_via_cli()
@@ -57,3 +110,4 @@ async def get_openai_client() -> AsyncAzureOpenAI:
         )
 
     return _client
+
