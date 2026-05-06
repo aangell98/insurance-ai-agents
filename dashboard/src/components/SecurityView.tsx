@@ -15,6 +15,17 @@ const STATUS_BADGE: Record<string, string> = {
   closed: 'bg-gray-800 text-gray-400 border-gray-700',
 };
 
+const TYPE_BADGE: Record<string, { label: string; classes: string }> = {
+  prompt_injection: {
+    label: 'Prompt injection',
+    classes: 'bg-purple-900/30 border-purple-800 text-purple-300',
+  },
+  fraud_suspected: {
+    label: 'Posible fraude',
+    classes: 'bg-orange-900/30 border-orange-800 text-orange-300',
+  },
+};
+
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleString('es-ES', {
@@ -137,8 +148,8 @@ export default function SecurityView() {
                     >
                       {inc.status === 'open' ? 'ABIERTO' : 'CERRADO'}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] border bg-purple-900/30 border-purple-800 text-purple-300">
-                      {inc.incident_type}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] border ${(TYPE_BADGE[inc.incident_type] ?? { classes: 'bg-purple-900/30 border-purple-800 text-purple-300' }).classes}`}>
+                      {(TYPE_BADGE[inc.incident_type]?.label) ?? inc.incident_type}
                     </span>
                     <span className="text-[10px] text-gray-500 ml-auto">
                       {formatDate(inc.detected_at)}

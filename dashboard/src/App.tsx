@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award } from 'lucide-react';
 import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
@@ -10,13 +10,15 @@ import StatsView from './components/StatsView';
 import PolicyView from './components/PolicyView';
 import CustomerView from './components/CustomerView';
 import SecurityView from './components/SecurityView';
+import { GovernanceView } from './components/GovernanceView';
+import Toast from './components/Toast';
 import type { ActivityEvent } from './components/ActivityFeed';
-import type { ClaimRequest, ClaimResult, PipelineUpdate } from './api';
-import { evaluateClaim, connectWebSocket } from './api';
+import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
+import { evaluateClaim, connectWebSocket, getSecurityIncidents } from './api';
 
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
-type Tab = 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad';
+type Tab = 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad' | 'gobernanza';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'cliente', label: 'Cliente', icon: UserCircle },
@@ -25,6 +27,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'polizas', label: 'Pólizas', icon: ScrollText },
   { id: 'seguridad', label: 'Seguridad', icon: ShieldAlert },
+  { id: 'gobernanza', label: 'Gobernanza', icon: Award },
 ];
 
 export default function App() {
@@ -40,6 +43,70 @@ export default function App() {
   const [result, setResult] = useState<ClaimResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ── Security incidents polling: badge counter + toast notifications ──
+  const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('security_seen_ids');
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [toasts, setToasts] = useState<{ key: string; incident: SecurityIncident }[]>([]);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const initializedRef = useRef(false);
+
+  const incidentKey = (i: SecurityIncident) => `${i.claim_id}-${i.detected_at}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await getSecurityIncidents();
+        if (cancelled) return;
+        const newToasts: { key: string; incident: SecurityIncident }[] = [];
+        for (const inc of res.incidents) {
+          const id = incidentKey(inc);
+          if (!knownIdsRef.current.has(id)) {
+            knownIdsRef.current.add(id);
+            // Skip toasts on the very first poll (avoid flooding on app load)
+            if (initializedRef.current) {
+              newToasts.push({ key: `toast-${id}-${Date.now()}`, incident: inc });
+            }
+          }
+        }
+        if (newToasts.length > 0) {
+          setToasts(prev => [...prev, ...newToasts]);
+        }
+        setIncidents(res.incidents);
+        initializedRef.current = true;
+      } catch { /* silent */ }
+    };
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  // Auto-dismiss toasts after 7s
+  useEffect(() => {
+    if (toasts.length === 0) return;
+    const timers = toasts.map(t =>
+      setTimeout(() => setToasts(prev => prev.filter(x => x.key !== t.key)), 7000)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [toasts]);
+
+  // Mark all incidents as seen when the user enters the Security tab
+  useEffect(() => {
+    if (activeTab === 'seguridad' && incidents.length > 0) {
+      const ids = incidents.map(incidentKey);
+      const next = new Set(ids);
+      setSeenIds(next);
+      try { localStorage.setItem('security_seen_ids', JSON.stringify(ids)); } catch { /* ignore */ }
+    }
+  }, [activeTab, incidents]);
+
+  const newIncidentCount = incidents.filter(i => !seenIds.has(incidentKey(i))).length;
 
   const resetPipeline = useCallback(() => {
     setStageStatuses({ intake: 'pending', risk_assessment: 'pending', compliance: 'pending', decision: 'pending' });
@@ -120,7 +187,7 @@ export default function App() {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === id
                     ? 'border-primary-500 text-primary-400'
                     : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-700'
@@ -128,6 +195,11 @@ export default function App() {
               >
                 <Icon className="w-4 h-4" />
                 {label}
+                {id === 'seguridad' && newIncidentCount > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-lg shadow-red-600/40 animate-pulse">
+                    {newIncidentCount > 99 ? '99+' : newIncidentCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -183,12 +255,31 @@ export default function App() {
 
         {/* ── Seguridad View ── */}
         {activeTab === 'seguridad' && <SecurityView />}
+
+        {/* ── Gobernanza View ── */}
+        {activeTab === 'gobernanza' && <GovernanceView />}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-gray-800 mt-12 py-6 text-center text-xs text-gray-600">
         Powered by Azure AI Foundry • Governed by GitHub • Secured by APIM AI Gateway
       </footer>
+
+      {/* Toast notifications (bottom-right) */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+        {toasts.map(t => (
+          <div key={t.key} className="pointer-events-auto">
+            <Toast
+              incident={t.incident}
+              onClose={() => setToasts(prev => prev.filter(x => x.key !== t.key))}
+              onClick={() => {
+                setActiveTab('seguridad');
+                setToasts(prev => prev.filter(x => x.key !== t.key));
+              }}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

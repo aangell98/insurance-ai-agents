@@ -290,3 +290,48 @@ export async function getSecurityIncidents(): Promise<SecurityIncidentsResponse>
   if (!res.ok) throw new Error('Failed to fetch security incidents');
   return res.json();
 }
+
+/* ── Governance ── */
+export interface GovernancePolicy {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+export interface CodeOwnership {
+  path: string;
+  owners: string[];
+}
+
+export interface GovernanceStatus {
+  pipeline_version: string;
+  git_commit: string;
+  model: string;
+  deployed_at: string;
+  apim: {
+    enabled: boolean;
+    gateway_url: string;
+    policies: GovernancePolicy[];
+  };
+  evals: {
+    dataset_path: string;
+    workflow: string;
+    latest: null | {
+      timestamp: string;
+      total: number;
+      passed: number;
+      failed: number;
+      pass_rate: number;
+      model: string;
+      via_apim: boolean;
+    };
+  };
+  code_ownership: CodeOwnership[];
+  checks: Record<string, boolean>;
+}
+
+export async function getGovernanceStatus(): Promise<GovernanceStatus> {
+  const res = await fetch(`${API_BASE}/api/governance/status`);
+  if (!res.ok) throw new Error('Failed to fetch governance status');
+  return res.json();
+}

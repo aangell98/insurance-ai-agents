@@ -147,11 +147,26 @@ export default function OperatorView() {
                                 alt="Evidencia"
                                 className="w-full md:w-48 max-h-48 object-contain rounded border border-gray-700 shrink-0 bg-surface-950"
                               />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-gray-500">Análisis del agente sobre la imagen:</span>
-                                <p className="text-gray-200 mt-1 leading-relaxed break-words">
-                                  {detail.intake_result?.image_analysis || 'El agente integró el análisis visual en el resumen general.'}
-                                </p>
+                              <div className="flex-1 min-w-0 space-y-2">
+                                {detail.intake_result?.image_matches_description === false && (
+                                  <div className="bg-red-900/30 border border-red-700/60 rounded px-2 py-1 text-xs text-red-200">
+                                    ⚠ Imagen NO coherente con el siniestro
+                                    {detail.intake_result?.image_concerns && (
+                                      <div className="mt-0.5 text-red-300/90">{detail.intake_result.image_concerns}</div>
+                                    )}
+                                  </div>
+                                )}
+                                {detail.intake_result?.image_matches_description === true && (
+                                  <div className="bg-green-900/30 border border-green-700/60 rounded px-2 py-1 text-xs text-green-200">
+                                    ✓ Imagen coherente con el siniestro descrito
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-gray-500 text-xs">Análisis del agente sobre la imagen:</span>
+                                  <p className="text-gray-200 mt-1 leading-relaxed break-words">
+                                    {detail.intake_result?.image_analysis || 'El agente integró el análisis visual en el resumen general.'}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </Section>
