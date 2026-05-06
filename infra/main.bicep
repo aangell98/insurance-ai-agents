@@ -228,7 +228,7 @@ resource apimOpenAiApi 'Microsoft.ApiManagement/service/apis@2023-09-01-preview'
   properties: {
     displayName: 'Azure OpenAI (governed)'
     description: 'AI Gateway in front of Azure OpenAI: managed-identity auth, content safety, token rate-limit, audit log, token metrics.'
-    path: 'openai'
+    path: 'openai-gov'
     protocols: ['https']
     serviceUrl: '${openAi.properties.endpoint}openai'
     subscriptionRequired: true

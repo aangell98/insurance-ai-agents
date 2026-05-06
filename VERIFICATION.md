@@ -76,37 +76,40 @@ Backend: `http://127.0.0.1:8000` · Dashboard: `http://localhost:5173`.
 
 ---
 
-## 3. Azure / APIM — qué se podrá ver tras `azd up`
+## 3. Azure / APIM — desplegado y verificable ahora ✅
 
-> ⚠️ El recurso APIM **StandardV2** está declarado en
-> `infra/main.bicep` pero su provisión real tarda **30–60 min**.
-> Los puntos siguientes aplican una vez ejecutado `azd up`.
+> ✅ Deployment `apim-governance-deploy` completado (Succeeded).
+> Recursos hijos creados sobre el APIM existente
+> `ins-ai-demo-apim-jii435hjlwyyc` (SKU StandardV2).
 
 ### 3.1 Portal de Azure
 Resource Group: `rg-insurance-ai-demo` → recurso APIM
-`ins-ai-demo-apim-XXX`.
+`ins-ai-demo-apim-jii435hjlwyyc`.
 
 ### 3.2 Verificar la API y las políticas
-1. APIM → **APIs** → `Azure OpenAI (governed)`.
+1. APIM → **APIs** → `Azure OpenAI (governed)` (path `openai-gov`).
 2. Operación `openai-passthrough` (POST `/*`).
 3. Pestaña **Policies** → debe verse el XML de
    `infra/apim-policy.xml` cargado (managed-identity, content-safety,
    token-limit, etc.).
 4. Pestaña **Test** → enviar un POST a
-   `/openai/deployments/gpt-4o/chat/completions?api-version=2024-12-01-preview`
+   `/openai-gov/deployments/gpt-4o/chat/completions?api-version=2024-12-01-preview`
    con `Ocp-Apim-Subscription-Key` y `X-Agent-Id: claims-intake` →
    se verá la respuesta y la traza de las políticas ejecutadas.
 
+> ℹ️ El path es `openai-gov` (no `openai`) para no colisionar con la
+> API legacy `azure-openai-api` ya existente en el servicio.
+
 ### 3.3 Subscriptions (claves por agente)
-- APIM → **Subscriptions** → debe haber 3:
-  - `sub-claims-intake`
-  - `sub-risk-assessment`
-  - `sub-compliance`
-- Recuperar la clave:
+- APIM → **Subscriptions** → 3 activas (scope = product `insurance-agents`):
+  - `sub-claims-intake` — *Claims Intake Agent*
+  - `sub-risk-assessment` — *Risk & Fraud Agent*
+  - `sub-compliance` — *Compliance Agent*
+- Recuperar la clave (REST, vía `az rest`):
   ```powershell
-  az apim subscription show --resource-group rg-insurance-ai-demo `
-    --service-name ins-ai-demo-apim-XXX `
-    --sid sub-claims-intake --query primaryKey -o tsv
+  az rest --method post `
+    --url "https://management.azure.com/subscriptions/<SUBID>/resourceGroups/rg-insurance-ai-demo/providers/Microsoft.ApiManagement/service/ins-ai-demo-apim-jii435hjlwyyc/subscriptions/sub-claims-intake/listSecrets?api-version=2023-09-01-preview" `
+    --query primaryKey -o tsv
   ```
 
 ### 3.4 Métricas y telemetría
@@ -141,5 +144,5 @@ Resource Group: `rg-insurance-ai-demo` → recurso APIM
 | OIDC GitHub ↔ Azure             | Sin secretos largos; federated credentials          | ✅ OK     |
 | CODEOWNERS                      | `.github/CODEOWNERS`                                 | ✅ OK     |
 | IaC APIM + políticas            | `infra/main.bicep` + `infra/apim-policy.xml`         | ✅ Bicep validado |
-| APIM en Azure (deployed)        | `rg-insurance-ai-demo` tras `azd up`                 | ⏳ Pendiente deploy |
+| APIM en Azure (deployed)        | `rg-insurance-ai-demo` → API `azure-openai` + product `insurance-agents` + 3 subs | ✅ Desplegado |
 | Dashboard Gobernanza            | http://localhost:5173 → tab Gobernanza               | ✅ OK     |

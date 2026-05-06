@@ -1,15 +1,13 @@
-# ============================================================================
-# APIM AI Gateway Policy - Insurance Claims
-# ============================================================================
-# This XML policy is applied to the Azure OpenAI API in APIM.
-# It implements the full financial services governance stack:
-# 1. Authentication (Managed Identity)
-# 2. Audit Logging (trace)
-# 3. Content Safety (zero tolerance)
-# 4. Token Rate Limiting
-# 5. Token Metrics (observability)
-# ============================================================================
-
+<!--
+    APIM AI Gateway Policy - Insurance Claims
+    This XML policy is applied to the Azure OpenAI API in APIM.
+    It implements the full financial services governance stack:
+      1. Authentication (Managed Identity)
+      2. Audit Logging (trace)
+      3. Content Safety (zero tolerance)
+      4. Token Rate Limiting
+      5. Token Metrics (observability)
+-->
 <policies>
     <inbound>
         <base />
@@ -41,10 +39,12 @@
         <!-- 3. CONTENT SAFETY — Zero tolerance for financial services -->
         <!-- ═══════════════════════════════════════════════════════════ -->
         <llm-content-safety backend-id="contentsafety-backend">
-            <category name="Hate" threshold="2" />
-            <category name="Sexual" threshold="2" />
-            <category name="SelfHarm" threshold="2" />
-            <category name="Violence" threshold="2" />
+            <categories>
+                <category name="Hate" threshold="2" />
+                <category name="Sexual" threshold="2" />
+                <category name="SelfHarm" threshold="2" />
+                <category name="Violence" threshold="2" />
+            </categories>
         </llm-content-safety>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
