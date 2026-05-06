@@ -75,6 +75,22 @@ def _determine_final_decision(
 
     # Invalid policy → reject
     if not policy_valid:
+        # Check if intake flagged a manipulation attempt
+        intake_summary = intake_result.get("summary", "")
+        extracted = intake_result.get("extracted_data", {})
+        docs = extracted.get("documentation_provided", [])
+        is_manipulation = (
+            "manipulación" in intake_summary.lower()
+            or "prompt_injection_detected" in docs
+            or "injection" in intake_summary.lower()
+        )
+        if is_manipulation:
+            return "reject", 0.99, (
+                "🛡️ ALERTA DE SEGURIDAD: Se ha detectado un intento de manipulación del sistema "
+                "en la descripción del siniestro. La reclamación contiene instrucciones falsas "
+                "que intentan evadir los controles de validación. Siniestro rechazado automáticamente "
+                "y registrado como incidente de seguridad para investigación."
+            )
         return "reject", 0.95, "La póliza no es válida o no está activa."
 
     # High fraud → reject
@@ -209,6 +225,9 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
     )
     total_duration = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
+    # Detect security incident (prompt injection / system manipulation attempt)
+    security_flagged = "ALERTA DE SEGURIDAD" in reasoning or "manipulación" in reasoning.lower()
+
     final_result = {
         "claim_id": claim_id,
         "decision": decision,
@@ -219,6 +238,7 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
         "risk_result": risk_result,
         "compliance_result": compliance_result,
         "audit_trail": audit_trail,
+        "security_flagged": security_flagged,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "metadata": {
             "agents_used": ["claims-intake", "risk-assessment", "compliance"],
@@ -226,6 +246,9 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
             "pipeline_version": "1.0.0",
         },
     }
+
+    if security_flagged:
+        logger.warning(f"[{claim_id}] 🛡️ SECURITY INCIDENT registered: prompt injection / manipulation attempt detected")
 
     await notify("decision", "completed", {
         "decision": decision,

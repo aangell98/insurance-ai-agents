@@ -5,8 +5,9 @@ import os
 import logging
 
 from dotenv import load_dotenv
-from azure.identity.aio import AzureCliCredential
 from openai import AsyncAzureOpenAI
+
+from agents.shared.azure_client import get_openai_client
 
 from agents.compliance.rules import evaluate_compliance, get_applicable_regulations, RULES
 
@@ -98,84 +99,75 @@ async def run(claim_input: dict, intake_result: dict, risk_result: dict) -> dict
     Returns:
         Dict with compliance validation result
     """
-    credential = AzureCliCredential()
-    try:
-        token = await credential.get_token("https://cognitiveservices.azure.com/.default")
-        client = AsyncAzureOpenAI(
-            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-            azure_ad_token=token.token,
-            api_version="2024-12-01-preview",
+    client = await get_openai_client()
+
+    risk_score = risk_result.get("risk_score", 5)
+    fraud_prob = risk_result.get("fraud_probability", "medium")
+    amount = claim_input.get("estimated_amount", 0)
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                f"Valida el cumplimiento normativo del siguiente siniestro:\n\n"
+                f"ID Siniestro: {claim_input.get('claim_id', 'CLM-UNKNOWN')}\n"
+                f"Monto estimado: {amount}€\n"
+                f"Risk score: {risk_score}/10\n"
+                f"Probabilidad de fraude: {fraud_prob}\n\n"
+                f"Resultado de intake:\n{json.dumps(intake_result, indent=2, ensure_ascii=False)}\n\n"
+                f"Resultado de evaluación de riesgo:\n{json.dumps(risk_result, indent=2, ensure_ascii=False)}\n\n"
+                f"Por favor:\n"
+                f"1. Verifica las regulaciones aplicables para un siniestro de {amount}€ con risk score {risk_score}\n"
+                f"2. Valida contra los umbrales regulatorios actuales\n"
+                f"3. Proporciona tu decisión de compliance"
+            ),
+        },
+    ]
+
+    for _ in range(2):
+        response = await client.chat.completions.create(
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+            temperature=0.1,
         )
 
-        risk_score = risk_result.get("risk_score", 5)
-        fraud_prob = risk_result.get("fraud_probability", "medium")
-        amount = claim_input.get("estimated_amount", 0)
+        msg = response.choices[0].message
+        if not msg.tool_calls:
+            break
 
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    f"Valida el cumplimiento normativo del siguiente siniestro:\n\n"
-                    f"ID Siniestro: {claim_input.get('claim_id', 'CLM-UNKNOWN')}\n"
-                    f"Monto estimado: {amount}€\n"
-                    f"Risk score: {risk_score}/10\n"
-                    f"Probabilidad de fraude: {fraud_prob}\n\n"
-                    f"Resultado de intake:\n{json.dumps(intake_result, indent=2, ensure_ascii=False)}\n\n"
-                    f"Resultado de evaluación de riesgo:\n{json.dumps(risk_result, indent=2, ensure_ascii=False)}\n\n"
-                    f"Por favor:\n"
-                    f"1. Verifica las regulaciones aplicables para un siniestro de {amount}€ con risk score {risk_score}\n"
-                    f"2. Valida contra los umbrales regulatorios actuales\n"
-                    f"3. Proporciona tu decisión de compliance"
-                ),
-            },
-        ]
+        messages.append(msg)
+        for tool_call in msg.tool_calls:
+            fn_name = tool_call.function.name
+            fn_args = json.loads(tool_call.function.arguments)
+            result = TOOL_MAP[fn_name](**fn_args)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": json.dumps(result, ensure_ascii=False),
+            })
 
-        for _ in range(2):
-            response = await client.chat.completions.create(
-                model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
-                messages=messages,
-                tools=TOOLS,
-                tool_choice="auto",
-                temperature=0.1,
-            )
+    if msg.tool_calls:
+        response = await client.chat.completions.create(
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            messages=messages,
+            temperature=0.1,
+        )
 
-            msg = response.choices[0].message
-            if not msg.tool_calls:
-                break
-
-            messages.append(msg)
-            for tool_call in msg.tool_calls:
-                fn_name = tool_call.function.name
-                fn_args = json.loads(tool_call.function.arguments)
-                result = TOOL_MAP[fn_name](**fn_args)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(result, ensure_ascii=False),
-                })
-
-        if msg.tool_calls:
-            response = await client.chat.completions.create(
-                model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
-                messages=messages,
-                temperature=0.1,
-            )
-
-        content = response.choices[0].message.content
-        try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
-            return {
-                "claim_id": claim_input.get("claim_id", "CLM-UNKNOWN"),
-                "compliant": True,
-                "decision": "human_review",
-                "regulations_checked": [],
-                "reasoning": content,
-            }
-    finally:
-        await credential.close()
+    content = response.choices[0].message.content
+    try:
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        return json.loads(content.strip())
+    except json.JSONDecodeError:
+        return {
+            "claim_id": claim_input.get("claim_id", "CLM-UNKNOWN"),
+            "compliant": True,
+            "decision": "human_review",
+            "regulations_checked": [],
+            "reasoning": content,
+        }

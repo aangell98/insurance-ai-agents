@@ -1,18 +1,34 @@
 import { useState, useCallback } from 'react';
-import { Shield, Activity } from 'lucide-react';
+import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert } from 'lucide-react';
 import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
 import AuditTrail from './components/AuditTrail';
 import ActivityFeed from './components/ActivityFeed';
+import OperatorView from './components/OperatorView';
+import StatsView from './components/StatsView';
+import PolicyView from './components/PolicyView';
+import CustomerView from './components/CustomerView';
+import SecurityView from './components/SecurityView';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate } from './api';
 import { evaluateClaim, connectWebSocket } from './api';
 
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
+type Tab = 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad';
+
+const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'cliente', label: 'Cliente', icon: UserCircle },
+  { id: 'operario', label: 'Operario', icon: ClipboardList },
+  { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
+  { id: 'clientes', label: 'Clientes', icon: Users },
+  { id: 'polizas', label: 'Pólizas', icon: ScrollText },
+  { id: 'seguridad', label: 'Seguridad', icon: ShieldAlert },
+];
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('cliente');
   const [stageStatuses, setStageStatuses] = useState<Record<Stage, StageStatus>>({
     intake: 'pending',
     risk_assessment: 'pending',
@@ -96,42 +112,77 @@ export default function App() {
             <span>v1.0.0</span>
           </div>
         </div>
+
+        {/* Tab Bar */}
+        <div className="max-w-7xl mx-auto px-6">
+          <nav className="flex gap-1 -mb-px">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === id
+                    ? 'border-primary-500 text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-700'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Claim Submission */}
-        <section>
-          <ClaimForm onSubmit={handleSubmit} loading={loading} />
-        </section>
+        {/* ── Cliente View ── */}
+        {activeTab === 'cliente' && (
+          <>
+            <section>
+              <ClaimForm onSubmit={handleSubmit} loading={loading} />
+            </section>
 
-        {/* Pipeline Visualization */}
-        {(loading || result) && (
-          <section className="animate-slide-in">
-            <Pipeline statuses={stageStatuses} />
-          </section>
+            {(loading || result) && (
+              <section className="animate-slide-in">
+                <Pipeline statuses={stageStatuses} />
+              </section>
+            )}
+
+            {activityEvents.length > 0 && (
+              <section>
+                <ActivityFeed events={activityEvents} />
+              </section>
+            )}
+
+            {error && (
+              <div className="p-4 rounded-lg bg-red-900/30 border border-red-800 text-red-300">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            {result && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-in">
+                <DecisionPanel result={result} />
+                <AuditTrail result={result} />
+              </div>
+            )}
+          </>
         )}
 
-        {/* Real-time Activity Feed */}
-        {activityEvents.length > 0 && (
-          <section>
-            <ActivityFeed events={activityEvents} />
-          </section>
-        )}
+        {/* ── Operario View ── */}
+        {activeTab === 'operario' && <OperatorView />}
 
-        {/* Error */}
-        {error && (
-          <div className="p-4 rounded-lg bg-red-900/30 border border-red-800 text-red-300">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
+        {/* ── Estadísticas View ── */}
+        {activeTab === 'estadisticas' && <StatsView />}
 
-        {/* Decision + Audit */}
-        {result && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-in">
-            <DecisionPanel result={result} />
-            <AuditTrail result={result} />
-          </div>
-        )}
+        {/* ── Clientes View ── */}
+        {activeTab === 'clientes' && <CustomerView />}
+
+        {/* ── Pólizas View ── */}
+        {activeTab === 'polizas' && <PolicyView />}
+
+        {/* ── Seguridad View ── */}
+        {activeTab === 'seguridad' && <SecurityView />}
       </main>
 
       {/* Footer */}
