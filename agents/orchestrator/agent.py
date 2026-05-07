@@ -9,6 +9,7 @@ Each agent's output feeds into the next agent, creating a complete audit trail.
 import json
 import os
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -24,6 +25,46 @@ compliance_agent = importlib.import_module("agents.compliance.agent")
 load_dotenv(override=False)
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Deterministic prompt-injection guard (defense in depth)
+# ---------------------------------------------------------------------------
+# Security guard does NOT depend on the LLM. Regex patterns catch known
+# manipulation phrasings even if the upstream LLM agents fail to flag them.
+# This makes security detection deterministic and CI-friendly.
+_INJECTION_PATTERNS = [
+    re.compile(r"\bnota\s+interna(?:\s+del\s+sistema)?\b", re.IGNORECASE),
+    re.compile(r"\b(internal|system)\s+(note|prompt|message)\b", re.IGNORECASE),
+    re.compile(r"\boverride\s+(autoriza|authoriz)", re.IGNORECASE),
+    re.compile(r"\bauthorization[-\s]?code\b", re.IGNORECASE),
+    re.compile(r"\bauth[-_\s]?code\s*[:=]?\s*\w", re.IGNORECASE),
+    re.compile(r"\bbypass[-\s]?\d", re.IGNORECASE),
+    re.compile(r"\bpre[-\s]?aprobad", re.IGNORECASE),
+    re.compile(r"\bignor(?:a|ar|e)\b.{0,40}\bvalidaci", re.IGNORECASE),
+    re.compile(r"\bignore\s+(all|previous|above|the).{0,30}instruction", re.IGNORECASE),
+    re.compile(r"\bdisregard\s+.{0,30}instruction", re.IGNORECASE),
+    re.compile(r"\bSUP[-\s]?\d{3,}\b", re.IGNORECASE),
+    re.compile(r"\b(jailbreak|DAN\s+mode)\b", re.IGNORECASE),
+    re.compile(r"\bsupervisor\s+ha\s+pre[-\s]?aprobad", re.IGNORECASE),
+]
+
+
+def _detect_prompt_injection(text: str) -> tuple[bool, list[str]]:
+    """Regex-based prompt-injection guard.
+
+    Returns (is_injection, list_of_matched_snippets). Runs before/after the
+    LLM cascade so the security signal does not depend on LLM behavior.
+    """
+    if not text:
+        return False, []
+    matches: list[str] = []
+    for pat in _INJECTION_PATTERNS:
+        m = pat.search(text)
+        if m:
+            matches.append(m.group(0))
+    return (len(matches) > 0, matches)
+
 
 
 def _make_audit_entry(stage: str, status: str, result: dict, duration_ms: int = 0) -> dict:
@@ -75,6 +116,22 @@ def _determine_final_decision(
 
     # Invalid policy → reject
     if not policy_valid:
+        # Check if intake flagged a manipulation attempt
+        intake_summary = intake_result.get("summary", "")
+        extracted = intake_result.get("extracted_data", {})
+        docs = extracted.get("documentation_provided", [])
+        is_manipulation = (
+            "manipulación" in intake_summary.lower()
+            or "prompt_injection_detected" in docs
+            or "injection" in intake_summary.lower()
+        )
+        if is_manipulation:
+            return "reject", 0.99, (
+                "🛡️ ALERTA DE SEGURIDAD: Se ha detectado un intento de manipulación del sistema "
+                "en la descripción del siniestro. La reclamación contiene instrucciones falsas "
+                "que intentan evadir los controles de validación. Siniestro rechazado automáticamente "
+                "y registrado como incidente de seguridad para investigación."
+            )
         return "reject", 0.95, "La póliza no es válida o no está activa."
 
     # High fraud → reject
@@ -209,6 +266,35 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
     )
     total_duration = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
+    # Detect security incident: LLM-based signal OR deterministic regex guard.
+    # The regex guard is defense in depth — we never rely solely on the LLM
+    # to detect attacks against itself.
+    description = claim_input.get("description", "") or ""
+    det_injection, det_matches = _detect_prompt_injection(description)
+    llm_flag = "ALERTA DE SEGURIDAD" in reasoning or "manipulación" in reasoning.lower()
+    security_flagged = llm_flag or det_injection
+
+    # If the deterministic guard fired but the LLM cascade missed it, override
+    # the decision so the pipeline behaves consistently regardless of LLM drift.
+    if det_injection and not llm_flag:
+        logger.warning(
+            f"[{claim_id}] 🛡️ Deterministic injection guard triggered (LLM missed): {det_matches}"
+        )
+        decision = "reject"
+        confidence = 0.99
+        reasoning = (
+            "🛡️ ALERTA DE SEGURIDAD: La descripción del siniestro contiene patrones "
+            "característicos de intento de manipulación del sistema (prompt injection). "
+            f"Patrones detectados: {', '.join(det_matches)}. Siniestro rechazado "
+            "automáticamente por el guard determinístico del orquestador y registrado "
+            "como incidente de seguridad para investigación."
+        )
+        audit_trail.append(_make_audit_entry(
+            "security_guard",
+            "triggered",
+            {"patterns_matched": det_matches, "source": "deterministic_regex"},
+        ))
+
     final_result = {
         "claim_id": claim_id,
         "decision": decision,
@@ -219,6 +305,7 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
         "risk_result": risk_result,
         "compliance_result": compliance_result,
         "audit_trail": audit_trail,
+        "security_flagged": security_flagged,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "metadata": {
             "agents_used": ["claims-intake", "risk-assessment", "compliance"],
@@ -226,6 +313,9 @@ async def process_claim(claim_input: dict, progress_callback=None) -> dict:
             "pipeline_version": "1.0.0",
         },
     }
+
+    if security_flagged:
+        logger.warning(f"[{claim_id}] 🛡️ SECURITY INCIDENT registered: prompt injection / manipulation attempt detected")
 
     await notify("decision", "completed", {
         "decision": decision,

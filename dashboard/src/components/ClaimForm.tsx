@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Send, FileText, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, FileText, Loader2, ImagePlus, X } from 'lucide-react';
 import type { ClaimRequest, Scenario } from '../api';
 import { getScenarios } from '../api';
 
@@ -17,6 +17,8 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
     description: '',
     estimated_amount: 0,
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getScenarios().then(setScenarios).catch(() => {});
@@ -25,6 +27,26 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
   const loadScenario = (name: string) => {
     const s = scenarios[name];
     if (s) setForm({ ...s });
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      // Strip the data:...;base64, prefix
+      const b64 = result.split(',')[1];
+      setForm(f => ({ ...f, image_b64: b64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setForm(f => { const { image_b64: _, ...rest } = f; return rest as ClaimRequest; });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,16 +63,24 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
           <h2 className="text-lg font-semibold text-white">Nuevo Siniestro</h2>
         </div>
         {Object.keys(scenarios).length > 0 && (
-          <div className="flex gap-2">
-            {Object.entries(scenarios).map(([key, s]) => (
-              <button
-                key={key}
-                onClick={() => loadScenario(key)}
-                className="px-3 py-1.5 text-xs rounded-md border border-gray-700 text-gray-400 hover:text-white hover:border-primary-500 transition-colors"
-              >
-                {key === 'low_risk' ? '✅ Bajo Riesgo' : key === 'high_amount' ? '💰 Alto Monto' : '🚨 Fraudulento'}
-              </button>
-            ))}
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(scenarios).map(([key, s]) => {
+              const label =
+                key === 'low_risk' ? '✅ Bajo Riesgo'
+                : key === 'high_amount' ? '💰 Alto Monto'
+                : key === 'human_review' ? '🟠 Revisión Humana'
+                : key === 'prompt_injection' ? '🛡️ Prompt Injection'
+                : '🚨 Fraudulento';
+              return (
+                <button
+                  key={key}
+                  onClick={() => loadScenario(key)}
+                  className="px-3 py-1.5 text-xs rounded-md border border-gray-700 text-gray-400 hover:text-white hover:border-primary-500 transition-colors"
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -62,7 +92,7 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
             type="text"
             value={form.policy_id}
             onChange={e => setForm(f => ({ ...f, policy_id: e.target.value }))}
-            placeholder="POL-2024-001"
+            placeholder="POL-2026-001"
             className="w-full px-3 py-2 bg-surface-800 border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 text-sm"
             required
           />
@@ -119,6 +149,39 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
             className="w-full px-3 py-2 bg-surface-800 border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 text-sm resize-none"
             required
           />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">Imagen del Siniestro (opcional)</label>
+          <div className="flex items-center gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-gray-700 rounded-lg text-gray-400 hover:text-white hover:border-primary-500 transition-colors text-sm"
+            >
+              <ImagePlus className="w-4 h-4" />
+              Adjuntar Imagen
+            </button>
+            {imagePreview && (
+              <div className="relative">
+                <img src={imagePreview} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-gray-700" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 p-0.5 bg-red-600 rounded-full text-white hover:bg-red-500"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="md:col-span-2">

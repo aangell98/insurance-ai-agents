@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle, XCircle, Clock, Gauge } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Clock, Gauge, Sparkles } from 'lucide-react';
 import type { ClaimResult } from '../api';
 
 interface Props {
@@ -91,7 +91,13 @@ export default function DecisionPanel({ result }: Props) {
 
       {/* Reasoning */}
       <div>
-        <h4 className="text-xs font-medium text-gray-400 uppercase mb-2">Razonamiento</h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-medium text-gray-400 uppercase">Razonamiento</h4>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-primary-900/40 border border-primary-800 text-primary-300">
+            <Sparkles className="w-3 h-3" />
+            Generado por GPT-4o · Azure OpenAI
+          </span>
+        </div>
         <p className="text-sm text-gray-300 leading-relaxed">{result.reasoning}</p>
       </div>
     </div>

@@ -25,6 +25,9 @@ param apimPublisherName string = 'Insurance AI Demo'
 @description('APIM publisher email')
 param apimPublisherEmail string = 'admin@insurance-ai-demo.com'
 
+@description('Object ID of the principal (user or service principal) that should get Cosmos DB data-plane access. Leave empty to skip the role assignment.')
+param cosmosDataPlanePrincipalId string = ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -39,6 +42,7 @@ var staticWebAppName = '${baseName}-swa-${uniqueSuffix}'
 var appInsightsName = '${baseName}-ai-${uniqueSuffix}'
 var logAnalyticsName = '${baseName}-law-${uniqueSuffix}'
 var aiServicesName = '${baseName}-ais-${uniqueSuffix}'
+var cosmosName = '${baseName}-cosmos-${uniqueSuffix}'
 
 // ============================================================================
 // Monitoring: Log Analytics + Application Insights
@@ -219,6 +223,93 @@ resource apimContentSafetyBackend 'Microsoft.ApiManagement/service/backends@2023
 }
 
 // ============================================================================
+// APIM API: Azure OpenAI passthrough — agents call /openai/* on the gateway
+// ============================================================================
+
+resource apimOpenAiApi 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
+  parent: apim
+  name: 'azure-openai'
+  properties: {
+    displayName: 'Azure OpenAI (governed)'
+    description: 'AI Gateway in front of Azure OpenAI: managed-identity auth, content safety, token rate-limit, audit log, token metrics.'
+    path: 'openai-gov'
+    protocols: ['https']
+    serviceUrl: '${openAi.properties.endpoint}openai'
+    subscriptionRequired: true
+    apiType: 'http'
+  }
+}
+
+// Single passthrough operation matching every Azure OpenAI route (deployments/{id}/chat/completions, etc.)
+resource apimOpenAiOperation 'Microsoft.ApiManagement/service/apis/operations@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'openai-passthrough'
+  properties: {
+    displayName: 'Azure OpenAI passthrough'
+    method: 'POST'
+    urlTemplate: '/*'
+  }
+}
+
+// Apply the AI Gateway policy XML (loaded from infra/apim-policy.xml)
+resource apimOpenAiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('apim-policy.xml')
+  }
+}
+
+// One subscription per agent → token-limit & metrics are sliced per agent
+resource apimAgentProduct 'Microsoft.ApiManagement/service/products@2023-09-01-preview' = {
+  parent: apim
+  name: 'insurance-agents'
+  properties: {
+    displayName: 'Insurance AI Agents'
+    description: 'Product that groups subscriptions for the multi-agent pipeline (intake, risk, compliance, orchestrator).'
+    state: 'published'
+    subscriptionRequired: true
+    approvalRequired: false
+  }
+}
+
+resource apimAgentProductApi 'Microsoft.ApiManagement/service/products/apis@2023-09-01-preview' = {
+  parent: apimAgentProduct
+  name: apimOpenAiApi.name
+}
+
+resource apimSubscriptionIntake 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-claims-intake'
+  properties: {
+    displayName: 'Claims Intake Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionRisk 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-risk-assessment'
+  properties: {
+    displayName: 'Risk & Fraud Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionCompliance 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-compliance'
+  properties: {
+    displayName: 'Compliance Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+// ============================================================================
 // RBAC: APIM → Cognitive Services User on Azure OpenAI
 // ============================================================================
 
@@ -281,6 +372,84 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 }
 
 // ============================================================================
+// Cosmos DB (NoSQL) - persistencia de siniestros procesados
+// ============================================================================
+// Container particionado por /customer_id (alta cardinalidad, query pattern
+// dominante: "siniestros del cliente X"). Modo serverless para minimizar coste
+// en demo. AAD-only: deshabilitamos las claves locales y usamos data-plane RBAC.
+
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: cosmosName
+  location: location
+  kind: 'GlobalDocumentDB'
+  properties: {
+    databaseAccountOfferType: 'Standard'
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+      }
+    ]
+    capabilities: [
+      { name: 'EnableServerless' }
+    ]
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
+  parent: cosmos
+  name: 'insurance-claims'
+  properties: {
+    resource: {
+      id: 'insurance-claims'
+    }
+  }
+}
+
+resource cosmosClaimsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDb
+  name: 'claims'
+  properties: {
+    resource: {
+      id: 'claims'
+      partitionKey: {
+        paths: ['/customer_id']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          { path: '/*' }
+        ]
+        excludedPaths: [
+          { path: '/_etag/?' }
+        ]
+      }
+      defaultTtl: -1
+    }
+  }
+}
+
+// Built-in Cosmos DB Data Contributor (data-plane RBAC, NOT ARM RBAC)
+var cosmosDataContributorRoleId = '${cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+
+resource cosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(cosmosDataPlanePrincipalId)) {
+  parent: cosmos
+  name: guid(cosmos.id, cosmosDataPlanePrincipalId, 'data-contributor')
+  properties: {
+    roleDefinitionId: cosmosDataContributorRoleId
+    principalId: cosmosDataPlanePrincipalId
+    scope: cosmos.id
+  }
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -296,3 +465,6 @@ output staticWebAppName string = staticWebApp.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
 output aiServicesEndpoint string = aiServices.properties.endpoint
+output cosmosEndpoint string = cosmos.properties.documentEndpoint
+output cosmosDatabaseName string = cosmosDb.name
+output cosmosContainerName string = cosmosClaimsContainer.name
