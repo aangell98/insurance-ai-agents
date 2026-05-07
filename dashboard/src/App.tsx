@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award, LogIn, LogOut } from 'lucide-react';
 import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
@@ -15,23 +15,42 @@ import Toast from './components/Toast';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
 import { evaluateClaim, connectWebSocket, getSecurityIncidents } from './api';
+import { useAuth } from './auth/useAuth';
 
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
 type Tab = 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad' | 'gobernanza';
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'cliente', label: 'Cliente', icon: UserCircle },
-  { id: 'operario', label: 'Operario', icon: ClipboardList },
-  { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
-  { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'polizas', label: 'Pólizas', icon: ScrollText },
-  { id: 'seguridad', label: 'Seguridad', icon: ShieldAlert },
-  { id: 'gobernanza', label: 'Gobernanza', icon: Award },
+type TabDef = { id: Tab; label: string; icon: React.ElementType; role: 'customer' | 'operator' };
+
+const ALL_TABS: TabDef[] = [
+  { id: 'cliente',      label: 'Cliente',      icon: UserCircle,   role: 'customer' },
+  { id: 'operario',     label: 'Operario',     icon: ClipboardList, role: 'operator' },
+  { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3,    role: 'operator' },
+  { id: 'clientes',     label: 'Clientes',     icon: Users,        role: 'operator' },
+  { id: 'polizas',      label: 'Pólizas',      icon: ScrollText,   role: 'operator' },
+  { id: 'seguridad',    label: 'Seguridad',    icon: ShieldAlert,  role: 'operator' },
+  { id: 'gobernanza',   label: 'Gobernanza',   icon: Award,        role: 'operator' },
 ];
 
 export default function App() {
+  const auth = useAuth();
+
+  // Filtra tabs por viewMode (en modo customer sólo mostramos Cliente)
+  const tabs = useMemo<TabDef[]>(
+    () => ALL_TABS.filter(t => auth.viewMode === 'operator' ? true : t.role === 'customer'),
+    [auth.viewMode]
+  );
+
   const [activeTab, setActiveTab] = useState<Tab>('cliente');
+
+  // Si el viewMode cambia y la tab activa no está disponible, vuelve a 'cliente'.
+  useEffect(() => {
+    if (!tabs.some(t => t.id === activeTab)) {
+      setActiveTab(tabs[0]?.id ?? 'cliente');
+    }
+  }, [tabs, activeTab]);
+
   const [stageStatuses, setStageStatuses] = useState<Record<Stage, StageStatus>>({
     intake: 'pending',
     risk_assessment: 'pending',
@@ -59,6 +78,7 @@ export default function App() {
   const incidentKey = (i: SecurityIncident) => `${i.claim_id}-${i.detected_at}`;
 
   useEffect(() => {
+    if (!auth.isOperator) return; // sólo el operario ve incidentes
     let cancelled = false;
     const poll = async () => {
       try {
@@ -85,7 +105,7 @@ export default function App() {
     poll();
     const interval = setInterval(poll, 4000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [auth.isOperator]);
 
   // Auto-dismiss toasts after 7s
   useEffect(() => {
@@ -172,18 +192,61 @@ export default function App() {
               <p className="text-xs text-gray-500">Multi-Agent Decision Platform — Governed & Auditable</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-500">
             <Activity className="w-3.5 h-3.5 text-green-400" />
             <span>Pipeline Active</span>
             <span className="mx-2 text-gray-700">|</span>
             <span>v1.0.0</span>
+            {auth.enabled && (
+              <>
+                <span className="mx-2 text-gray-700">|</span>
+                {auth.authenticated && auth.account ? (
+                  <>
+                    {auth.isCustomer && auth.isOperator && (
+                      <div className="flex items-center gap-1 mr-2 rounded-md bg-surface-800 p-0.5 border border-gray-700">
+                        <button
+                          onClick={() => auth.setViewMode('customer')}
+                          className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                            auth.viewMode === 'customer' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-gray-200'
+                          }`}
+                        >Cliente</button>
+                        <button
+                          onClick={() => auth.setViewMode('operator')}
+                          className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                            auth.viewMode === 'operator' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-gray-200'
+                          }`}
+                        >Operario</button>
+                      </div>
+                    )}
+                    <span className="text-gray-400 hidden sm:inline" title={auth.account.username}>
+                      {auth.account.name || auth.account.username}
+                    </span>
+                    <button
+                      onClick={() => auth.logout()}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-gray-400 hover:text-white hover:bg-surface-800 transition-colors"
+                      title="Cerrar sesión"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => auth.login()}
+                    className="flex items-center gap-1 px-3 py-1 rounded bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Iniciar sesión</span>
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
 
         {/* Tab Bar */}
         <div className="max-w-7xl mx-auto px-6">
           <nav className="flex gap-1 -mb-px">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -207,6 +270,31 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Login gate cuando AUTH_ENABLED y no autenticado */}
+        {auth.enabled && !auth.authenticated && (
+          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-gray-800 bg-surface-900 text-center">
+            <Shield className="w-12 h-12 mx-auto text-primary-400 mb-4" />
+            <h2 className="text-xl font-semibold text-white mb-2">Acceso restringido</h2>
+            <p className="text-sm text-gray-400 mb-6">Inicia sesión con tu cuenta corporativa para acceder a la plataforma.</p>
+            <button
+              onClick={() => auth.login()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Iniciar sesión con Microsoft Entra
+            </button>
+          </div>
+        )}
+
+        {auth.enabled && auth.authenticated && !auth.isCustomer && !auth.isOperator && (
+          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-yellow-800 bg-yellow-950/40 text-center">
+            <ShieldAlert className="w-12 h-12 mx-auto text-yellow-400 mb-4" />
+            <h2 className="text-xl font-semibold text-white mb-2">Sin permisos</h2>
+            <p className="text-sm text-gray-400">Tu cuenta no tiene asignados los roles <code className="text-yellow-300">Customer.Submit</code> ni <code className="text-yellow-300">Operator.Review</code>. Solicita acceso al administrador del tenant.</p>
+          </div>
+        )}
+
+        {(!auth.enabled || (auth.authenticated && (auth.isCustomer || auth.isOperator))) && <>
         {/* ── Cliente View ── */}
         {activeTab === 'cliente' && (
           <>
@@ -258,6 +346,7 @@ export default function App() {
 
         {/* ── Gobernanza View ── */}
         {activeTab === 'gobernanza' && <GovernanceView />}
+        </>}
       </main>
 
       {/* Footer */}

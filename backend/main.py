@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, UploadFile, Form
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agents.orchestrator.agent import process_claim
 from agents.shared.mock_data import DEMO_SCENARIOS, POLICIES, CUSTOMER_HISTORY
+from claims_repository import get_repo
+from auth import (
+    AUTH_ENABLED,
+    Principal,
+    enforce_self_or_operator,
+    require_customer_or_operator,
+    require_operator,
+)
 
 load_dotenv(override=False)
 
@@ -152,7 +160,7 @@ async def get_scenarios():
 
 
 @app.get("/api/policies/{policy_id}")
-async def get_policy(policy_id: str):
+async def get_policy(policy_id: str, _: Principal = Depends(require_operator)):
     """Lookup a policy by ID. Returns 404 if not found."""
     policy = policies_store.get(policy_id)
     if not policy:
@@ -164,13 +172,13 @@ async def get_policy(policy_id: str):
 
 
 @app.get("/api/policies")
-async def list_policies():
+async def list_policies(_: Principal = Depends(require_operator)):
     """List all registered policies."""
     return list(policies_store.values())
 
 
 @app.post("/api/policies")
-async def register_policy(request: PolicyRequest):
+async def register_policy(request: PolicyRequest, _: Principal = Depends(require_operator)):
     """Register a new insurance policy linked to an existing customer."""
     customer = customers_store.get(request.customer_id)
     if not customer:
@@ -206,13 +214,13 @@ async def register_policy(request: PolicyRequest):
 # ── Customers ──
 
 @app.get("/api/customers")
-async def list_customers():
+async def list_customers(_: Principal = Depends(require_operator)):
     """List all registered customers."""
     return list(customers_store.values())
 
 
 @app.get("/api/customers/{customer_id}")
-async def get_customer(customer_id: str):
+async def get_customer(customer_id: str, _: Principal = Depends(require_operator)):
     """Lookup a customer by ID. Returns 404 if not found."""
     customer = customers_store.get(customer_id)
     if not customer:
@@ -222,7 +230,7 @@ async def get_customer(customer_id: str):
 
 
 @app.post("/api/customers")
-async def register_customer(request: CustomerRequest):
+async def register_customer(request: CustomerRequest, _: Principal = Depends(require_operator)):
     """Register a new customer."""
     seq = len(customers_store) + 1
     customer_id = f"CUST-{1000 + seq}"
@@ -243,15 +251,22 @@ async def register_customer(request: CustomerRequest):
 
 
 @app.post("/api/claims/evaluate", response_model=ClaimResponse)
-async def evaluate_claim(request: ClaimRequest):
+async def evaluate_claim(
+    request: ClaimRequest,
+    principal: Principal = Depends(require_customer_or_operator),
+):
     """Submit a claim for evaluation through the multi-agent pipeline.
-    
+
     This is the main endpoint. It runs the claim through:
     1. Claims Intake Agent
     2. Risk & Fraud Assessment Agent
     3. Compliance Agent
     4. Final Decision
+
+    Si AUTH_ENABLED y el caller es customer-puro, el `customer_id` del body
+    debe coincidir con el UPN del token (un cliente sólo crea siniestros suyos).
     """
+    enforce_self_or_operator(principal, request.customer_id)
     claim_id = request.claim_id or f"CLM-{uuid.uuid4().hex[:8].upper()}"
 
     claim_input = {
@@ -284,7 +299,18 @@ async def evaluate_claim(request: ClaimRequest):
         "policy_id": request.policy_id,
         "customer_id": request.customer_id,
     }
+    # customer_id at top level too — used by Cosmos as partition key
+    result["customer_id"] = request.customer_id
+    result["policy_id"] = request.policy_id
+    result["estimated_amount"] = request.estimated_amount
+    result["incident_type"] = request.incident_type
     claims_store[claim_id] = result
+
+    # Persist to Cosmos (no-op si COSMOS_ENDPOINT no está configurado)
+    try:
+        get_repo().save(result)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Cosmos persist failó: {e}")
 
     # Register security incident if the pipeline flagged a manipulation attempt
     if result.get("security_flagged"):
@@ -340,7 +366,7 @@ async def evaluate_claim(request: ClaimRequest):
 
 
 @app.get("/api/claims/{claim_id}/audit")
-async def get_audit_trail(claim_id: str):
+async def get_audit_trail(claim_id: str, _: Principal = Depends(require_operator)):
     """Get the complete audit trail for a processed claim."""
     result = claims_store.get(claim_id)
     if not result:
@@ -371,7 +397,7 @@ async def get_audit_trail(claim_id: str):
 
 
 @app.get("/api/claims/{claim_id}/image")
-async def get_claim_image(claim_id: str):
+async def get_claim_image(claim_id: str, _: Principal = Depends(require_operator)):
     """Return the base64 evidence image attached to a claim, if any."""
     img = image_store.get(claim_id)
     if not img:
@@ -380,24 +406,106 @@ async def get_claim_image(claim_id: str):
 
 
 @app.get("/api/claims")
-async def list_claims():
-    """List all processed claims (for demo dashboard)."""
+async def list_claims(_: Principal = Depends(require_operator)):
+    """List all processed claims (for demo dashboard).
+
+    Si Cosmos está configurado, lee de la base de datos (persistencia real).
+    Si no, cae en el store en-memoria (fallback dev).
+    """
+    repo = get_repo()
+    if repo.is_enabled:
+        items = repo.list_all(limit=200)
+        return [
+            {
+                "claim_id": r.get("claim_id") or r.get("id"),
+                "customer_id": r.get("customer_id"),
+                "policy_id": r.get("policy_id") or (r.get("_input") or {}).get("policy_id", ""),
+                "decision": r.get("decision"),
+                "confidence": r.get("confidence"),
+                "timestamp": r.get("timestamp"),
+                "total_duration_ms": r.get("total_duration_ms"),
+                "estimated_amount": r.get("estimated_amount")
+                    or r.get("intake_result", {}).get("extracted_data", {}).get("estimated_amount", 0),
+                "persisted": True,
+            }
+            for r in items
+        ]
+    # Fallback in-memory
     return [
         {
             "claim_id": cid,
+            "customer_id": (r.get("_input") or {}).get("customer_id"),
             "decision": r["decision"],
             "confidence": r["confidence"],
             "timestamp": r["timestamp"],
             "total_duration_ms": r["total_duration_ms"],
             "estimated_amount": r.get("intake_result", {}).get("extracted_data", {}).get("estimated_amount", 0),
             "policy_id": r.get("intake_result", {}).get("claim_id", ""),
+            "persisted": False,
         }
         for cid, r in claims_store.items()
     ]
 
 
+@app.get("/api/claims/by-customer/{customer_id}")
+async def list_claims_by_customer(
+    customer_id: str,
+    principal: Principal = Depends(require_customer_or_operator),
+):
+    """Lista siniestros de un cliente concreto (single-partition query).
+
+    Customer-puro sólo puede consultar su propio `customer_id` (matched contra UPN).
+    Operator puede consultar cualquiera.
+    """
+    enforce_self_or_operator(principal, customer_id)
+    repo = get_repo()
+    if repo.is_enabled:
+        items = repo.list_by_customer(customer_id, limit=100)
+    else:
+        items = [
+            r for r in claims_store.values()
+            if (r.get("_input") or {}).get("customer_id") == customer_id
+        ]
+    return [
+        {
+            "claim_id": r.get("claim_id") or r.get("id"),
+            "customer_id": r.get("customer_id") or (r.get("_input") or {}).get("customer_id"),
+            "decision": r.get("decision"),
+            "confidence": r.get("confidence"),
+            "timestamp": r.get("timestamp"),
+            "estimated_amount": r.get("estimated_amount")
+                or r.get("intake_result", {}).get("extracted_data", {}).get("estimated_amount", 0),
+        }
+        for r in items
+    ]
+
+
+@app.get("/api/claims/pending-review")
+async def list_pending_review(_: Principal = Depends(require_operator)):
+    """Cola de revisión humana — vista de operario."""
+    repo = get_repo()
+    if repo.is_enabled:
+        items = repo.list_pending_review(limit=100)
+    else:
+        items = [r for r in claims_store.values() if r.get("decision") == "human_review"]
+    return [
+        {
+            "claim_id": r.get("claim_id") or r.get("id"),
+            "customer_id": r.get("customer_id") or (r.get("_input") or {}).get("customer_id"),
+            "policy_id": r.get("policy_id") or (r.get("_input") or {}).get("policy_id"),
+            "decision": r.get("decision"),
+            "confidence": r.get("confidence"),
+            "reasoning": r.get("reasoning"),
+            "timestamp": r.get("timestamp"),
+            "estimated_amount": r.get("estimated_amount")
+                or r.get("intake_result", {}).get("extracted_data", {}).get("estimated_amount", 0),
+        }
+        for r in items
+    ]
+
+
 @app.get("/api/security/incidents")
-async def list_security_incidents():
+async def list_security_incidents(_: Principal = Depends(require_operator)):
     """List all detected security incidents (manipulation / prompt-injection attempts)."""
     return {
         "total": len(security_incidents),
@@ -407,7 +515,7 @@ async def list_security_incidents():
 
 
 @app.get("/api/governance/status")
-async def governance_status():
+async def governance_status(_: Principal = Depends(require_operator)):
     """Return live governance posture: APIM gateway, eval pipeline, audit trail."""
     import subprocess
 
@@ -506,7 +614,7 @@ async def governance_status():
 
 
 @app.get("/api/stats")
-async def get_statistics():
+async def get_statistics(_: Principal = Depends(require_operator)):
     """Get dashboard statistics for the operator view."""
     total = len(claims_store)
     approved = sum(1 for r in claims_store.values() if r["decision"] == "approve")

@@ -1,5 +1,18 @@
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+/**
+ * Helper que añade el Authorization header con el access token de MSAL
+ * cuando VITE_AUTH_ENABLED='true'. Si no, hace fetch normal (modo demo abierto).
+ */
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers || {});
+  // Lazy import para evitar ciclo (msal carga módulo más pesado)
+  const { acquireApiToken } = await import('./auth/useAuth');
+  const token = await acquireApiToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+
 export interface ClaimRequest {
   policy_id: string;
   customer_id: string;
@@ -50,13 +63,13 @@ export interface Scenario {
 }
 
 export async function getScenarios(): Promise<Record<string, Scenario>> {
-  const res = await fetch(`${API_BASE}/api/scenarios`);
+  const res = await apiFetch(`/api/scenarios`);
   if (!res.ok) throw new Error('Failed to fetch scenarios');
   return res.json();
 }
 
 export async function evaluateClaim(req: ClaimRequest): Promise<ClaimResult> {
-  const res = await fetch(`${API_BASE}/api/claims/evaluate`, {
+  const res = await apiFetch(`/api/claims/evaluate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
@@ -101,7 +114,7 @@ export interface StatsResponse {
 }
 
 export async function getStats(): Promise<StatsResponse> {
-  const res = await fetch(`${API_BASE}/api/stats`);
+  const res = await apiFetch(`/api/stats`);
   if (!res.ok) throw new Error('Failed to fetch stats');
   return res.json();
 }
@@ -113,16 +126,32 @@ export interface ClaimSummary {
   confidence: number;
   timestamp: string;
   total_duration_ms: number;
+  customer_id?: string;
+  policy_id?: string;
+  estimated_amount?: number;
+  reasoning?: string;
 }
 
 export async function getClaims(): Promise<ClaimSummary[]> {
-  const res = await fetch(`${API_BASE}/api/claims`);
+  const res = await apiFetch(`/api/claims`);
   if (!res.ok) throw new Error('Failed to fetch claims');
   return res.json();
 }
 
+export async function getClaimsByCustomer(customerId: string): Promise<ClaimSummary[]> {
+  const res = await apiFetch(`/api/claims/by-customer/${encodeURIComponent(customerId)}`);
+  if (!res.ok) throw new Error('Failed to fetch claims for customer');
+  return res.json();
+}
+
+export async function getPendingReview(): Promise<ClaimSummary[]> {
+  const res = await apiFetch(`/api/claims/pending-review`);
+  if (!res.ok) throw new Error('Failed to fetch pending review');
+  return res.json();
+}
+
 export async function getClaimAudit(claimId: string): Promise<ClaimAuditDetail> {
-  const res = await fetch(`${API_BASE}/api/claims/${encodeURIComponent(claimId)}/audit`);
+  const res = await apiFetch(`/api/claims/${encodeURIComponent(claimId)}/audit`);
   if (!res.ok) throw new Error('Failed to fetch audit');
   return res.json();
 }
@@ -161,7 +190,7 @@ export interface ClaimAuditDetail {
 }
 
 export async function getClaimImage(claimId: string): Promise<string | null> {
-  const res = await fetch(`${API_BASE}/api/claims/${encodeURIComponent(claimId)}/image`);
+  const res = await apiFetch(`/api/claims/${encodeURIComponent(claimId)}/image`);
   if (!res.ok) return null;
   const data = await res.json();
   return data.image_b64 ?? null;
@@ -217,19 +246,19 @@ export interface CustomerDetail extends CustomerHistory {
 }
 
 export async function getCustomers(): Promise<CustomerHistory[]> {
-  const res = await fetch(`${API_BASE}/api/customers`);
+  const res = await apiFetch(`/api/customers`);
   if (!res.ok) throw new Error('Failed to fetch customers');
   return res.json();
 }
 
 export async function getCustomerDetail(customerId: string): Promise<CustomerDetail> {
-  const res = await fetch(`${API_BASE}/api/customers/${encodeURIComponent(customerId)}`);
+  const res = await apiFetch(`/api/customers/${encodeURIComponent(customerId)}`);
   if (!res.ok) throw new Error('Failed to fetch customer');
   return res.json();
 }
 
 export async function registerCustomer(req: NewCustomerRequest): Promise<CustomerHistory> {
-  const res = await fetch(`${API_BASE}/api/customers`, {
+  const res = await apiFetch(`/api/customers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
@@ -242,19 +271,19 @@ export async function registerCustomer(req: NewCustomerRequest): Promise<Custome
 }
 
 export async function getPolicies(): Promise<Policy[]> {
-  const res = await fetch(`${API_BASE}/api/policies`);
+  const res = await apiFetch(`/api/policies`);
   if (!res.ok) throw new Error('Failed to fetch policies');
   return res.json();
 }
 
 export async function getPolicyDetail(policyId: string): Promise<PolicyDetail> {
-  const res = await fetch(`${API_BASE}/api/policies/${encodeURIComponent(policyId)}`);
+  const res = await apiFetch(`/api/policies/${encodeURIComponent(policyId)}`);
   if (!res.ok) throw new Error('Failed to fetch policy');
   return res.json();
 }
 
 export async function registerPolicy(req: NewPolicyRequest): Promise<Policy> {
-  const res = await fetch(`${API_BASE}/api/policies`, {
+  const res = await apiFetch(`/api/policies`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
@@ -286,7 +315,7 @@ export interface SecurityIncidentsResponse {
 }
 
 export async function getSecurityIncidents(): Promise<SecurityIncidentsResponse> {
-  const res = await fetch(`${API_BASE}/api/security/incidents`);
+  const res = await apiFetch(`/api/security/incidents`);
   if (!res.ok) throw new Error('Failed to fetch security incidents');
   return res.json();
 }
@@ -331,7 +360,7 @@ export interface GovernanceStatus {
 }
 
 export async function getGovernanceStatus(): Promise<GovernanceStatus> {
-  const res = await fetch(`${API_BASE}/api/governance/status`);
+  const res = await apiFetch(`/api/governance/status`);
   if (!res.ok) throw new Error('Failed to fetch governance status');
   return res.json();
 }

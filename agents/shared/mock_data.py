@@ -137,6 +137,24 @@ DEMO_SCENARIOS = {
         "incident_type": "natural_disaster",
         "expected_decision": "approve",
     },
+    "human_review": {
+        "policy_id": "POL-2026-003",
+        "customer_id": "CUST-1003",
+        "description": (
+            "El pasado 28 de abril sufrí un incendio en mi Tesla Model 3 en el parking "
+            "subterráneo del centro comercial La Vaguada. Según el informe preliminar de "
+            "los bomberos (referencia BOMB-2026-MAD-04887), el origen fue una falla en el "
+            "sistema eléctrico de un vehículo contiguo que se propagó al mío. El vehículo "
+            "quedó calcinado en su totalidad. Adjunto el atestado de bomberos, fotografías "
+            "del estado final y la valoración del perito independiente, que estima el "
+            "daño en 32.000€ (valor venal del vehículo nuevo menos depreciación). El "
+            "centro comercial ha facilitado también las grabaciones de la cámara de "
+            "vigilancia del parking."
+        ),
+        "estimated_amount": 32000,
+        "incident_type": "fire",
+        "expected_decision": "human_review",
+    },
     "fraudulent": {
         "policy_id": "POL-2026-002",
         "customer_id": "CUST-1002",

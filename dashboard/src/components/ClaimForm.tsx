@@ -68,6 +68,7 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
               const label =
                 key === 'low_risk' ? '✅ Bajo Riesgo'
                 : key === 'high_amount' ? '💰 Alto Monto'
+                : key === 'human_review' ? '🟠 Revisión Humana'
                 : key === 'prompt_injection' ? '🛡️ Prompt Injection'
                 : '🚨 Fraudulento';
               return (

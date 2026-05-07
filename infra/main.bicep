@@ -25,6 +25,9 @@ param apimPublisherName string = 'Insurance AI Demo'
 @description('APIM publisher email')
 param apimPublisherEmail string = 'admin@insurance-ai-demo.com'
 
+@description('Object ID of the principal (user or service principal) that should get Cosmos DB data-plane access. Leave empty to skip the role assignment.')
+param cosmosDataPlanePrincipalId string = ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -39,6 +42,7 @@ var staticWebAppName = '${baseName}-swa-${uniqueSuffix}'
 var appInsightsName = '${baseName}-ai-${uniqueSuffix}'
 var logAnalyticsName = '${baseName}-law-${uniqueSuffix}'
 var aiServicesName = '${baseName}-ais-${uniqueSuffix}'
+var cosmosName = '${baseName}-cosmos-${uniqueSuffix}'
 
 // ============================================================================
 // Monitoring: Log Analytics + Application Insights
@@ -368,6 +372,84 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 }
 
 // ============================================================================
+// Cosmos DB (NoSQL) - persistencia de siniestros procesados
+// ============================================================================
+// Container particionado por /customer_id (alta cardinalidad, query pattern
+// dominante: "siniestros del cliente X"). Modo serverless para minimizar coste
+// en demo. AAD-only: deshabilitamos las claves locales y usamos data-plane RBAC.
+
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: cosmosName
+  location: location
+  kind: 'GlobalDocumentDB'
+  properties: {
+    databaseAccountOfferType: 'Standard'
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+      }
+    ]
+    capabilities: [
+      { name: 'EnableServerless' }
+    ]
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
+  parent: cosmos
+  name: 'insurance-claims'
+  properties: {
+    resource: {
+      id: 'insurance-claims'
+    }
+  }
+}
+
+resource cosmosClaimsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDb
+  name: 'claims'
+  properties: {
+    resource: {
+      id: 'claims'
+      partitionKey: {
+        paths: ['/customer_id']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          { path: '/*' }
+        ]
+        excludedPaths: [
+          { path: '/_etag/?' }
+        ]
+      }
+      defaultTtl: -1
+    }
+  }
+}
+
+// Built-in Cosmos DB Data Contributor (data-plane RBAC, NOT ARM RBAC)
+var cosmosDataContributorRoleId = '${cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+
+resource cosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(cosmosDataPlanePrincipalId)) {
+  parent: cosmos
+  name: guid(cosmos.id, cosmosDataPlanePrincipalId, 'data-contributor')
+  properties: {
+    roleDefinitionId: cosmosDataContributorRoleId
+    principalId: cosmosDataPlanePrincipalId
+    scope: cosmos.id
+  }
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -383,3 +465,6 @@ output staticWebAppName string = staticWebApp.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
 output aiServicesEndpoint string = aiServices.properties.endpoint
+output cosmosEndpoint string = cosmos.properties.documentEndpoint
+output cosmosDatabaseName string = cosmosDb.name
+output cosmosContainerName string = cosmosClaimsContainer.name
