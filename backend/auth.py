@@ -76,8 +76,10 @@ def _expected_issuer() -> str:
     return f"https://login.microsoftonline.com/{TENANT_ID}/v2.0"
 
 
-def _expected_audience() -> str:
-    return f"api://{CLIENT_ID}"
+def _expected_audience() -> list[str]:
+    # En tokens v2.0 emitidos por la propia app, el aud puede ser el GUID puro
+    # (`{CLIENT_ID}`) o el identifier URI (`api://{CLIENT_ID}`). Aceptamos ambos.
+    return [f"api://{CLIENT_ID}", CLIENT_ID]
 
 
 def _get_jwks(force_refresh: bool = False) -> dict:

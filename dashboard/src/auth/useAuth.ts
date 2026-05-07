@@ -1,11 +1,14 @@
 /**
- * Hooks y helpers de auth: extracción de roles, viewMode, y obtención
- * del access token para las llamadas REST.
+ * Hooks y helpers de auth: extracción de roles, viewMode y forzado de cache
+ * del access token tras login.
  */
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import type { AccountInfo } from '@azure/msal-browser';
-import { AUTH_ENABLED, API_SCOPES, ROLE_CUSTOMER, ROLE_OPERATOR, msalInstance } from './msalConfig';
+import { AUTH_ENABLED, API_SCOPES, LOGIN_SCOPES, ROLE_CUSTOMER, ROLE_OPERATOR } from './msalConfig';
+
+// Re-export para compatibilidad con código que ya importa desde aquí.
+export { acquireApiToken } from './msalConfig';
 
 export type ViewMode = 'customer' | 'operator';
 
@@ -55,7 +58,10 @@ export function useAuth(): AuthState {
   }, [isCustomer, isOperator]);
 
   const login = useCallback(async () => {
-    await instance.loginPopup({ scopes: ['openid', 'profile', ...API_SCOPES] });
+    // Pedimos OIDC + el scope de la API en la misma popup. Así el consent
+    // ('access_as_user') se resuelve en el primer login y luego
+    // acquireTokenSilent funcionará sin abrir más popups.
+    await instance.loginPopup({ scopes: [...LOGIN_SCOPES, ...API_SCOPES] });
   }, [instance]);
 
   const logout = useCallback(async () => {
@@ -81,24 +87,4 @@ export function useAuth(): AuthState {
     logout,
     customerId,
   };
-}
-
-/**
- * Adquiere un access token para llamar a la API. Devuelve null si auth está desactivado.
- */
-export async function acquireApiToken(): Promise<string | null> {
-  if (!AUTH_ENABLED) return null;
-  const account = msalInstance.getAllAccounts()[0];
-  if (!account) return null;
-  try {
-    const result = await msalInstance.acquireTokenSilent({
-      scopes: API_SCOPES,
-      account,
-    });
-    return result.accessToken;
-  } catch {
-    // Fallback popup (consentimiento o renovación)
-    const result = await msalInstance.acquireTokenPopup({ scopes: API_SCOPES });
-    return result.accessToken;
-  }
 }

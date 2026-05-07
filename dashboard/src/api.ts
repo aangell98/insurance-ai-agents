@@ -1,3 +1,5 @@
+import { acquireApiToken } from './auth/msalConfig';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /**
@@ -6,8 +8,6 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
  */
 async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers || {});
-  // Lazy import para evitar ciclo (msal carga módulo más pesado)
-  const { acquireApiToken } = await import('./auth/useAuth');
   const token = await acquireApiToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   return fetch(`${API_BASE}${path}`, { ...init, headers });
