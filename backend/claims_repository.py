@@ -15,10 +15,35 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_azure_cli_on_path() -> None:
+    """Asegura que `az.cmd` está en PATH para que AzureCliCredential lo encuentre.
+
+    En Windows, cuando uvicorn se arranca como proceso desligado, a veces el
+    PATH heredado no incluye el directorio de Azure CLI aunque el usuario lo
+    tenga instalado. azure-identity invoca `az` por subprocess, así que sin
+    el directorio en PATH, AzureCliCredential falla con
+    'Failed to invoke the Azure CLI'.
+    """
+    if sys.platform != "win32":
+        return
+    candidates = [
+        r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin",
+        r"C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin",
+    ]
+    current = os.environ.get("PATH", "")
+    parts = current.split(os.pathsep)
+    for c in candidates:
+        if os.path.isfile(os.path.join(c, "az.cmd")) and c not in parts:
+            os.environ["PATH"] = c + os.pathsep + current
+            current = os.environ["PATH"]
+            parts = current.split(os.pathsep)
 
 
 class ClaimsRepository:
@@ -34,6 +59,8 @@ class ClaimsRepository:
         if not self.endpoint:
             logger.info("Cosmos DB no configurado (COSMOS_ENDPOINT vacío) → modo en-memoria.")
             return
+
+        _ensure_azure_cli_on_path()
 
         try:
             from azure.cosmos import CosmosClient
