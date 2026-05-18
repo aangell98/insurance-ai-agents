@@ -13,7 +13,14 @@ export interface ComplianceRule {
 export interface ComplianceChecklistPanelProps {
   active: boolean;
   rules: ComplianceRule[];
+  phaseLabel?: string;
 }
+
+const COMPLIANCE_WARMING_MESSAGES = [
+  'Revisando reglas regulatorias...',
+  'Validando límites de cobertura...',
+  'Comprobando documentación...',
+] as const;
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -49,10 +56,18 @@ function getStatusStyles(status: RuleStatus) {
   }
 }
 
-export default function ComplianceChecklistPanel({ active, rules }: ComplianceChecklistPanelProps) {
+export default function ComplianceChecklistPanel({
+  active,
+  rules,
+  phaseLabel,
+}: ComplianceChecklistPanelProps) {
   const [animatedRuleIds, setAnimatedRuleIds] = useState<string[]>([]);
+  const [warmingCheckingCount, setWarmingCheckingCount] = useState(0);
+  const [warmingMessageIndex, setWarmingMessageIndex] = useState(0);
   const previousStatusesRef = useRef<Record<string, RuleStatus>>({});
   const timersRef = useRef<number[]>([]);
+  const warmingTimersRef = useRef<number[]>([]);
+  const allRulesPending = active && rules.length > 0 && rules.every((rule) => rule.status === 'pending');
 
   useEffect(() => {
     const previousStatuses = previousStatusesRef.current;
@@ -78,8 +93,41 @@ export default function ComplianceChecklistPanel({ active, rules }: ComplianceCh
     previousStatusesRef.current = nextStatuses;
   }, [active, rules]);
 
+  useEffect(() => {
+    warmingTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    warmingTimersRef.current = [];
+
+    if (!allRulesPending) {
+      setWarmingCheckingCount(0);
+      setWarmingMessageIndex(0);
+      return;
+    }
+
+    setWarmingCheckingCount(1);
+
+    for (let index = 1; index < rules.length; index += 1) {
+      const timer = window.setTimeout(() => {
+        setWarmingCheckingCount(index + 1);
+      }, index * 800);
+
+      warmingTimersRef.current.push(timer);
+    }
+
+    const messageInterval = window.setInterval(() => {
+      setWarmingMessageIndex((current) => (current + 1) % COMPLIANCE_WARMING_MESSAGES.length);
+    }, 1400);
+
+    warmingTimersRef.current.push(messageInterval);
+
+    return () => {
+      warmingTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      warmingTimersRef.current = [];
+    };
+  }, [allRulesPending, rules.length]);
+
   useEffect(() => () => {
     timersRef.current.forEach((timer) => window.clearTimeout(timer));
+    warmingTimersRef.current.forEach((timer) => window.clearTimeout(timer));
   }, []);
 
   return (
@@ -91,12 +139,20 @@ export default function ComplianceChecklistPanel({ active, rules }: ComplianceCh
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Compliance agent</p>
           <h3 className="text-lg font-semibold text-white">Validación de cumplimiento</h3>
+          {phaseLabel ? <p className="mt-1 text-xs text-slate-400">{phaseLabel}</p> : null}
         </div>
       </div>
 
       <div className="space-y-3">
-        {rules.map((rule) => {
-          const statusStyles = getStatusStyles(rule.status);
+        {allRulesPending ? (
+          <div className="rounded-xl border border-sky-400/10 bg-sky-500/5 px-4 py-3 text-xs font-medium text-slate-300 transition-opacity duration-300">
+            {COMPLIANCE_WARMING_MESSAGES[warmingMessageIndex]}
+          </div>
+        ) : null}
+
+        {rules.map((rule, index) => {
+          const visualStatus: RuleStatus = allRulesPending && index < warmingCheckingCount ? 'checking' : rule.status;
+          const statusStyles = getStatusStyles(visualStatus);
           const shouldPulse = animatedRuleIds.includes(rule.id);
 
           return (
@@ -105,8 +161,8 @@ export default function ComplianceChecklistPanel({ active, rules }: ComplianceCh
               className={cx(
                 'flex items-center gap-4 rounded-xl border p-4 transition-colors duration-300',
                 statusStyles.row,
-                rule.status === 'pending' && 'text-slate-400',
-                rule.status === 'checking' && active && 'shadow-[0_0_24px_rgba(14,165,233,0.1)]',
+                visualStatus === 'pending' && 'text-slate-400',
+                visualStatus === 'checking' && active && 'shadow-[0_0_24px_rgba(14,165,233,0.1)]',
               )}
               style={shouldPulse ? { animation: 'pulseRow 0.6s ease-out both' } : undefined}
             >

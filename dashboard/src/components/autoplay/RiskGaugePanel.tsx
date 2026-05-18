@@ -1,5 +1,5 @@
 import { ShieldAlert } from 'lucide-react';
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 export type FraudProbability = 'low' | 'medium' | 'high';
 
@@ -7,6 +7,7 @@ export interface RiskGaugePanelProps {
   active: boolean;
   targetScore: number | null;
   fraudProbability: FraudProbability | null;
+  phaseLabel?: string;
 }
 
 const GAUGE_RADIUS = 102;
@@ -39,6 +40,12 @@ const FRAUD_META: Record<FraudProbability, { scale: number; label: string; color
   },
 };
 
+const RISK_WARMING_MESSAGES = [
+  'Calculando risk score...',
+  'Analizando histórico del cliente...',
+  'Cruzando patrones de fraude...',
+] as const;
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -56,8 +63,14 @@ function getScoreTone(score: number | null, active: boolean) {
   return 'text-rose-300';
 }
 
-export default function RiskGaugePanel({ active, targetScore, fraudProbability }: RiskGaugePanelProps) {
+export default function RiskGaugePanel({
+  active,
+  targetScore,
+  fraudProbability,
+  phaseLabel,
+}: RiskGaugePanelProps) {
   const clipPathId = useId().replace(/:/g, '');
+  const [warmingMessageIndex, setWarmingMessageIndex] = useState(0);
   const score = typeof targetScore === 'number' ? Math.max(0, Math.min(100, targetScore)) : null;
   const displayScore = active ? score : null;
   const needleAngle = getNeedleAngle(displayScore, active);
@@ -65,13 +78,29 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
   const scoreLabel = displayScore === null ? '—' : Math.round(displayScore).toString();
   const riskPending = active && displayScore === null;
   const fraudPending = active && fraudProbability === null;
+  const warmingUp = active && targetScore === null && fraudProbability === null;
   const fraudMeta = active && fraudProbability ? FRAUD_META[fraudProbability] : null;
   const fillScale = fraudMeta?.scale ?? (fraudPending ? 0.14 : 0);
-  const fillColor = fraudMeta?.color ?? (fraudPending ? '#38bdf8' : '#64748b');
+  const fillColor = fraudMeta?.color ?? (warmingUp ? '#f87171' : fraudPending ? '#38bdf8' : '#64748b');
   const pillLabel = fraudMeta?.label ?? (fraudPending ? 'CALCULANDO' : '—');
   const pillTone = fraudMeta?.pill ?? (fraudPending
-    ? 'border-sky-400/20 bg-sky-500/10 text-sky-200 animate-pulse'
+    ? `border-sky-400/20 bg-sky-500/10 text-sky-200${warmingUp ? '' : ' animate-pulse'}`
     : 'border-white/10 bg-white/5 text-slate-400');
+
+  useEffect(() => {
+    if (!warmingUp) {
+      setWarmingMessageIndex(0);
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setWarmingMessageIndex((current) => (current + 1) % RISK_WARMING_MESSAGES.length);
+    }, 1400);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [warmingUp]);
 
   return (
     <section className="rounded-[28px] border border-white/10 bg-surface-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
@@ -82,11 +111,18 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Risk agent</p>
           <h3 className="text-lg font-semibold text-white">Scoring y fraude</h3>
+          {phaseLabel ? <p className="mt-1 text-xs text-slate-400">{phaseLabel}</p> : null}
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-surface-800/90 p-5">
+          {warmingUp ? (
+            <p className="mb-3 text-center text-xs font-medium text-slate-400 transition-opacity duration-300">
+              {RISK_WARMING_MESSAGES[warmingMessageIndex]}
+            </p>
+          ) : null}
+
           <svg viewBox="0 0 300 190" className="mx-auto h-[180px] w-full max-w-[300px] overflow-visible">
             <circle
               cx="150"
@@ -114,7 +150,7 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
                   strokeDasharray={`${segment.length} ${GAUGE_CIRCUMFERENCE}`}
                   strokeDashoffset={offset}
                   transform="rotate(180 150 150)"
-                  className={riskPending ? 'animate-pulse' : undefined}
+                  className={riskPending && !warmingUp ? 'animate-pulse' : undefined}
                 />
               );
             })}
@@ -128,15 +164,21 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
               cy="150"
               r="18"
               fill={riskPending ? 'rgba(56, 189, 248, 0.18)' : 'rgba(15, 23, 42, 0.92)'}
-              className={riskPending ? 'animate-pulse' : undefined}
+              className={riskPending && !warmingUp ? 'animate-pulse' : undefined}
             />
             <g
-              style={{
-                transformBox: 'view-box',
-                transformOrigin: '150px 150px',
-                transform: `rotate(${-needleAngle}deg)`,
-                transition: 'transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }}
+              style={warmingUp
+                ? {
+                    transformBox: 'view-box',
+                    transformOrigin: '150px 150px',
+                    animation: 'radarSweep 3s ease-in-out infinite',
+                  }
+                : {
+                    transformBox: 'view-box',
+                    transformOrigin: '150px 150px',
+                    transform: `rotate(${-needleAngle}deg)`,
+                    transition: 'transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
             >
               <line
                 x1="150"
@@ -152,7 +194,7 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
             <circle cx="150" cy="150" r="4" fill="#0f172a" />
           </svg>
 
-          <div className={cx('mt-4 text-center', riskPending && 'animate-pulse')}>
+          <div className={cx('mt-4 text-center', riskPending && !warmingUp && 'animate-pulse')}>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Risk Score</p>
             <p className={cx('mt-2 text-4xl font-semibold tracking-tight', scoreTone)}>
               {scoreLabel}
@@ -182,13 +224,19 @@ export default function RiskGaugePanel({ active, targetScore, fraudProbability }
               <g clipPath={`url(#${clipPathId})`}>
                 <rect x="24" y="18" width="32" height="208" fill="#111827" opacity="0.68" />
                 <g
-                  style={{
-                    transformBox: 'view-box',
-                    transformOrigin: '40px 226px',
-                    transform: `scaleY(${fillScale})`,
-                    transition: 'transform 1s',
-                  }}
-                  className={fraudPending ? 'animate-pulse' : undefined}
+                  style={warmingUp
+                    ? {
+                        transformBox: 'view-box',
+                        transformOrigin: '40px 226px',
+                        animation: 'thermoBreathe 2.5s ease-in-out infinite',
+                      }
+                    : {
+                        transformBox: 'view-box',
+                        transformOrigin: '40px 226px',
+                        transform: `scaleY(${fillScale})`,
+                        transition: 'transform 1s',
+                      }}
+                  className={fraudPending && !warmingUp ? 'animate-pulse' : undefined}
                 >
                   <rect x="24" y="18" width="32" height="208" fill={fillColor} style={{ transition: 'fill 1s' }} />
                 </g>

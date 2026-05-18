@@ -11,6 +11,7 @@ export interface IntakeExtractionPanelProps {
     date?: string;
     location?: string;
   };
+  phaseLabel?: string;
 }
 
 type HighlightTone = 'amount' | 'incident' | 'vehicle' | 'date' | 'location';
@@ -66,6 +67,17 @@ const HIGHLIGHT_RULES: Array<{
   },
 ];
 
+const INTAKE_DETECTION_STEPS = [
+  'Detectando tipo de incidente...',
+  'Detectando vehículo...',
+  'Detectando ubicación...',
+] as const;
+
+const INTAKE_VALIDATION_STEPS = [
+  'Validando póliza...',
+  'Comprobando documentación...',
+] as const;
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -115,8 +127,11 @@ export default function IntakeExtractionPanel({
   scenarioText,
   active,
   extractedFields,
+  phaseLabel,
 }: IntakeExtractionPanelProps) {
   const [visibleHighlights, setVisibleHighlights] = useState(0);
+  const [detectionStepIndex, setDetectionStepIndex] = useState(0);
+  const [validationStepIndex, setValidationStepIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const highlightRefs = useRef<Array<HTMLSpanElement | null>>([]);
 
@@ -154,6 +169,7 @@ export default function IntakeExtractionPanel({
   }, [extractedFields]);
 
   const shouldScrollExtractedItems = extractedItems.length > 5;
+  const showGhostExtraction = active && extractedItems.length === 0;
 
   useEffect(() => {
     highlightRefs.current = [];
@@ -199,6 +215,23 @@ export default function IntakeExtractionPanel({
       });
     }
   }, [active, visibleHighlights]);
+
+  useEffect(() => {
+    if (!showGhostExtraction) {
+      setDetectionStepIndex(0);
+      setValidationStepIndex(0);
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setDetectionStepIndex((current) => (current + 1) % INTAKE_DETECTION_STEPS.length);
+      setValidationStepIndex((current) => (current + 1) % INTAKE_VALIDATION_STEPS.length);
+    }, 1200);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [showGhostExtraction]);
 
   const renderedScenarioText = useMemo(() => {
     if (highlightMatches.length === 0) {
@@ -293,6 +326,7 @@ export default function IntakeExtractionPanel({
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Intake agent</p>
               <h3 className="text-lg font-semibold text-white">Campos extraídos</h3>
+              {phaseLabel ? <p className="mt-1 text-xs text-slate-400">{phaseLabel}</p> : null}
             </div>
           </div>
 
@@ -313,19 +347,58 @@ export default function IntakeExtractionPanel({
                   <p className="text-sm font-medium text-emerald-50">✓ {item.label}: {item.value}</p>
                 </div>
               </div>
-            )) : active ? (
-              Array.from({ length: 3 }, (_, index) => (
-                <div
-                  key={`ghost-row-${index}`}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-surface-800/90 p-3"
-                >
-                  <div className="h-5 w-5 rounded-full bg-slate-700/80 animate-pulse" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 w-3/5 rounded-full bg-slate-700/80 animate-pulse" />
-                    <div className="h-3 w-2/5 rounded-full bg-slate-700/60 animate-pulse" />
+            )) : showGhostExtraction ? (
+              <>
+                <div className="rounded-xl border border-cyan-400/10 bg-surface-800/90 p-4 shadow-inner shadow-cyan-500/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 animate-pulse" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Captura del parte</p>
+                      <p className="mt-1 text-sm text-slate-300 transition-opacity duration-300">{INTAKE_DETECTION_STEPS[detectionStepIndex]}</p>
+                    </div>
                   </div>
                 </div>
-              ))
+
+                <div className="rounded-xl border border-white/10 bg-surface-800/90 p-4">
+                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    <span>Extracción estructurada</span>
+                    <span>streaming</span>
+                  </div>
+                  <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="absolute inset-y-0 left-0 w-[62%] rounded-full bg-gradient-to-r from-cyan-400/0 via-cyan-300/95 to-teal-300/0"
+                      style={{ animation: 'shimmer 1.6s ease-in-out infinite' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-violet-400/10 bg-surface-800/90 p-4 shadow-inner shadow-violet-500/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-violet-300 animate-pulse" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Verificación previa</p>
+                      <p className="mt-1 text-sm text-slate-300 transition-opacity duration-300">{INTAKE_VALIDATION_STEPS[validationStepIndex]}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-surface-800/90 p-4">
+                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    <span>Cobertura y anexos</span>
+                    <span>verificando</span>
+                  </div>
+                  <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-violet-400/0 via-fuchsia-300/90 to-sky-300/0"
+                      style={{ animation: 'shimmer 1.8s ease-in-out infinite', animationDelay: '0.18s' }}
+                    />
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="rounded-xl border border-dashed border-white/10 bg-surface-800/80 p-4 text-sm text-slate-500">
                 Esperando extracción estructurada.

@@ -202,6 +202,72 @@ interface ExtractedFieldsView {
   location?: string;
 }
 
+// === Streaming JSON parsing helpers ============================================
+// Los tokens del LLM streamean JSON crudo (response_format=PydanticModel). Para
+// no esperar al `executor_completed`, extraemos campos top-level conforme se van
+// cerrando en el JSON parcial. Esto alimenta los paneles viz en vivo.
+
+function extractStringField(text: string, key: string): string | undefined {
+  const regex = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i');
+  const m = text.match(regex);
+  if (!m) return undefined;
+  try {
+    return JSON.parse(`"${m[1]}"`) as string;
+  } catch {
+    return m[1];
+  }
+}
+
+function extractNumberField(text: string, key: string): number | undefined {
+  const regex = new RegExp(`"${key}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`, 'i');
+  const m = text.match(regex);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function extractBooleanField(text: string, key: string): boolean | undefined {
+  const regex = new RegExp(`"${key}"\\s*:\\s*(true|false)`, 'i');
+  const m = text.match(regex);
+  if (!m) return undefined;
+  return m[1].toLowerCase() === 'true';
+}
+
+function parseStreamingIntake(tokens: string): ExtractedFieldsView | undefined {
+  if (!tokens) return undefined;
+  const view: ExtractedFieldsView = {};
+  const incidentType = extractStringField(tokens, 'incident_type');
+  if (incidentType) view.incident_type = incidentType;
+  const amount = extractNumberField(tokens, 'estimated_amount');
+  if (amount !== undefined && amount > 0) view.estimated_amount = amount;
+  const vehicle = extractStringField(tokens, 'vehicle');
+  if (vehicle) view.vehicle = vehicle;
+  const date = extractStringField(tokens, 'date_of_incident');
+  if (date) view.date = date;
+  const location = extractStringField(tokens, 'location');
+  if (location) view.location = location;
+  return Object.keys(view).length > 0 ? view : undefined;
+}
+
+function parseStreamingRisk(tokens: string): { score: number | null; fraud: FraudProbability | null } {
+  if (!tokens) return { score: null, fraud: null };
+  let score: number | null = null;
+  const raw = extractNumberField(tokens, 'risk_score');
+  if (raw !== undefined) score = Math.round(raw * (raw <= 10 ? 10 : 1));
+  let fraud: FraudProbability | null = null;
+  const fp = extractStringField(tokens, 'fraud_probability')?.toLowerCase();
+  if (fp === 'low' || fp === 'medium' || fp === 'high') fraud = fp;
+  else if (fp === 'baja') fraud = 'low';
+  else if (fp === 'media') fraud = 'medium';
+  else if (fp === 'alta') fraud = 'high';
+  return { score, fraud };
+}
+
+function parseStreamingCompliance(tokens: string): { compliant?: boolean } {
+  if (!tokens) return {};
+  return { compliant: extractBooleanField(tokens, 'compliant') };
+}
+
 function getExtractedFields(result: ClaimResult | null): ExtractedFieldsView | undefined {
   if (!result) return undefined;
   const intake = result.intake_result as Record<string, unknown>;
@@ -315,6 +381,67 @@ async function evaluateClaimAbortable(req: ClaimRequest, signal: AbortSignal): P
   return response.json() as Promise<ClaimResult>;
 }
 
+// ===========================================================================
+// ConsolidationStepsPanel: mini-secuencia visual entre Compliance y la
+// DecisionFinale. Da margen al espectador para asimilar la transición.
+// ===========================================================================
+
+const CONSOLIDATION_STEPS = [
+  { label: 'Reconciliando outputs', detail: 'Cruzando salidas de Intake, Risk y Compliance' },
+  { label: 'Calculando confianza', detail: 'Ponderando señales de los 3 agentes' },
+  { label: 'Emitiendo decisión final', detail: 'Generando justificación y audit trail' },
+] as const;
+
+function ConsolidationStepsPanel({ phase }: { phase: 0 | 1 | 2 }) {
+  return (
+    <div className="flex h-full min-h-[420px] flex-col items-center justify-center px-6 py-10">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">Consolidación</p>
+      <h3 className="mt-3 bg-gradient-to-r from-white via-violet-100 to-teal-100 bg-clip-text text-center text-2xl font-semibold tracking-tight text-transparent xl:text-3xl">
+        Preparando la decisión final
+      </h3>
+      <ul className="mt-8 w-full max-w-md space-y-3">
+        {CONSOLIDATION_STEPS.map((step, idx) => {
+          const isActive = idx === phase;
+          const isDone = idx < phase;
+          return (
+            <li
+              key={step.label}
+              className={`flex items-start gap-3 rounded-2xl border px-4 py-3 transition-all duration-300 ${
+                isDone
+                  ? 'border-emerald-400/30 bg-emerald-500/10'
+                  : isActive
+                    ? 'border-cyan-400/40 bg-cyan-500/12 animate-pulse-soft'
+                    : 'border-white/10 bg-white/5 opacity-60'
+              }`}
+            >
+              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                isDone
+                  ? 'bg-emerald-400 text-slate-950'
+                  : isActive
+                    ? 'bg-cyan-400 text-slate-950'
+                    : 'bg-white/10 text-slate-500'
+              }`}>
+                {isDone ? '✓' : isActive ? '•' : idx + 1}
+              </span>
+              <div className="flex-1">
+                <p className={`text-sm font-semibold ${isActive ? 'text-cyan-50' : isDone ? 'text-emerald-50' : 'text-slate-300'}`}>{step.label}</p>
+                <p className="mt-1 text-xs text-slate-400">{step.detail}</p>
+              </div>
+              {isActive ? (
+                <div className="mt-1 flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" />
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" style={{ animationDelay: '0.18s' }} />
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" style={{ animationDelay: '0.36s' }} />
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function AutoPlayDemo({ open, onClose }: Props) {
   const onCloseRef = useRef(onClose);
   const demoRunRef = useRef(0);
@@ -352,12 +479,19 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     compliance: 0,
     decision: 0,
   }));
+  // displayedActiveStage: lo que el espectador ve en el panel viz. Se retrasa
+  // respecto al stage real para garantizar un mínimo de tiempo de visibilidad.
+  const [displayedActiveStage, setDisplayedActiveStage] = useState<Stage>('intake');
+  // consolidationPhase: micro-fase visual entre compliance y DecisionFinale para
+  // que la decisión no salga "instantánea".
+  const [consolidationPhase, setConsolidationPhase] = useState<null | 0 | 1 | 2>(null);
   const stageStartsRef = useRef<Record<Stage, number>>({
     intake: 0,
     risk_assessment: 0,
     compliance: 0,
     decision: 0,
   });
+  const lastDisplayChangeRef = useRef(0);
 
   const clearNoticeTimers = useCallback(() => {
     noticeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -547,6 +681,10 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         setCurrentResult(null);
         setStageDurations({ intake: 0, risk_assessment: 0, compliance: 0, decision: 0 });
         stageStartsRef.current = { intake: 0, risk_assessment: 0, compliance: 0, decision: 0 };
+        // Reset pacing refs per case
+        setDisplayedActiveStage('intake');
+        lastDisplayChangeRef.current = Date.now();
+        setConsolidationPhase(null);
 
         const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
           if (demoRunRef.current !== runId) return;
@@ -613,11 +751,24 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           };
           setFeedItems((previous) => [...previous, item]);
 
-          const finaleDelay = await waitForFinaleDelay(700, runId);
-          if (finaleDelay === 'close') return;
-          if (finaleDelay === 'skip') {
-            skippedCurrent = true;
-          } else {
+          // Mini-secuencia de consolidación: 3 pasos visibles antes del overlay
+          // final. Convierte una transición instantánea en una mini-experiencia.
+          const CONSOLIDATION_STEP_MS = 850;
+          for (const phase of [0, 1, 2] as const) {
+            setConsolidationPhase(phase);
+            const action = await waitForFinaleDelay(CONSOLIDATION_STEP_MS, runId);
+            if (action === 'close') {
+              setConsolidationPhase(null);
+              return;
+            }
+            if (action === 'skip') {
+              skippedCurrent = true;
+              break;
+            }
+          }
+          setConsolidationPhase(null);
+
+          if (!skippedCurrent) {
             setDecisionFinale({ item, key: Date.now() });
           }
         } catch (error) {
@@ -724,6 +875,24 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     activeAgent === 'risk' ? 'risk_assessment' : activeAgent
   ), [activeAgent]);
 
+  // Sincroniza displayedActiveStage ← activeStage con un MÍNIMO de 4.5 s por
+  // panel para que el espectador tenga tiempo a fijar la vista. Si el LLM tarda
+  // más, no se altera nada (cambia inmediatamente cuando el delay ya se cumplió).
+  const MIN_STAGE_DISPLAY_MS = 4500;
+  useEffect(() => {
+    if (activeStage === displayedActiveStage) return;
+    const elapsed = Date.now() - lastDisplayChangeRef.current;
+    const wait = Math.max(0, MIN_STAGE_DISPLAY_MS - elapsed);
+    const timer = window.setTimeout(() => {
+      setDisplayedActiveStage(activeStage);
+      lastDisplayChangeRef.current = Date.now();
+    }, wait);
+    return () => window.clearTimeout(timer);
+  }, [activeStage, displayedActiveStage]);
+
+  // Mientras la consolidationPhase está activa, el "agente activo" es 'decision'
+  // pero el panel viz muestra una mini secuencia de pasos.
+
   const agentStatus: AgentStatus = useMemo(() => {
     const stage: Stage = AGENT_NAMES.indexOf(activeAgent) >= 0
       ? (activeAgent === 'risk' ? 'risk_assessment' : activeAgent)
@@ -742,16 +911,58 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     return ms > 0 ? ms / 1000 : undefined;
   })();
 
-  const extractedFields = useMemo(
-    () => getExtractedFields(currentResult),
-    [currentResult],
-  );
-  const riskScore = useMemo(() => getRiskScore(currentResult), [currentResult]);
-  const fraudProbabilityTyped = useMemo(() => getFraudProbabilityTyped(currentResult), [currentResult]);
-  const complianceRules = useMemo(
-    () => buildComplianceRules(currentResult, stageStatuses),
-    [currentResult, stageStatuses],
-  );
+  const extractedFields = useMemo<ExtractedFieldsView | undefined>(() => {
+    // Si ya tenemos el resultado completo, usarlo; si no, parsear los tokens en vivo
+    const fromResult = getExtractedFields(currentResult);
+    if (fromResult) return fromResult;
+    return parseStreamingIntake(stageTokens.intake);
+  }, [currentResult, stageTokens.intake]);
+
+  const riskScore = useMemo<number | null>(() => {
+    const fromResult = getRiskScore(currentResult);
+    if (fromResult !== null) return fromResult;
+    return parseStreamingRisk(stageTokens.risk_assessment).score;
+  }, [currentResult, stageTokens.risk_assessment]);
+
+  const fraudProbabilityTyped = useMemo<FraudProbability | null>(() => {
+    const fromResult = getFraudProbabilityTyped(currentResult);
+    if (fromResult !== null) return fromResult;
+    return parseStreamingRisk(stageTokens.risk_assessment).fraud;
+  }, [currentResult, stageTokens.risk_assessment]);
+
+  const complianceRules = useMemo<ComplianceRule[]>(() => {
+    // If we have the full result, build deterministically; otherwise show staggered
+    // "checking" states based on how much of the compliance JSON has streamed.
+    if (currentResult || stageStatuses.compliance === 'pending') {
+      return buildComplianceRules(currentResult, stageStatuses);
+    }
+    // Streaming preview: progressively mark rules as 'checking' or 'passed' depending
+    // on tokens received so far.
+    const tokens = stageTokens.compliance;
+    const parsedCompliant = parseStreamingCompliance(tokens).compliant;
+    const baseRules: ComplianceRule[] = [
+      { id: 'policy_valid',     label: 'Póliza vigente',                       status: 'pending' },
+      { id: 'coverage',          label: 'Cobertura aplica al incidente',        status: 'pending' },
+      { id: 'amount_threshold',  label: 'Importe dentro del límite automático', status: 'pending' },
+      { id: 'fraud_indicators',  label: 'Sin patrones de fraude detectados',   status: 'pending' },
+      { id: 'documentation',     label: 'Documentación completa',               status: 'pending' },
+    ];
+    if (stageStatuses.compliance !== 'processing') return baseRules;
+    // We don't have proper per-rule signals while streaming, so simulate progress:
+    // each ~120 chars of tokens advances one rule from checking → passed.
+    const charsPerRule = 150;
+    const advanced = Math.min(baseRules.length, Math.floor(tokens.length / charsPerRule));
+    const result = baseRules.map((rule, idx) => {
+      if (idx < advanced) return { ...rule, status: 'passed' as RuleStatus };
+      if (idx === advanced) return { ...rule, status: 'checking' as RuleStatus };
+      return rule;
+    });
+    // If compliance JSON already said compliant=false, mark last 1-2 as failed/warning at the end.
+    if (parsedCompliant === false && advanced >= 3) {
+      result[3] = { ...result[3], status: 'failed' };
+    }
+    return result;
+  }, [currentResult, stageStatuses, stageTokens.compliance]);
 
   const subtitle = useMemo(() => {
     if (status === 'loading') return 'Preparando escenarios, agentes y telemetría en tiempo real…';
@@ -951,25 +1162,34 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                   />
 
                   <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-5 xl:p-6">
-                    {activeStage === 'intake' && (
-                      <IntakeExtractionPanel
-                        scenarioText={currentScenario?.description ?? ''}
-                        active={stageStatuses.intake === 'processing' || stageStatuses.intake === 'completed'}
-                        extractedFields={extractedFields}
-                      />
-                    )}
-                    {activeStage === 'risk_assessment' && (
-                      <RiskGaugePanel
-                        active={stageStatuses.risk_assessment !== 'pending'}
-                        targetScore={riskScore}
-                        fraudProbability={fraudProbabilityTyped}
-                      />
-                    )}
-                    {(activeStage === 'compliance' || activeStage === 'decision') && (
-                      <ComplianceChecklistPanel
-                        active={stageStatuses.compliance !== 'pending'}
-                        rules={complianceRules}
-                      />
+                    {consolidationPhase !== null ? (
+                      <ConsolidationStepsPanel phase={consolidationPhase} />
+                    ) : (
+                      <>
+                        {displayedActiveStage === 'intake' && (
+                          <IntakeExtractionPanel
+                            scenarioText={currentScenario?.description ?? ''}
+                            active={stageStatuses.intake === 'processing' || stageStatuses.intake === 'completed'}
+                            extractedFields={extractedFields}
+                            phaseLabel={stageStatuses.intake === 'completed' ? 'Datos extraídos' : 'Leyendo el parte del siniestro'}
+                          />
+                        )}
+                        {displayedActiveStage === 'risk_assessment' && (
+                          <RiskGaugePanel
+                            active={stageStatuses.risk_assessment !== 'pending'}
+                            targetScore={riskScore}
+                            fraudProbability={fraudProbabilityTyped}
+                            phaseLabel={stageStatuses.risk_assessment === 'completed' ? 'Evaluación de riesgo' : 'Calculando score y patrones de fraude'}
+                          />
+                        )}
+                        {(displayedActiveStage === 'compliance' || displayedActiveStage === 'decision') && (
+                          <ComplianceChecklistPanel
+                            active={stageStatuses.compliance !== 'pending'}
+                            rules={complianceRules}
+                            phaseLabel={stageStatuses.compliance === 'completed' ? 'Validación regulatoria' : 'Aplicando reglas y umbrales'}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 </section>
