@@ -1,33 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  CheckCircle2,
-  FileSearch,
-  Gavel,
   Loader2,
   Pause,
   Play,
-  Scale,
-  ShieldAlert,
   SkipForward,
-  Sparkles,
   X,
 } from 'lucide-react';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, Scenario } from '../api';
 import { connectWebSocket, getScenarios } from '../api';
 import { AUTH_ENABLED, acquireApiToken } from '../auth/msalConfig';
+import LiveStatsTicker from './autoplay/LiveStatsTicker';
+import AgentThinkingPanel from './autoplay/AgentThinkingPanel';
+import type { AgentName, AgentStatus } from './autoplay/AgentThinkingPanel';
+import DecisionFinale from './autoplay/DecisionFinale';
+import IntakeExtractionPanel from './autoplay/IntakeExtractionPanel';
+import RiskGaugePanel from './autoplay/RiskGaugePanel';
+import type { FraudProbability } from './autoplay/RiskGaugePanel';
+import ComplianceChecklistPanel from './autoplay/ComplianceChecklistPanel';
+import type { ComplianceRule, RuleStatus } from './autoplay/ComplianceChecklistPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const DEMO_ORDER = ['low_risk', 'high_amount', 'human_review', 'fraudulent', 'prompt_injection'] as const;
-const STAGES = [
-  { key: 'intake', label: 'Intake', helper: 'Recepción y validación', icon: FileSearch },
-  { key: 'risk_assessment', label: 'Risk', helper: 'Fraude y scoring', icon: ShieldAlert },
-  { key: 'compliance', label: 'Compliance', helper: 'Reglas y coberturas', icon: Scale },
-  { key: 'decision', label: 'Decision', helper: 'Resolución final', icon: Gavel },
-] as const;
+
+const AGENT_NAMES: AgentName[] = ['intake', 'risk', 'compliance', 'decision'];
+
+const STAGE_TO_AGENT: Record<Stage, AgentName> = {
+  intake: 'intake',
+  risk_assessment: 'risk',
+  compliance: 'compliance',
+  decision: 'decision',
+};
 
 type ScenarioKey = (typeof DEMO_ORDER)[number];
-type Stage = (typeof STAGES)[number]['key'];
+type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
 type DemoStatus = 'idle' | 'loading' | 'running' | 'finished' | 'error';
 type NoticeKind = 'error' | 'info';
@@ -121,10 +127,6 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
-function truncateText(text: string, maxLength = 80) {
-  return text.length <= maxLength ? text : `${text.slice(0, maxLength - 1)}…`;
-}
-
 function formatElapsed(totalSeconds: number) {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   const minutes = Math.floor(totalSeconds / 60);
@@ -154,7 +156,7 @@ function createAbortError() {
   return new DOMException('Aborted', 'AbortError');
 }
 
-function getFraudProbability(result: ClaimResult) {
+function getFraudProbability(result: ClaimResult): string {
   const riskResult = result.risk_result as Record<string, unknown>;
   return typeof riskResult?.fraud_probability === 'string' ? riskResult.fraud_probability.toLowerCase() : '';
 }
@@ -163,24 +165,121 @@ function isSecurityFlagged(result: ClaimResult) {
   return Boolean((result as ClaimResult & { security_flagged?: boolean }).security_flagged);
 }
 
-function stageStatusLabel(status: StageStatus) {
-  switch (status) {
-    case 'processing':
-      return 'Procesando';
-    case 'completed':
-      return 'Completado';
-    case 'failed':
-      return 'Error';
-    default:
-      return 'Pendiente';
+function getFraudProbabilityTyped(result: ClaimResult | null): FraudProbability | null {
+  if (!result) return null;
+  const value = getFraudProbability(result);
+  if (value === 'low' || value === 'medium' || value === 'high') return value;
+  if (value === 'baja') return 'low';
+  if (value === 'media') return 'medium';
+  if (value === 'alta') return 'high';
+  return null;
+}
+
+function getRiskScore(result: ClaimResult | null): number | null {
+  if (!result) return null;
+  const risk = result.risk_result as Record<string, unknown>;
+  const raw = risk?.risk_score;
+  if (typeof raw === 'number') return Math.round(raw * (raw <= 10 ? 10 : 1));
+  if (typeof raw === 'string') {
+    const n = parseFloat(raw);
+    if (!Number.isNaN(n)) return Math.round(n * (n <= 10 ? 10 : 1));
   }
+  return null;
+}
+
+interface ExtractedFieldsView {
+  incident_type?: string;
+  estimated_amount?: number;
+  vehicle?: string;
+  date?: string;
+  location?: string;
+}
+
+function getExtractedFields(result: ClaimResult | null): ExtractedFieldsView | undefined {
+  if (!result) return undefined;
+  const intake = result.intake_result as Record<string, unknown>;
+  const data = (intake?.extracted_data ?? {}) as Record<string, unknown>;
+  const view: ExtractedFieldsView = {};
+  if (typeof data.incident_type === 'string' && data.incident_type) view.incident_type = data.incident_type;
+  if (typeof data.estimated_amount === 'number' && data.estimated_amount > 0) view.estimated_amount = data.estimated_amount;
+  if (typeof data.vehicle === 'string' && data.vehicle) view.vehicle = data.vehicle;
+  if (typeof data.date_of_incident === 'string' && data.date_of_incident) view.date = data.date_of_incident;
+  if (typeof data.location === 'string' && data.location) view.location = data.location;
+  return Object.keys(view).length > 0 ? view : undefined;
+}
+
+function buildComplianceRules(result: ClaimResult | null, stageStatuses: Record<Stage, StageStatus>): ComplianceRule[] {
+  const base: ComplianceRule[] = [
+    { id: 'policy_valid', label: 'Póliza vigente', status: 'pending' },
+    { id: 'coverage', label: 'Cobertura aplica al incidente', status: 'pending' },
+    { id: 'amount_threshold', label: 'Importe dentro del límite automático', status: 'pending' },
+    { id: 'fraud_indicators', label: 'Sin patrones de fraude detectados', status: 'pending' },
+    { id: 'documentation', label: 'Documentación completa', status: 'pending' },
+  ];
+
+  const status = stageStatuses.compliance;
+  if (status === 'pending') return base;
+
+  if (status === 'processing' && !result) {
+    return base.map((r, idx) => ({ ...r, status: idx === 0 ? 'checking' : 'pending' as RuleStatus }));
+  }
+
+  if (!result) return base;
+
+  const compliance = result.compliance_result as Record<string, unknown>;
+  const rulesApplied = (compliance?.rules_applied ?? {}) as Record<string, unknown>;
+  const decision = result.decision;
+  const reasoning = (result.reasoning ?? '').toLowerCase();
+  const fraudProb = getFraudProbability(result);
+  const securityFlagged = isSecurityFlagged(result);
+  const amount = result.intake_result
+    ? ((result.intake_result as Record<string, unknown>).extracted_data as Record<string, unknown> | undefined)?.estimated_amount
+    : undefined;
+  const numericAmount = typeof amount === 'number' ? amount : 0;
+  const threshold = typeof rulesApplied.human_review_threshold === 'number' ? rulesApplied.human_review_threshold : 20000;
+  const policyValid = typeof rulesApplied.policy_valid === 'boolean' ? rulesApplied.policy_valid : true;
+  const coverageOk = typeof rulesApplied.coverage_applies === 'boolean' ? rulesApplied.coverage_applies : decision !== 'reject';
+
+  return [
+    {
+      id: 'policy_valid',
+      label: 'Póliza vigente',
+      status: policyValid ? 'passed' : 'failed',
+      detail: policyValid ? undefined : 'Póliza no encontrada o expirada.',
+    },
+    {
+      id: 'coverage',
+      label: 'Cobertura aplica al incidente',
+      status: coverageOk ? 'passed' : 'failed',
+    },
+    {
+      id: 'amount_threshold',
+      label: 'Importe dentro del límite automático',
+      status: numericAmount > threshold ? 'warning' : 'passed',
+      detail: numericAmount > threshold
+        ? `${numericAmount.toLocaleString('es-ES')} € supera el umbral de ${threshold.toLocaleString('es-ES')} €`
+        : undefined,
+    },
+    {
+      id: 'fraud_indicators',
+      label: 'Sin patrones de fraude detectados',
+      status: securityFlagged || fraudProb === 'high' || decision === 'reject' ? 'failed' : 'passed',
+      detail: securityFlagged ? 'Intento de manipulación detectado por el guard de seguridad.' : undefined,
+    },
+    {
+      id: 'documentation',
+      label: 'Documentación completa',
+      status: reasoning.includes('falta') || reasoning.includes('incompleta') ? 'warning' : 'passed',
+    },
+  ];
 }
 
 function nextStageStatuses(previous: Record<Stage, StageStatus>, stage: Stage, status: StageStatus) {
+  const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
   const updated = { ...previous, [stage]: status };
   if (status === 'processing' || status === 'completed') {
-    const stageIndex = STAGES.findIndex((item) => item.key === stage);
-    STAGES.slice(0, stageIndex).forEach(({ key }) => {
+    const stageIndex = order.indexOf(stage);
+    order.slice(0, stageIndex).forEach((key) => {
       if (updated[key] === 'pending') updated[key] = 'completed';
     });
   }
@@ -209,30 +308,6 @@ async function evaluateClaimAbortable(req: ClaimRequest, signal: AbortSignal): P
   return response.json() as Promise<ClaimResult>;
 }
 
-function CounterCard({
-  label,
-  value,
-  helper,
-  tone,
-  valueKey,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  tone: string;
-  valueKey: string | number;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</p>
-      <div key={valueKey} className="mt-3 space-y-1 animate-slide-in">
-        <p className={`text-3xl font-semibold ${tone}`}>{value}</p>
-        <p className="text-sm text-slate-400">{helper}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function AutoPlayDemo({ open, onClose }: Props) {
   const onCloseRef = useRef(onClose);
   const demoRunRef = useRef(0);
@@ -252,10 +327,30 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   const [currentScenarioKey, setCurrentScenarioKey] = useState<ScenarioKey | null>(null);
   const [currentClaimId, setCurrentClaimId] = useState('');
   const [stageStatuses, setStageStatuses] = useState<Record<Stage, StageStatus>>(() => ({ ...EMPTY_STAGE_STATUSES }));
+  const [stageTokens, setStageTokens] = useState<Record<Stage, string>>(() => ({
+    intake: '',
+    risk_assessment: '',
+    compliance: '',
+    decision: '',
+  }));
   const [feedItems, setFeedItems] = useState<DemoItem[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [finishedCount, setFinishedCount] = useState(0);
+  const [currentResult, setCurrentResult] = useState<ClaimResult | null>(null);
+  const [decisionFinale, setDecisionFinale] = useState<{ item: DemoItem; key: number } | null>(null);
+  const [stageDurations, setStageDurations] = useState<Record<Stage, number>>(() => ({
+    intake: 0,
+    risk_assessment: 0,
+    compliance: 0,
+    decision: 0,
+  }));
+  const stageStartsRef = useRef<Record<Stage, number>>({
+    intake: 0,
+    risk_assessment: 0,
+    compliance: 0,
+    decision: 0,
+  });
 
   const clearNoticeTimers = useCallback(() => {
     noticeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -372,11 +467,15 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     setFinishedCount(0);
 
     const runDemo = async () => {
+      // Best-effort: pre-cache the token. We DON'T abort if it fails — many
+      // demo setups run with backend AUTH_ENABLED=false where no token is
+      // needed. If the backend actually requires auth we'll get a 401 from
+      // the first request and handle it there.
       if (AUTH_ENABLED) {
-        const token = await acquireApiToken();
-        if (!token) {
-          if (demoRunRef.current === runId) expireSession();
-          return;
+        try {
+          await acquireApiToken();
+        } catch {
+          /* ignore — let the request fail naturally if auth is required */
         }
       }
 
@@ -385,6 +484,11 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         scenariosResponse = await getScenarios();
       } catch (error) {
         if (demoRunRef.current !== runId || closeRequestedRef.current) return;
+        const apiError = error as ApiError;
+        if (apiError.status === 401) {
+          expireSession();
+          return;
+        }
         setStatus('error');
         setFatalError(getErrorMessage(error) || 'No se pudieron cargar los escenarios.');
         return;
@@ -414,17 +518,37 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         setCurrentScenarioKey(demoScenario.key);
         setCurrentClaimId(claimId);
         setStageStatuses({ ...EMPTY_STAGE_STATUSES });
+        setStageTokens({ intake: '', risk_assessment: '', compliance: '', decision: '' });
+        setCurrentResult(null);
+        setStageDurations({ intake: 0, risk_assessment: 0, compliance: 0, decision: 0 });
+        stageStartsRef.current = { intake: 0, risk_assessment: 0, compliance: 0, decision: 0 };
 
         const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
-          if (demoRunRef.current !== runId || update.type !== 'progress') return;
-          const stage = update.stage as Stage;
-          if (!(stage in EMPTY_STAGE_STATUSES)) return;
-          const nextStatus: StageStatus = update.status === 'completed'
-            ? 'completed'
-            : update.status === 'processing'
-              ? 'processing'
-              : 'failed';
-          setStageStatuses((previous) => nextStageStatuses(previous, stage, nextStatus));
+          if (demoRunRef.current !== runId) return;
+          if (update.type === 'progress') {
+            const stage = update.stage as Stage;
+            if (!(stage in EMPTY_STAGE_STATUSES)) return;
+            const nextStatus: StageStatus = update.status === 'completed'
+              ? 'completed'
+              : update.status === 'processing'
+                ? 'processing'
+                : 'failed';
+            if (nextStatus === 'processing') {
+              stageStartsRef.current[stage] = Date.now();
+            } else if (nextStatus === 'completed' && stageStartsRef.current[stage] > 0) {
+              const dur = Date.now() - stageStartsRef.current[stage];
+              setStageDurations((prev) => ({ ...prev, [stage]: dur }));
+            }
+            setStageStatuses((previous) => nextStageStatuses(previous, stage, nextStatus));
+          } else if (update.type === 'token') {
+            const agent = update.agent;
+            const stage: Stage = agent === 'risk'
+              ? 'risk_assessment'
+              : (agent === 'intake' || agent === 'compliance' || agent === 'decision')
+                ? agent
+                : 'intake';
+            setStageTokens((previous) => ({ ...previous, [stage]: previous[stage] + update.text }));
+          }
         });
 
         wsRef.current = ws;
@@ -449,15 +573,16 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
           setStageStatuses((previous) => ({ ...previous, decision: 'completed' }));
-          setFeedItems((previous) => [
-            ...previous,
-            {
-              scenarioKey: demoScenario.key,
-              scenario: demoScenario.scenario,
-              result,
-              durationMs: result.total_duration_ms || Date.now() - startedAt,
-            },
-          ]);
+          setCurrentResult(result);
+          const item: DemoItem = {
+            scenarioKey: demoScenario.key,
+            scenario: demoScenario.scenario,
+            result,
+            durationMs: result.total_duration_ms || Date.now() - startedAt,
+          };
+          setFeedItems((previous) => [...previous, item]);
+          // Lanza el overlay celebratorio
+          setDecisionFinale({ item, key: Date.now() });
         } catch (error) {
           if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
@@ -538,12 +663,59 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     [feedItems],
   );
   const approvalRate = Math.round((approveCount / Math.max(finishedCount, 1)) * 100);
+  const automationRateLive = Math.round((automaticDecisionCount / Math.max(finishedCount, 1)) * 100);
   const averageCaseSeconds = feedItems.length > 0
     ? feedItems.reduce((sum, item) => sum + Math.max(item.durationMs / 1000, 1), 0) / feedItems.length
     : 28;
   const remainingSeconds = status === 'finished'
     ? 0
     : Math.max(0, Math.round((totalScenarios - finishedCount) * averageCaseSeconds + Math.max(totalScenarios - finishedCount - 1, 0) * 2));
+
+  // Active agent: the stage currently 'processing'. Fallback to the latest completed if all idle.
+  const activeAgent: AgentName = useMemo(() => {
+    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    const processing = order.find((s) => stageStatuses[s] === 'processing');
+    if (processing) return STAGE_TO_AGENT[processing];
+    // none processing → return last completed
+    const reversed = [...order].reverse();
+    const lastCompleted = reversed.find((s) => stageStatuses[s] === 'completed');
+    if (lastCompleted) return STAGE_TO_AGENT[lastCompleted];
+    return 'intake';
+  }, [stageStatuses]);
+
+  const activeStage: Stage = useMemo(() => {
+    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    return order.find((s) => stageStatuses[s] === 'processing') ?? 'intake';
+  }, [stageStatuses]);
+
+  const agentStatus: AgentStatus = useMemo(() => {
+    const stage: Stage = AGENT_NAMES.indexOf(activeAgent) >= 0
+      ? (activeAgent === 'risk' ? 'risk_assessment' : activeAgent)
+      : 'intake';
+    const s = stageStatuses[stage];
+    if (s === 'processing') return 'thinking';
+    if (s === 'completed') return 'completed';
+    if (s === 'failed') return 'failed';
+    return 'idle';
+  }, [activeAgent, stageStatuses]);
+
+  const thoughtTokens = stageTokens[activeAgent === 'risk' ? 'risk_assessment' : activeAgent];
+  const activeDurationSeconds = (() => {
+    const stage: Stage = activeAgent === 'risk' ? 'risk_assessment' : activeAgent;
+    const ms = stageDurations[stage];
+    return ms > 0 ? ms / 1000 : undefined;
+  })();
+
+  const extractedFields = useMemo(
+    () => getExtractedFields(currentResult),
+    [currentResult],
+  );
+  const riskScore = useMemo(() => getRiskScore(currentResult), [currentResult]);
+  const fraudProbabilityTyped = useMemo(() => getFraudProbabilityTyped(currentResult), [currentResult]);
+  const complianceRules = useMemo(
+    () => buildComplianceRules(currentResult, stageStatuses),
+    [currentResult, stageStatuses],
+  );
 
   const subtitle = useMemo(() => {
     if (status === 'loading') return 'Preparando escenarios, agentes y telemetría en tiempo real…';
@@ -681,39 +853,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
 
             {status === 'running' && (
               <>
-                <section className="grid gap-4 lg:grid-cols-4">
-                  <div className="rounded-2xl border border-emerald-500/15 bg-white/5 p-5 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Casos procesados</p>
-                    <div key={finishedCount} className="mt-3 flex items-center gap-3 animate-slide-in">
-                      <CheckCircle2 className="h-6 w-6 text-emerald-400" />
-                      <div>
-                        <p className="text-3xl font-semibold text-emerald-300">{finishedCount} / {totalScenarios}</p>
-                        <p className="text-sm text-slate-400">se acumula en tiempo real</p>
-                      </div>
-                    </div>
-                  </div>
-                  <CounterCard
-                    label="€ procesados"
-                    value={currencyFormatter.format(totalAmount)}
-                    helper="suma de casos finalizados"
-                    tone="text-cyan-300"
-                    valueKey={totalAmount}
-                  />
-                  <CounterCard
-                    label="Decisión automática"
-                    value={automaticDecisionCount.toString()}
-                    helper="approve + reject"
-                    tone="text-violet-300"
-                    valueKey={automaticDecisionCount}
-                  />
-                  <CounterCard
-                    label="Tiempo total"
-                    value={formatElapsed(elapsedSeconds)}
-                    helper="cronómetro de la demo"
-                    tone="text-white"
-                    valueKey={elapsedSeconds}
-                  />
-                </section>
+                <LiveStatsTicker
+                  totalProcessed={totalAmount}
+                  casesCompleted={finishedCount}
+                  totalCases={totalScenarios}
+                  automationRate={automationRateLive}
+                  fraudsDetected={fraudDetectedCount}
+                  elapsedSeconds={elapsedSeconds}
+                />
 
                 {notices.length > 0 && (
                   <section className="space-y-3">
@@ -732,125 +879,114 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                   </section>
                 )}
 
-                <section className={`rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.12),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(2,6,23,0.96))] p-6 xl:p-8 ${currentScenarioMeta?.glow ?? ''}`}>
-                  <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                    <div>
+                {/* Scenario header */}
+                <section className={`rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.14),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(2,6,23,0.96))] p-5 xl:p-6 ${currentScenarioMeta?.glow ?? ''}`}>
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex items-center gap-4">
                       <div className={`inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium ${currentScenarioMeta?.badge ?? 'border-white/10 bg-white/5 text-slate-200'}`}>
                         {currentScenarioMeta?.label ?? 'Preparando escenarios…'}
                       </div>
-                      <h3 className="mt-4 text-3xl font-semibold tracking-tight text-white xl:text-4xl">Pipeline multi-agente XL</h3>
-                      <p className="mt-2 text-sm text-slate-400">
-                        {currentClaimId ? `${currentClaimId} · ${currencyFormatter.format(currentScenario?.estimated_amount ?? 0)}` : 'Esperando el primer caso…'}
-                      </p>
+                      <div className="text-sm text-slate-400">
+                        <span className="font-mono text-xs text-slate-500">{currentClaimId || '—'}</span>
+                        <span className="mx-2 text-slate-700">·</span>
+                        <span className="text-white font-semibold">{currencyFormatter.format(currentScenario?.estimated_amount ?? 0)}</span>
+                      </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Cliente</p>
-                        <p className="mt-2 text-sm font-medium text-white">{currentScenario?.customer_id ?? '—'}</p>
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Cliente</p>
+                        <p className="mt-0.5 text-sm font-medium text-white">{currentScenario?.customer_id ?? '—'}</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Póliza</p>
-                        <p className="mt-2 text-sm font-medium text-white">{currentScenario?.policy_id ?? '—'}</p>
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Póliza</p>
+                        <p className="mt-0.5 text-sm font-medium text-white">{currentScenario?.policy_id ?? '—'}</p>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="relative mt-8">
-                    <div className="absolute left-[12%] right-[12%] top-12 hidden h-px bg-gradient-to-r from-transparent via-white/15 to-transparent lg:block" />
-                    <div className="grid gap-4 lg:grid-cols-4">
-                      {STAGES.map((stage) => {
-                        const Icon = stage.icon;
-                        const stageStatus = stageStatuses[stage.key];
-                        const isProcessing = stageStatus === 'processing';
-                        const tone = stageStatus === 'completed'
-                          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
-                          : stageStatus === 'failed'
-                            ? 'border-rose-500/25 bg-rose-500/10 text-rose-200'
-                            : isProcessing
-                              ? 'border-primary-400/40 bg-primary-500/10 text-primary-100'
-                              : 'border-white/10 bg-white/5 text-slate-300';
-
-                        return (
-                          <div
-                            key={stage.key}
-                            className={`relative z-10 rounded-[24px] border p-5 transition-all duration-500 ${tone} ${isProcessing ? 'animate-pulse-glow' : ''}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-                                <Icon className="h-6 w-6" />
-                              </div>
-                              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                {stageStatusLabel(stageStatus)}
-                              </span>
-                            </div>
-                            <div className="mt-8">
-                              <p className="text-2xl font-semibold text-white">{stage.label}</p>
-                              <p className="mt-2 text-sm text-slate-400">{stage.helper}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-[30px] border border-white/10 bg-white/5 p-6 backdrop-blur-sm xl:p-8">
-                  <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Feed de resultados</p>
-                      <h3 className="mt-2 text-2xl font-semibold text-white">Los casos se van acumulando automáticamente</h3>
-                    </div>
-                    <p className="text-sm text-slate-400">{feedItems.length} decisión(es) registradas</p>
-                  </div>
+                {/* Main two-column area: agent thinking + per-agent viz */}
+                <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+                  <AgentThinkingPanel
+                    agent={activeAgent}
+                    status={agentStatus}
+                    thoughtTokens={thoughtTokens}
+                    durationSeconds={activeDurationSeconds}
+                  />
 
-                  <div className="mt-5 space-y-3">
-                    {feedItems.length === 0 && (
-                      <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-6 text-sm text-slate-400">
-                        Todavía no hay resultados cerrados. El primer caso aparecerá aquí en cuanto termine el pipeline.
-                      </div>
+                  <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-5 xl:p-6">
+                    {activeStage === 'intake' && (
+                      <IntakeExtractionPanel
+                        scenarioText={currentScenario?.description ?? ''}
+                        active={stageStatuses.intake === 'processing' || stageStatuses.intake === 'completed'}
+                        extractedFields={extractedFields}
+                      />
                     )}
+                    {activeStage === 'risk_assessment' && (
+                      <RiskGaugePanel
+                        active={stageStatuses.risk_assessment !== 'pending'}
+                        targetScore={riskScore}
+                        fraudProbability={fraudProbabilityTyped}
+                      />
+                    )}
+                    {(activeStage === 'compliance' || activeStage === 'decision') && (
+                      <ComplianceChecklistPanel
+                        active={stageStatuses.compliance !== 'pending'}
+                        rules={complianceRules}
+                      />
+                    )}
+                  </div>
+                </section>
 
-                    {feedItems.map((item) => {
-                      const decisionMeta = DECISION_META[item.result.decision];
-                      const leadingIcon = item.scenarioKey === 'prompt_injection'
-                        ? '🛡️'
-                        : item.result.decision === 'approve'
-                          ? '✅'
-                          : item.result.decision === 'human_review'
-                            ? '⚠️'
-                            : '❌';
-
+                {/* Compact feed at the bottom */}
+                <section className="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Feed</p>
+                      <p className="text-sm text-slate-400">{feedItems.length} decisión(es)</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    {orderedScenarios.map((demo, idx) => {
+                      const item = feedItems.find((f) => f.scenarioKey === demo.key);
+                      const meta = SCENARIO_META[demo.key];
+                      const isActive = idx === currentIndex && status === 'running' && !item;
+                      const isPending = !item && !isActive;
+                      const decisionMeta = item ? DECISION_META[item.result.decision] : null;
+                      const leadingIcon = item
+                        ? (demo.key === 'prompt_injection' ? '🛡️'
+                          : item.result.decision === 'approve' ? '✅'
+                          : item.result.decision === 'human_review' ? '⚠️'
+                          : '❌')
+                        : isActive ? '⏳' : '·';
                       return (
                         <div
-                          key={item.result.claim_id}
-                          className="animate-slide-in-right rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+                          key={demo.key}
+                          className={`rounded-xl border px-3 py-2.5 text-xs transition ${
+                            isActive
+                              ? 'border-primary-400/40 bg-primary-500/10 animate-pulse-glow'
+                              : isPending
+                                ? 'border-white/5 bg-white/[0.02] opacity-60'
+                                : 'border-white/10 bg-slate-950/40'
+                          }`}
                         >
-                          <div className="grid gap-4 xl:grid-cols-[56px_minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.8fr)_minmax(0,0.7fr)_minmax(0,1.6fr)] xl:items-center">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-2xl">
-                              {leadingIcon}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-white">{SCENARIO_META[item.scenarioKey].shortLabel}</p>
-                              <p className="mt-1 truncate font-mono text-xs text-slate-500">{item.result.claim_id}</p>
-                            </div>
-                            <div>
-                              <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${decisionMeta.badge}`}>
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg">{leadingIcon}</span>
+                            {decisionMeta ? (
+                              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${decisionMeta.badge}`}>
                                 {decisionMeta.label}
                               </span>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Monto</p>
-                              <p className="mt-1 text-sm font-medium text-white">{currencyFormatter.format(item.scenario.estimated_amount)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Duración</p>
-                              <p className="mt-1 text-sm font-medium text-white">{formatCaseDuration(item.durationMs)}</p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Reasoning</p>
-                              <p className="mt-1 text-sm text-slate-300">{truncateText(item.result.reasoning, 80)}</p>
-                            </div>
+                            ) : (
+                              <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                                {isActive ? 'En curso' : isPending ? 'Pendiente' : '—'}
+                              </span>
+                            )}
                           </div>
+                          <p className="mt-1.5 text-sm font-semibold text-white truncate">{meta.shortLabel}</p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {currencyFormatter.format(demo.scenario.estimated_amount)}
+                            {item ? ` · ${formatCaseDuration(item.durationMs)}` : ''}
+                          </p>
                         </div>
                       );
                     })}
@@ -860,6 +996,16 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             )}
           </div>
         </main>
+
+        {decisionFinale && (
+          <DecisionFinale
+            key={decisionFinale.key}
+            decision={decisionFinale.item.result.decision}
+            amount={decisionFinale.item.scenario.estimated_amount}
+            scenarioLabel={SCENARIO_META[decisionFinale.item.scenarioKey].shortLabel}
+            onDone={() => setDecisionFinale(null)}
+          />
+        )}
       </div>
     </div>
   );
