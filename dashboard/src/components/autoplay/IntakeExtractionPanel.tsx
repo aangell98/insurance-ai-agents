@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, FileSearch } from 'lucide-react';
 
 export interface IntakeExtractionPanelProps {
@@ -22,31 +22,47 @@ interface HighlightMatch {
   tone: HighlightTone;
 }
 
-const HIGHLIGHT_RULES: Array<{ tone: HighlightTone; regex: RegExp; className: string }> = [
+const HIGHLIGHT_RULES: Array<{
+  tone: HighlightTone;
+  label: string;
+  regex: RegExp;
+  className: string;
+  dotClassName: string;
+}> = [
   {
     tone: 'amount',
+    label: 'Monto',
     regex: /\d+[.,]?\d*\s*(?:€|euros?)/gi,
     className: 'bg-emerald-400/15 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.2)]',
+    dotClassName: 'bg-emerald-300',
   },
   {
     tone: 'incident',
+    label: 'Tipo',
     regex: /\b(?:colisi[oó]n|incendio|robo|inundaci[oó]n|granizo|vandalismo|fire|collision)\b/gi,
     className: 'bg-amber-400/15 text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.22)]',
+    dotClassName: 'bg-amber-300',
   },
   {
     tone: 'vehicle',
+    label: 'Vehículo',
     regex: /\b(?:tesla|bmw|audi|seat|coche|veh[ií]culo|moto)\b/gi,
     className: 'bg-cyan-400/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.22)]',
+    dotClassName: 'bg-cyan-300',
   },
   {
     tone: 'date',
+    label: 'Fecha',
     regex: /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi,
     className: 'bg-violet-400/15 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]',
+    dotClassName: 'bg-violet-300',
   },
   {
     tone: 'location',
+    label: 'Ubicación',
     regex: /\b(?:Madrid|Barcelona|Valencia|Sevilla|parking|calle|carretera|autopista|A-\d+|M-\d+)\b/gi,
     className: 'bg-fuchsia-400/15 text-fuchsia-200 shadow-[0_0_0_1px_rgba(232,121,249,0.22)]',
+    dotClassName: 'bg-fuchsia-300',
   },
 ];
 
@@ -101,8 +117,11 @@ export default function IntakeExtractionPanel({
   extractedFields,
 }: IntakeExtractionPanelProps) {
   const [visibleHighlights, setVisibleHighlights] = useState(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const highlightRefs = useRef<Array<HTMLSpanElement | null>>([]);
 
-  const highlightMatches = useMemo(() => findHighlightMatches(scenarioText), [scenarioText]);
+  const hasScenarioText = scenarioText.trim().length > 0;
+  const highlightMatches = useMemo(() => (hasScenarioText ? findHighlightMatches(scenarioText) : []), [hasScenarioText, scenarioText]);
 
   const extractedItems = useMemo(() => {
     const items: Array<{ id: string; label: string; value: string }> = [];
@@ -134,7 +153,12 @@ export default function IntakeExtractionPanel({
     return items;
   }, [extractedFields]);
 
+  const shouldScrollExtractedItems = extractedItems.length > 5;
+
   useEffect(() => {
+    highlightRefs.current = [];
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+
     if (!active || highlightMatches.length === 0) {
       setVisibleHighlights(0);
       return;
@@ -147,6 +171,34 @@ export default function IntakeExtractionPanel({
       timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [active, highlightMatches]);
+
+  useEffect(() => {
+    if (!active || visibleHighlights === 0) {
+      return;
+    }
+
+    const container = scrollRef.current;
+    const target = highlightRefs.current[visibleHighlights - 1];
+
+    if (!container || !target) {
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const targetTop = targetRect.top - containerRect.top + container.scrollTop;
+    const targetHeight = target.offsetHeight || targetRect.height;
+    const targetBottom = targetTop + targetHeight;
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + container.clientHeight;
+
+    if (targetTop < viewTop || targetBottom > viewBottom) {
+      container.scrollTo({
+        top: Math.max(0, targetTop - container.clientHeight / 2 + targetHeight / 2),
+        behavior: 'smooth',
+      });
+    }
+  }, [active, visibleHighlights]);
 
   const renderedScenarioText = useMemo(() => {
     if (highlightMatches.length === 0) {
@@ -171,6 +223,9 @@ export default function IntakeExtractionPanel({
       fragments.push(
         <span
           key={`match-${match.start}-${match.end}`}
+          ref={(node) => {
+            highlightRefs.current[index] = node;
+          }}
           className={cx(
             'rounded-md px-1 py-0.5 transition-colors duration-300',
             visible && toneClass,
@@ -204,8 +259,29 @@ export default function IntakeExtractionPanel({
             <h3 className="mt-2 text-lg font-semibold text-white">Texto del siniestro</h3>
           </div>
 
-          <div className="max-h-[280px] overflow-y-auto rounded-xl border border-white/10 bg-surface-800 p-5">
-            <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">{renderedScenarioText}</p>
+          <div className="flex flex-wrap gap-3 text-xs text-slate-300">
+            {HIGHLIGHT_RULES.map((rule) => (
+              <div
+                key={rule.tone}
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1"
+              >
+                <span className={cx('h-2.5 w-2.5 rounded-full', rule.dotClassName)} />
+                <span>{rule.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div
+            ref={scrollRef}
+            className="scrollbar-clean max-h-[360px] overflow-y-auto rounded-xl border border-white/10 bg-surface-800 p-5"
+          >
+            {hasScenarioText ? (
+              <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">{renderedScenarioText}</p>
+            ) : (
+              <div className="flex min-h-[160px] items-center justify-center text-sm text-slate-500">
+                Esperando descripción del siniestro…
+              </div>
+            )}
           </div>
         </div>
 
@@ -220,7 +296,12 @@ export default function IntakeExtractionPanel({
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div
+            className={cx(
+              'space-y-3',
+              shouldScrollExtractedItems && 'scrollbar-clean max-h-[360px] overflow-y-auto pr-1',
+            )}
+          >
             {extractedItems.length > 0 ? extractedItems.map((item, index) => (
               <div
                 key={item.id}

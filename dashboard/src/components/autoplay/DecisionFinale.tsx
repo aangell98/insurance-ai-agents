@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { CheckCircle2, Users, XCircle } from 'lucide-react';
@@ -91,6 +91,7 @@ export default function DecisionFinale({ decision, amount, scenarioLabel, onDone
   const meta = DECISION_META[decision];
   const Icon = meta.icon;
   const amountLabel = formatAmount(amount);
+  const onDoneRef = useRef(onDone);
 
   const particles = useMemo<ConfettiParticle[]>(() => {
     if (decision !== 'approve') return [];
@@ -110,10 +111,15 @@ export default function DecisionFinale({ decision, amount, scenarioLabel, onDone
   }, [decision, amount, scenarioLabel]);
 
   useEffect(() => {
-    if (!onDone) return undefined;
-    const timerId = window.setTimeout(() => onDone(), 2400);
-    return () => window.clearTimeout(timerId);
+    onDoneRef.current = onDone;
   }, [onDone]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      onDoneRef.current?.();
+    }, 2400);
+    return () => window.clearTimeout(timerId);
+  }, []);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[200] overflow-hidden">

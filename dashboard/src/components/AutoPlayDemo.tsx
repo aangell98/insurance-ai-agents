@@ -69,6 +69,13 @@ const EMPTY_STAGE_STATUSES: Record<Stage, StageStatus> = {
   decision: 'pending',
 };
 
+const COMPLETED_STAGE_STATUSES: Record<Stage, StageStatus> = {
+  intake: 'completed',
+  risk_assessment: 'completed',
+  compliance: 'completed',
+  decision: 'completed',
+};
+
 const SCENARIO_META: Record<ScenarioKey, { label: string; shortLabel: string; badge: string; glow: string }> = {
   low_risk: {
     label: '🟢 Bajo Riesgo',
@@ -364,8 +371,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     }
   }, []);
 
-  const cleanupActiveCase = useCallback((abortRequest: boolean) => {
+  const cleanupActiveCase = useCallback((abortRequest: boolean, clearFinale = abortRequest) => {
     stopPing();
+    if (clearFinale) setDecisionFinale(null);
     if (abortRequest) controllerRef.current?.abort();
     controllerRef.current = null;
     wsRef.current?.close();
@@ -421,6 +429,21 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     return 'close' as const;
   }, []);
 
+  const waitForFinaleDelay = useCallback(async (delayMs: number, runId: number) => {
+    let remaining = delayMs;
+    while (remaining > 0) {
+      if (demoRunRef.current !== runId || closeRequestedRef.current) return 'close' as const;
+      if (skipRequestedRef.current) {
+        skipRequestedRef.current = false;
+        return 'skip' as const;
+      }
+      const slice = Math.min(remaining, 100);
+      await sleep(slice);
+      remaining -= slice;
+    }
+    return demoRunRef.current !== runId || closeRequestedRef.current ? 'close' as const : 'resume' as const;
+  }, []);
+
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
@@ -461,6 +484,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     setCurrentScenarioKey(null);
     setCurrentClaimId('');
     setStageStatuses({ ...EMPTY_STAGE_STATUSES });
+    setDecisionFinale(null);
     setFeedItems([]);
     setNotices([]);
     setElapsedSeconds(0);
@@ -513,6 +537,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         const claimId = `CLM-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
         const startedAt = Date.now();
 
+        cleanupActiveCase(false, true);
         skipRequestedRef.current = false;
         setCurrentIndex(index);
         setCurrentScenarioKey(demoScenario.key);
@@ -572,7 +597,13 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           const result = await evaluateClaimAbortable({ ...demoScenario.scenario, claim_id: claimId }, controller.signal);
           if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
-          setStageStatuses((previous) => ({ ...previous, decision: 'completed' }));
+          if (stageStartsRef.current.decision > 0) {
+            const decisionDuration = Date.now() - stageStartsRef.current.decision;
+            setStageDurations((previous) => (previous.decision > 0
+              ? previous
+              : { ...previous, decision: decisionDuration }));
+          }
+          setStageStatuses({ ...COMPLETED_STAGE_STATUSES });
           setCurrentResult(result);
           const item: DemoItem = {
             scenarioKey: demoScenario.key,
@@ -581,8 +612,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             durationMs: result.total_duration_ms || Date.now() - startedAt,
           };
           setFeedItems((previous) => [...previous, item]);
-          // Lanza el overlay celebratorio
-          setDecisionFinale({ item, key: Date.now() });
+
+          const finaleDelay = await waitForFinaleDelay(700, runId);
+          if (finaleDelay === 'close') return;
+          if (finaleDelay === 'skip') {
+            skippedCurrent = true;
+          } else {
+            setDecisionFinale({ item, key: Date.now() });
+          }
         } catch (error) {
           if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
@@ -634,7 +671,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       cleanupActiveCase(true);
       clearNoticeTimers();
     };
-  }, [cleanupActiveCase, clearNoticeTimers, expireSession, open, pushNotice, waitForNextStep]);
+  }, [cleanupActiveCase, clearNoticeTimers, expireSession, open, pushNotice, waitForFinaleDelay, waitForNextStep]);
 
   const totalScenarios = orderedScenarios.length || DEMO_ORDER.length;
   const currentScenario = currentScenarioKey ? orderedScenarios[currentIndex]?.scenario ?? null : null;
@@ -683,10 +720,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     return 'intake';
   }, [stageStatuses]);
 
-  const activeStage: Stage = useMemo(() => {
-    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
-    return order.find((s) => stageStatuses[s] === 'processing') ?? 'intake';
-  }, [stageStatuses]);
+  const activeStage: Stage = useMemo(() => (
+    activeAgent === 'risk' ? 'risk_assessment' : activeAgent
+  ), [activeAgent]);
 
   const agentStatus: AgentStatus = useMemo(() => {
     const stage: Stage = AGENT_NAMES.indexOf(activeAgent) >= 0

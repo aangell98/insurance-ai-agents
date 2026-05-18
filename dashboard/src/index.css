@@ -282,6 +282,27 @@ body {
   }
 }
 
+/* === scrollbar utility (consumido por paneles del autoplay) === */
+.scrollbar-clean {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+.scrollbar-clean::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-clean::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-clean::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  transition: background 0.18s ease;
+}
+.scrollbar-clean::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
 @keyframes pulseRow {
   0% {
     transform: translateY(0) scale(1);
