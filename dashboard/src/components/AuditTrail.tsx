@@ -20,6 +20,12 @@ const stageLabels: Record<string, string> = {
 };
 
 export default function AuditTrail({ result }: Props) {
+  const metadata = (result as ClaimResult & {
+    metadata?: { model?: string; pipeline_version?: string };
+  }).metadata;
+  const model = typeof metadata?.model === 'string' ? metadata.model : 'gpt-4o';
+  const pipelineVersion = typeof metadata?.pipeline_version === 'string' ? metadata.pipeline_version : '1.0.0';
+
   return (
     <div className="bg-surface-900 rounded-xl border border-gray-800 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -71,11 +77,11 @@ export default function AuditTrail({ result }: Props) {
         <div className="grid grid-cols-2 gap-2 text-[11px]">
           <div>
             <span className="text-gray-600">Modelo: </span>
-            <span className="text-gray-400">{(result as Record<string, unknown>).metadata ? ((result as Record<string, unknown>).metadata as Record<string, unknown>).model as string : 'gpt-4o'}</span>
+            <span className="text-gray-400">{model}</span>
           </div>
           <div>
             <span className="text-gray-600">Pipeline: </span>
-            <span className="text-gray-400">{(result as Record<string, unknown>).metadata ? ((result as Record<string, unknown>).metadata as Record<string, unknown>).pipeline_version as string : '1.0.0'}</span>
+            <span className="text-gray-400">{pipelineVersion}</span>
           </div>
           <div>
             <span className="text-gray-600">Duración total: </span>

@@ -33,6 +33,7 @@ export interface ClaimResult {
   risk_result: Record<string, unknown>;
   compliance_result: Record<string, unknown>;
   audit_trail: AuditEntry[];
+  metadata?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -44,14 +45,24 @@ export interface AuditEntry {
   result_summary: string;
 }
 
-export interface PipelineUpdate {
-  type: string;
+export interface ProgressUpdate {
+  type: 'progress';
   claim_id: string;
   stage: string;
-  status: string;
+  status: 'processing' | 'completed' | 'failed';
   data: Record<string, unknown>;
   timestamp: string;
 }
+
+export interface TokenUpdate {
+  type: 'token';
+  claim_id: string;
+  agent: string;
+  text: string;
+  timestamp: string;
+}
+
+export type PipelineUpdate = ProgressUpdate | TokenUpdate;
 
 export interface Scenario {
   policy_id: string;

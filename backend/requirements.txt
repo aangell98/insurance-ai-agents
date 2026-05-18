@@ -11,3 +11,5 @@ aiohttp>=3.9.0
 # Persistencia y autenticación
 azure-cosmos>=4.7.0
 PyJWT[crypto]>=2.9.0
+# Microsoft Agent Framework — orquestación multi-agente con streaming y OTel
+agent-framework>=1.4.0,<2

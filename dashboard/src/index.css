@@ -24,3 +24,135 @@ body {
 .animate-progress-pulse {
   animation: progressPulse 1.5s ease-in-out infinite;
 }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.45s ease-out forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0), 0 0 0 rgba(139, 92, 246, 0), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(56, 189, 248, 0.18), 0 0 56px rgba(45, 212, 191, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 45%, 100% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-pop-in {
+  animation: popIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lightSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(-130%);
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(190%);
+  }
+}
+
+.animate-light-slide {
+  animation: lightSlide 3s linear infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.8s ease-in-out infinite;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-count-up {
+  animation: countUp 0.6s ease-out both;
+}
+
+@keyframes slideAcross {
+  0% {
+    opacity: 0;
+    transform: translate(-10%, -50%);
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(470%, -50%);
+  }
+}
+
+.animate-slide-across {
+  animation: slideAcross 4.8s linear infinite;
+}
+
+.timeline-light {
+  left: 0;
+  width: 18%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0), rgba(167, 139, 250, 0.95), rgba(45, 212, 191, 0));
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.55);
+  animation: slideAcross 4.8s linear infinite;
+}

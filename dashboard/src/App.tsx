@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award, LogIn, LogOut } from 'lucide-react';
+import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award, LogIn, LogOut, Sparkles, PlayCircle } from 'lucide-react';
 import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
@@ -10,7 +10,9 @@ import StatsView from './components/StatsView';
 import PolicyView from './components/PolicyView';
 import CustomerView from './components/CustomerView';
 import SecurityView from './components/SecurityView';
+import HeroView from './components/HeroView';
 import { GovernanceView } from './components/GovernanceView';
+import AutoPlayDemo from './components/AutoPlayDemo';
 import Toast from './components/Toast';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
@@ -19,11 +21,35 @@ import { useAuth } from './auth/useAuth';
 
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
-type Tab = 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad' | 'gobernanza';
+type Tab = 'inicio' | 'cliente' | 'operario' | 'estadisticas' | 'clientes' | 'polizas' | 'seguridad' | 'gobernanza';
+
+const EMPTY_STAGE_STATUSES: Record<Stage, StageStatus> = {
+  intake: 'pending',
+  risk_assessment: 'pending',
+  compliance: 'pending',
+  decision: 'pending',
+};
+
+const EMPTY_STAGE_TOKENS: Record<Stage, string> = {
+  intake: '',
+  risk_assessment: '',
+  compliance: '',
+  decision: '',
+};
+
+function isStage(value: string): value is Stage {
+  return value in EMPTY_STAGE_STATUSES;
+}
+
+function mapStreamingAgentToStage(agent: string): Stage | null {
+  if (agent === 'risk') return 'risk_assessment';
+  return isStage(agent) ? agent : null;
+}
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType; role: 'customer' | 'operator' };
 
 const ALL_TABS: TabDef[] = [
+  { id: 'inicio',       label: 'Inicio',       icon: Sparkles,     role: 'operator' },
   { id: 'cliente',      label: 'Cliente',      icon: UserCircle,   role: 'customer' },
   { id: 'operario',     label: 'Operario',     icon: ClipboardList, role: 'operator' },
   { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3,    role: 'operator' },
@@ -42,22 +68,23 @@ export default function App() {
     [auth.viewMode]
   );
 
-  const [activeTab, setActiveTab] = useState<Tab>('cliente');
+  const defaultTab: Tab = auth.viewMode === 'operator' ? 'inicio' : 'cliente';
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+  const [autoplayOpen, setAutoplayOpen] = useState(false);
 
-  // Si el viewMode cambia y la tab activa no está disponible, vuelve a 'cliente'.
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
+
   useEffect(() => {
     if (!tabs.some(t => t.id === activeTab)) {
-      setActiveTab(tabs[0]?.id ?? 'cliente');
+      setActiveTab(defaultTab);
     }
-  }, [tabs, activeTab]);
+  }, [tabs, activeTab, defaultTab]);
 
-  const [stageStatuses, setStageStatuses] = useState<Record<Stage, StageStatus>>({
-    intake: 'pending',
-    risk_assessment: 'pending',
-    compliance: 'pending',
-    decision: 'pending',
-  });
-  const [stageData, setStageData] = useState<Record<string, unknown>>({});
+  const [stageStatuses, setStageStatuses] = useState<Record<Stage, StageStatus>>(EMPTY_STAGE_STATUSES);
+  const [stageTokens, setStageTokens] = useState<Record<Stage, string>>(EMPTY_STAGE_TOKENS);
+  const [stageData, setStageData] = useState<Partial<Record<Stage, Record<string, unknown>>>>({});
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [result, setResult] = useState<ClaimResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -129,7 +156,8 @@ export default function App() {
   const newIncidentCount = incidents.filter(i => !seenIds.has(incidentKey(i))).length;
 
   const resetPipeline = useCallback(() => {
-    setStageStatuses({ intake: 'pending', risk_assessment: 'pending', compliance: 'pending', decision: 'pending' });
+    setStageStatuses({ ...EMPTY_STAGE_STATUSES });
+    setStageTokens({ ...EMPTY_STAGE_TOKENS });
     setStageData({});
     setActivityEvents([]);
     setResult(null);
@@ -145,19 +173,41 @@ export default function App() {
 
     // Connect WebSocket FIRST for real-time stage updates
     const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
-      const stage = update.stage as Stage;
-      const status = update.status === 'processing' ? 'processing' : update.status === 'completed' ? 'completed' : 'failed';
-      setStageStatuses(prev => ({ ...prev, [stage]: status as StageStatus }));
-      if (update.data && Object.keys(update.data).length > 0) {
-        setStageData(prev => ({ ...prev, [stage]: update.data }));
+      if (update.type === 'progress') {
+        if (!isStage(update.stage)) return;
+
+        const stage = update.stage;
+        const status: StageStatus = update.status === 'completed'
+          ? 'completed'
+          : update.status === 'processing'
+            ? 'processing'
+            : 'failed';
+
+        if (status === 'processing') {
+          setStageTokens(prev => ({ ...prev, [stage]: '' }));
+        }
+
+        setStageStatuses(prev => ({ ...prev, [stage]: status }));
+        if (Object.keys(update.data).length > 0) {
+          setStageData(prev => ({ ...prev, [stage]: update.data }));
+        }
+        setActivityEvents(prev => [...prev, {
+          stage: update.stage,
+          status: update.status,
+          timestamp: update.timestamp || new Date().toISOString(),
+          data: update.data,
+        }]);
+        return;
       }
-      // Add to activity feed
-      setActivityEvents(prev => [...prev, {
-        stage: update.stage,
-        status: update.status,
-        timestamp: update.timestamp || new Date().toISOString(),
-        data: update.data,
-      }]);
+
+      if (update.type === 'token') {
+        const stage = mapStreamingAgentToStage(update.agent);
+        if (!stage) return;
+        setStageTokens(prev => ({
+          ...prev,
+          [stage]: `${prev[stage]}${update.text}`,
+        }));
+      }
     });
 
     try {
@@ -166,6 +216,14 @@ export default function App() {
       // Send claim_id so backend uses the same ID as the WebSocket
       const res = await evaluateClaim({ ...req, claim_id: claimId });
       setResult(res);
+      setStageData(prev => ({
+        ...prev,
+        decision: {
+          decision: res.decision,
+          confidence: res.confidence,
+          reasoning: res.reasoning,
+        },
+      }));
       // Ensure all stages show completed (WebSocket may have already set most)
       setStageStatuses(prev => ({ ...prev, decision: 'completed' }));
     } catch (e) {
@@ -197,6 +255,18 @@ export default function App() {
             <span>Pipeline Active</span>
             <span className="mx-2 text-gray-700">|</span>
             <span>v1.0.0</span>
+            {auth.isOperator && auth.authenticated && (
+              <>
+                <span className="mx-2 text-gray-700">|</span>
+                <button
+                  onClick={() => setAutoplayOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-violet-400/20 bg-gradient-to-r from-violet-600/80 to-teal-500/80 px-3 py-1.5 text-white shadow-lg shadow-violet-900/20 transition hover:from-violet-500 hover:to-teal-400"
+                >
+                  <PlayCircle size={14} />
+                  <span>Demo automática</span>
+                </button>
+              </>
+            )}
             {auth.enabled && (
               <>
                 <span className="mx-2 text-gray-700">|</span>
@@ -295,6 +365,8 @@ export default function App() {
         )}
 
         {(!auth.enabled || (auth.authenticated && (auth.isCustomer || auth.isOperator))) && <>
+        {activeTab === 'inicio' && <HeroView onCTAClick={() => setActiveTab('cliente')} />}
+
         {/* ── Cliente View ── */}
         {activeTab === 'cliente' && (
           <>
@@ -304,7 +376,7 @@ export default function App() {
 
             {(loading || result) && (
               <section className="animate-slide-in">
-                <Pipeline statuses={stageStatuses} />
+                <Pipeline statuses={stageStatuses} tokens={stageTokens} stageData={stageData} />
               </section>
             )}
 
@@ -369,6 +441,8 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      <AutoPlayDemo open={autoplayOpen} onClose={() => setAutoplayOpen(false)} />
     </div>
   );
 }

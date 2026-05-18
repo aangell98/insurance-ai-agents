@@ -74,6 +74,8 @@ python scripts/run_demo.py
 
 Este es el archivo que se modifica durante el **WOW moment** de la demo para demostrar cómo un cambio regulatorio se gestiona con el mismo control que software bancario crítico.
 
+Este proyecto usa Microsoft Agent Framework v1.4.0 para la orquestación multi-agente. La migración mantiene el orquestador legacy como fallback automático activado por la variable `USE_MAF_ORCHESTRATOR`.
+
 ## Technologies
 
 - **GitHub Enterprise** — Gobierno de agentes (CODEOWNERS, branch protection, PR reviews)

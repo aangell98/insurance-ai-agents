@@ -108,6 +108,8 @@ class ClaimResponse(BaseModel):
     risk_result: dict
     compliance_result: dict
     audit_trail: list
+    security_flagged: bool = False
+    metadata: dict = Field(default_factory=dict)
     timestamp: str
 
 
@@ -284,13 +286,23 @@ async def evaluate_claim(
         claim_input["image_b64"] = request.image_b64
 
     async def progress_callback(stage: str, status: str, data: dict):
+        timestamp = datetime.now(timezone.utc).isoformat()
+        if status == "token":
+            await manager.send_update(claim_id, {
+                "type": "token",
+                "claim_id": claim_id,
+                "agent": stage,
+                "text": data.get("text", ""),
+                "timestamp": timestamp,
+            })
+            return
         await manager.send_update(claim_id, {
             "type": "progress",
             "claim_id": claim_id,
             "stage": stage,
             "status": status,
             "data": data,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": timestamp,
         })
 
     result = await process_claim(claim_input, progress_callback=progress_callback)

@@ -26,6 +26,8 @@ load_dotenv(override=False)
 
 logger = logging.getLogger(__name__)
 
+USE_MAF_ORCHESTRATOR = os.environ.get("USE_MAF_ORCHESTRATOR", "false").lower() == "true"
+
 
 # ---------------------------------------------------------------------------
 # Deterministic prompt-injection guard (defense in depth)
@@ -194,6 +196,16 @@ def _determine_final_decision(
 
 
 async def process_claim(claim_input: dict, progress_callback=None) -> dict:
+    if USE_MAF_ORCHESTRATOR:
+        try:
+            from .maf_agent import process_claim_maf
+            return await process_claim_maf(claim_input, progress_callback)
+        except Exception:
+            logger.exception("MAF orchestrator failed, falling back to legacy")
+    return await _process_claim_legacy(claim_input, progress_callback)
+
+
+async def _process_claim_legacy(claim_input: dict, progress_callback=None) -> dict:
     """Process a claim through the full multi-agent pipeline.
     
     Args:
