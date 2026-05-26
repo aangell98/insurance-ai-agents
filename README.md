@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="images/SAN.png" alt="Santander" width="120" />
+<img src="images/microsoft.svg" alt="Microsoft" height="48" />&nbsp;&nbsp;<span style="font-size:32px;color:#888">×</span>&nbsp;&nbsp;<img src="images/SAN.png" alt="Santander" height="56" />
 
 # Insurance AI Agents
 ### Governed Multi-Agent Claims Processing — Demo Santander
@@ -35,76 +35,11 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 
 ## 🏗️ Arquitectura
 
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#EC0000','primaryTextColor':'#fff','primaryBorderColor':'#B00000','lineColor':'#1F1F1F','secondaryColor':'#0078D4','tertiaryColor':'#FFFFFF','fontFamily':'Inter, system-ui, sans-serif' }}}%%
-flowchart TB
-    subgraph CLIENT["🏦 Canal Santander · React Dashboard"]
-        direction LR
-        WEB["Vistas por rol<br/>Cliente · Operario · Riesgo · Compliance"]
-        DEMO["AutoPlay Demo<br/>Slides + streaming en vivo"]
-    end
+<div align="center">
 
-    subgraph API["⚙️ API Layer · FastAPI"]
-        direction LR
-        REST["REST<br/>/api/claims · /governance"]
-        WS["WebSocket<br/>Streaming de tokens"]
-        AUTH["Entra ID<br/>JWT v2.0"]
-    end
+<img src="images/architecture.svg" alt="Insurance AI Agents — Reference architecture" />
 
-    subgraph GW["🛡️ Azure API Management — AI Gateway"]
-        direction LR
-        POL["Content Safety<br/>Token Limits<br/>Audit Logs"]
-        MI["Managed Identity<br/>(sin secretos)"]
-    end
-
-    subgraph MAF["🤖 Microsoft Agent Framework v1.4"]
-        direction LR
-        ORCH["Orchestrator<br/>Plan + Stream + Fallback"]
-        INT["Intake Agent<br/>Extracción estructurada"]
-        RISK["Risk Agent<br/>Scoring + Fraude"]
-        COMP["Compliance Agent<br/>Reglas regulatorias"]
-    end
-
-    subgraph DATA["📦 Datos & Modelos"]
-        direction LR
-        AOAI["Azure OpenAI<br/>GPT-4o"]
-        COSMOS["Cosmos DB<br/>Audit Trail"]
-        BLOB["Blob Storage<br/>Evidencias"]
-    end
-
-    subgraph GOV["📜 GitHub Enterprise · Governance"]
-        direction LR
-        OWN["CODEOWNERS<br/>por dominio"]
-        EVAL["Eval Gate<br/>Golden Dataset"]
-        CICD["GitHub Actions<br/>federated OIDC"]
-    end
-
-    CLIENT -->|HTTPS + JWT| API
-    API -->|Subscription Key| GW
-    GW -->|MI Token| AOAI
-    API --> MAF
-    MAF -->|inference| GW
-    API -->|persist| COSMOS
-    API -->|store evidence| BLOB
-
-    GOV -.->|protege & audita| MAF
-    GOV -.->|protege & audita| GW
-    GOV -.->|protege & audita| API
-
-    classDef ui fill:#1F1F1F,stroke:#EC0000,color:#fff,stroke-width:2px
-    classDef api fill:#FFFFFF,stroke:#1F1F1F,color:#1F1F1F,stroke-width:2px
-    classDef azure fill:#0078D4,stroke:#005A9E,color:#fff,stroke-width:2px
-    classDef agent fill:#FFE5E5,stroke:#EC0000,color:#1F1F1F,stroke-width:2px
-    classDef data fill:#F3F3F3,stroke:#888,color:#1F1F1F,stroke-width:1px
-    classDef governance fill:#EC0000,stroke:#B00000,color:#fff,stroke-width:2px
-
-    class WEB,DEMO ui
-    class REST,WS,AUTH api
-    class POL,MI,GW azure
-    class ORCH,INT,RISK,COMP agent
-    class AOAI,COSMOS,BLOB data
-    class OWN,EVAL,CICD governance
-```
+</div>
 
 ### Flujo de un siniestro
 

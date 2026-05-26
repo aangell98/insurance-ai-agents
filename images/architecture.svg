@@ -1,0 +1,435 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960" font-family="'Segoe UI', Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="canvasBg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FBFBFD"/>
+      <stop offset="1" stop-color="#EEF2F7"/>
+    </linearGradient>
+    <linearGradient id="azureZone" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#E8F3FC"/>
+      <stop offset="1" stop-color="#D9ECFA"/>
+    </linearGradient>
+    <linearGradient id="govZone" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFF1F1"/>
+      <stop offset="1" stop-color="#FFE3E3"/>
+    </linearGradient>
+    <linearGradient id="agentCard" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FAF7FF"/>
+    </linearGradient>
+    <linearGradient id="dataCard" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4FAFE"/>
+    </linearGradient>
+    <linearGradient id="apimCard" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F0F8FE"/>
+    </linearGradient>
+    <linearGradient id="azureCloudIcon" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0078D4"/>
+      <stop offset="1" stop-color="#005A9E"/>
+    </linearGradient>
+    <linearGradient id="openaiIcon" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#10A37F"/>
+      <stop offset="1" stop-color="#0B7A5F"/>
+    </linearGradient>
+    <linearGradient id="cosmosIcon" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#3999D4"/>
+      <stop offset="1" stop-color="#1F6FB7"/>
+    </linearGradient>
+    <linearGradient id="agentIcon" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#7A52C5"/>
+      <stop offset="1" stop-color="#5C2D91"/>
+    </linearGradient>
+    <linearGradient id="santanderIcon" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#EC0000"/>
+      <stop offset="1" stop-color="#B30000"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0B2545" flood-opacity="0.10"/>
+    </filter>
+    <filter id="zoneShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#0B2545" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1F1F1F"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#EC0000"/>
+    </marker>
+  </defs>
+
+  <!-- ============ Canvas background ============ -->
+  <rect width="1440" height="960" fill="url(#canvasBg)"/>
+
+  <!-- ============ HEADER BAR (dark) ============ -->
+  <g>
+    <rect x="0" y="0" width="1440" height="118" fill="#1F1F1F"/>
+    <rect x="0" y="115" width="1440" height="3" fill="#EC0000"/>
+
+    <!-- Microsoft logo -->
+    <g transform="translate(50, 38)">
+      <rect x="0" y="0" width="22" height="22" fill="#F25022"/>
+      <rect x="26" y="0" width="22" height="22" fill="#7FBA00"/>
+      <rect x="0" y="26" width="22" height="22" fill="#00A4EF"/>
+      <rect x="26" y="26" width="22" height="22" fill="#FFB900"/>
+      <text x="60" y="34" font-size="26" font-weight="600" fill="#FFFFFF">Microsoft</text>
+    </g>
+
+    <!-- separator dot -->
+    <circle cx="285" cy="60" r="3" fill="#666"/>
+
+    <!-- Santander logo -->
+    <g transform="translate(310, 36)">
+      <g>
+        <circle cx="26" cy="26" r="24" fill="url(#santanderIcon)"/>
+        <!-- stylised Santander flame mark -->
+        <path d="M14 30 Q18 16 26 18 Q34 20 38 30 Q34 22 26 23 Q18 24 14 30 Z" fill="#FFFFFF" opacity="0.95"/>
+        <path d="M16 32 Q20 22 26 24 Q32 26 36 32 Q32 27 26 28 Q20 28 16 32 Z" fill="#FFFFFF" opacity="0.55"/>
+      </g>
+      <text x="62" y="34" font-size="26" font-weight="600" fill="#FFFFFF">Santander</text>
+    </g>
+
+    <!-- Title on right -->
+    <text x="1390" y="48" text-anchor="end" font-size="22" font-weight="700" fill="#FFFFFF">Insurance AI Agents</text>
+    <text x="1390" y="75" text-anchor="end" font-size="13" fill="#BBB">Governed multi-agent claims processing · Reference architecture</text>
+    <text x="1390" y="100" text-anchor="end" font-size="11" fill="#888" font-style="italic">Powered by Microsoft Agent Framework + Azure AI Foundry</text>
+  </g>
+
+  <!-- ============ User edge (top) ============ -->
+  <g transform="translate(70, 155)">
+    <!-- User icon -->
+    <g>
+      <circle cx="32" cy="22" r="14" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="2"/>
+      <path d="M8 60 Q8 38 32 38 Q56 38 56 60 L56 68 L8 68 Z" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="2"/>
+    </g>
+    <text x="32" y="92" text-anchor="middle" font-size="13" font-weight="600" fill="#1F1F1F">Cliente / Operario</text>
+    <text x="32" y="108" text-anchor="middle" font-size="11" fill="#666">Banca digital</text>
+  </g>
+
+  <!-- arrow user → dashboard -->
+  <line x1="145" y1="195" x2="240" y2="195" stroke="#1F1F1F" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="192" y="187" text-anchor="middle" font-size="10" fill="#444">HTTPS + JWT</text>
+
+  <!-- Dashboard card -->
+  <g transform="translate(250, 152)" filter="url(#cardShadow)">
+    <rect width="220" height="92" rx="10" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="1.5"/>
+    <!-- React-ish icon (atom) -->
+    <g transform="translate(20, 26)" fill="none" stroke="#61DAFB" stroke-width="2.2">
+      <ellipse cx="20" cy="20" rx="20" ry="7.5"/>
+      <ellipse cx="20" cy="20" rx="20" ry="7.5" transform="rotate(60 20 20)"/>
+      <ellipse cx="20" cy="20" rx="20" ry="7.5" transform="rotate(120 20 20)"/>
+      <circle cx="20" cy="20" r="3" fill="#61DAFB" stroke="none"/>
+    </g>
+    <text x="76" y="38" font-size="15" font-weight="700" fill="#1F1F1F">Dashboard React</text>
+    <text x="76" y="56" font-size="11" fill="#555">Vistas por rol · AutoPlay demo</text>
+    <text x="76" y="72" font-size="10" fill="#888" font-style="italic">TypeScript · Tailwind · Vite</text>
+  </g>
+
+  <!-- arrow dashboard → entra -->
+  <line x1="358" y1="244" x2="358" y2="318" stroke="#0078D4" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowBlue)"/>
+  <text x="368" y="285" font-size="10" fill="#0078D4">Bearer token</text>
+
+  <!-- ============ AZURE ZONE ============ -->
+  <g filter="url(#zoneShadow)">
+    <rect x="60" y="290" width="1310" height="490" rx="22" fill="url(#azureZone)" stroke="#0078D4" stroke-width="1.6" stroke-dasharray="8 4"/>
+  </g>
+
+  <!-- Azure zone label -->
+  <g transform="translate(90, 308)">
+    <!-- Mini Azure cloud icon -->
+    <path d="M0 18 Q0 8 10 8 Q12 0 22 0 Q32 0 34 8 Q44 8 44 18 Q44 28 34 28 L10 28 Q0 28 0 18 Z" fill="url(#azureCloudIcon)"/>
+    <text x="52" y="22" font-size="16" font-weight="700" fill="#0078D4">Azure</text>
+    <text x="100" y="22" font-size="12" fill="#666">· AI Foundry + Agent Framework + APIM Gateway</text>
+  </g>
+
+  <!-- ============ Entra ID ============ -->
+  <g transform="translate(90, 340)" filter="url(#cardShadow)">
+    <rect width="200" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+    <!-- Shield icon -->
+    <g transform="translate(18, 22)">
+      <path d="M22 4 L40 12 V28 Q40 42 22 50 Q4 42 4 28 V12 Z" fill="#50E6FF" stroke="#0078D4" stroke-width="2"/>
+      <path d="M14 26 L20 32 L32 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Entra ID</text>
+    <text x="78" y="55" font-size="10" fill="#555">JWT v2.0 · OIDC</text>
+    <text x="78" y="71" font-size="10" fill="#888">Managed identity</text>
+  </g>
+
+  <!-- ============ FastAPI Backend ============ -->
+  <g transform="translate(320, 340)" filter="url(#cardShadow)">
+    <rect width="240" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+    <!-- Container icon -->
+    <g transform="translate(18, 18)">
+      <rect x="2" y="6" width="44" height="42" rx="4" fill="#0078D4"/>
+      <rect x="6" y="10" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.9"/>
+      <rect x="26" y="10" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.75"/>
+      <rect x="6" y="28" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.6"/>
+      <rect x="26" y="28" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.45"/>
+    </g>
+    <text x="78" y="36" font-size="14" font-weight="700" fill="#1F1F1F">Container App · FastAPI</text>
+    <text x="78" y="54" font-size="10" fill="#555">REST /api/claims · WebSocket streaming</text>
+    <text x="78" y="70" font-size="10" fill="#888">Auth · Audit · Orchestration glue</text>
+  </g>
+
+  <!-- ============ Key Vault ============ -->
+  <g transform="translate(590, 340)" filter="url(#cardShadow)">
+    <rect width="170" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+    <!-- Key icon -->
+    <g transform="translate(18, 22)">
+      <circle cx="14" cy="24" r="10" fill="none" stroke="#FFB900" stroke-width="3"/>
+      <line x1="22" y1="24" x2="44" y2="24" stroke="#FFB900" stroke-width="3"/>
+      <line x1="40" y1="24" x2="40" y2="32" stroke="#FFB900" stroke-width="3"/>
+      <line x1="34" y1="24" x2="34" y2="30" stroke="#FFB900" stroke-width="3"/>
+    </g>
+    <text x="78" y="40" font-size="14" font-weight="700" fill="#1F1F1F">Key Vault</text>
+    <text x="78" y="58" font-size="10" fill="#555">APIM subscription</text>
+    <text x="78" y="72" font-size="10" fill="#888">keys · secrets</text>
+  </g>
+
+  <!-- ============ APIM AI Gateway ============ -->
+  <g transform="translate(820, 340)" filter="url(#cardShadow)">
+    <rect width="290" height="92" rx="10" fill="url(#apimCard)" stroke="#EC0000" stroke-width="2"/>
+    <!-- Gateway icon (hexagon with arrows) -->
+    <g transform="translate(15, 18)">
+      <polygon points="28,2 50,15 50,41 28,54 6,41 6,15" fill="#EC0000" opacity="0.95"/>
+      <path d="M14 28 L42 28" stroke="#FFFFFF" stroke-width="3"/>
+      <path d="M36 22 L42 28 L36 34" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="78" y="32" font-size="15" font-weight="800" fill="#1F1F1F">APIM · AI Gateway</text>
+    <text x="78" y="50" font-size="10.5" fill="#444">Content Safety · Token Limits · Audit logs</text>
+    <text x="78" y="66" font-size="10.5" fill="#444">Managed Identity · 6 políticas activas</text>
+    <text x="78" y="82" font-size="9" fill="#888" font-style="italic">Defined in infra/apim-policy.xml</text>
+  </g>
+
+  <!-- ============ App Insights ============ -->
+  <g transform="translate(1140, 340)" filter="url(#cardShadow)">
+    <rect width="200" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+    <!-- Chart icon -->
+    <g transform="translate(18, 22)">
+      <rect x="4" y="30" width="8" height="18" fill="#7A52C5"/>
+      <rect x="16" y="20" width="8" height="28" fill="#9B6CD9"/>
+      <rect x="28" y="10" width="8" height="38" fill="#BC8FED"/>
+      <rect x="40" y="22" width="8" height="26" fill="#7A52C5"/>
+      <path d="M4 18 L18 12 L32 6 L46 16" fill="none" stroke="#EC0000" stroke-width="2"/>
+    </g>
+    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">App Insights</text>
+    <text x="78" y="55" font-size="10" fill="#555">Token metrics · traces</text>
+    <text x="78" y="71" font-size="10" fill="#888">Per-agent dimensions</text>
+  </g>
+
+  <!-- arrows backend ↔ entra and backend → keyvault -->
+  <line x1="290" y1="386" x2="320" y2="386" stroke="#0078D4" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+  <line x1="560" y1="386" x2="590" y2="386" stroke="#0078D4" stroke-width="1.5"/>
+  <text x="575" y="380" text-anchor="middle" font-size="9" fill="#0078D4">key</text>
+
+  <!-- backend → APIM -->
+  <line x1="560" y1="380" x2="820" y2="380" stroke="#0078D4" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="690" y="372" text-anchor="middle" font-size="10" fill="#0078D4">Subscription Key</text>
+
+  <!-- APIM → App Insights -->
+  <line x1="1110" y1="386" x2="1140" y2="386" stroke="#0078D4" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowBlue)"/>
+
+  <!-- ============ MAF Agents ============ -->
+  <!-- arrow APIM → Agents container -->
+  <line x1="965" y1="432" x2="965" y2="470" stroke="#EC0000" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+  <!-- MAF zone -->
+  <g>
+    <rect x="320" y="475" width="790" height="170" rx="14" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <g transform="translate(340, 492)">
+      <!-- MS Agent hexagon -->
+      <polygon points="14,2 26,9 26,21 14,28 2,21 2,9" fill="url(#agentIcon)"/>
+      <text x="36" y="20" font-size="13" font-weight="700" fill="#5C2D91">Microsoft Agent Framework v1.4</text>
+      <text x="246" y="20" font-size="11" fill="#888">orchestrator · plan · stream · fallback</text>
+    </g>
+  </g>
+
+  <!-- Intake Agent -->
+  <g transform="translate(345, 522)" filter="url(#cardShadow)">
+    <rect width="240" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="1.5"/>
+    <g transform="translate(18, 22)">
+      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
+      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">IA</text>
+    </g>
+    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Intake Agent</text>
+    <text x="78" y="56" font-size="10.5" fill="#555">Extracción estructurada</text>
+    <text x="78" y="72" font-size="10.5" fill="#555">del parte de siniestro</text>
+    <text x="78" y="92" font-size="9" fill="#888" font-style="italic">agents/claims-intake/</text>
+  </g>
+
+  <!-- Risk Agent -->
+  <g transform="translate(605, 522)" filter="url(#cardShadow)">
+    <rect width="240" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="1.5"/>
+    <g transform="translate(18, 22)">
+      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
+      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">RA</text>
+    </g>
+    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Risk Agent</text>
+    <text x="78" y="56" font-size="10.5" fill="#555">Scoring + detección</text>
+    <text x="78" y="72" font-size="10.5" fill="#555">de fraude</text>
+    <text x="78" y="92" font-size="9" fill="#888" font-style="italic">agents/risk-assessment/</text>
+  </g>
+
+  <!-- Compliance Agent -->
+  <g transform="translate(865, 522)" filter="url(#cardShadow)">
+    <rect width="225" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="2"/>
+    <g transform="translate(18, 22)">
+      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
+      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">CA</text>
+    </g>
+    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Compliance Agent</text>
+    <text x="78" y="56" font-size="10.5" fill="#555">Reglas regulatorias</text>
+    <text x="78" y="72" font-size="10.5" fill="#555">y normativa</text>
+    <text x="78" y="92" font-size="9" fill="#B30000" font-weight="700">WOW moment</text>
+  </g>
+
+  <!-- arrows from agents → OpenAI (each goes back through APIM) -->
+  <line x1="465" y1="627" x2="465" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="725" y1="627" x2="725" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="977" y1="627" x2="977" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="465" y1="680" x2="977" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="720" y1="680" x2="720" y2="708" stroke="#7A52C5" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="745" y="675" font-size="10" fill="#7A52C5" font-style="italic">all calls via APIM</text>
+
+  <!-- ============ Azure OpenAI ============ -->
+  <g transform="translate(580, 710)" filter="url(#cardShadow)">
+    <rect width="290" height="58" rx="10" fill="#FFFFFF" stroke="#10A37F" stroke-width="2"/>
+    <g transform="translate(15, 12)">
+      <!-- OpenAI swirl -->
+      <g transform="translate(0, 0)">
+        <circle cx="17" cy="17" r="17" fill="url(#openaiIcon)"/>
+        <path d="M9 17 Q9 9 17 9 Q25 9 25 17 Q25 25 17 25 Q12 25 12 21 M21 19 Q21 13 17 13 Q13 13 13 17" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+    </g>
+    <text x="60" y="26" font-size="14" font-weight="700" fill="#1F1F1F">Azure OpenAI</text>
+    <text x="60" y="44" font-size="11" fill="#555">GPT-4o · vía APIM Gateway · counter-key por agente</text>
+  </g>
+
+  <!-- ============ Data services on the right within Azure zone ============ -->
+  <g transform="translate(1140, 475)">
+    <text x="100" y="6" text-anchor="middle" font-size="11" font-weight="700" fill="#0078D4" letter-spacing="1.5">DATOS</text>
+  </g>
+
+  <!-- Cosmos DB -->
+  <g transform="translate(1140, 488)" filter="url(#cardShadow)">
+    <rect width="200" height="80" rx="10" fill="url(#dataCard)" stroke="#3999D4" stroke-width="1.5"/>
+    <g transform="translate(18, 22)">
+      <!-- Globe with rings -->
+      <circle cx="18" cy="20" r="16" fill="url(#cosmosIcon)"/>
+      <ellipse cx="18" cy="20" rx="16" ry="6" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+      <ellipse cx="18" cy="20" rx="6" ry="16" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+    </g>
+    <text x="76" y="36" font-size="13" font-weight="700" fill="#1F1F1F">Cosmos DB</text>
+    <text x="76" y="54" font-size="10" fill="#555">SQL API</text>
+    <text x="76" y="68" font-size="10" fill="#888">Audit trail · claims</text>
+  </g>
+
+  <!-- Blob Storage -->
+  <g transform="translate(1140, 580)" filter="url(#cardShadow)">
+    <rect width="200" height="80" rx="10" fill="url(#dataCard)" stroke="#3999D4" stroke-width="1.5"/>
+    <g transform="translate(18, 22)">
+      <!-- Stack icon -->
+      <ellipse cx="18" cy="9" rx="14" ry="4" fill="#0078D4"/>
+      <rect x="4" y="9" width="28" height="22" fill="#0078D4"/>
+      <ellipse cx="18" cy="31" rx="14" ry="4" fill="#005A9E"/>
+      <ellipse cx="18" cy="18" rx="14" ry="4" fill="#3999D4" opacity="0.6"/>
+    </g>
+    <text x="76" y="36" font-size="13" font-weight="700" fill="#1F1F1F">Blob Storage</text>
+    <text x="76" y="54" font-size="10" fill="#555">Evidencias</text>
+    <text x="76" y="68" font-size="10" fill="#888">fotos · documentos</text>
+  </g>
+
+  <!-- Data services connected to backend -->
+  <path d="M560 410 Q900 410 1140 528" fill="none" stroke="#3999D4" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrowBlue)" opacity="0.7"/>
+  <path d="M560 410 Q900 410 1140 620" fill="none" stroke="#3999D4" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrowBlue)" opacity="0.7"/>
+
+  <!-- ============ GITHUB GOVERNANCE ZONE ============ -->
+  <g filter="url(#zoneShadow)">
+    <rect x="60" y="810" width="1310" height="130" rx="22" fill="url(#govZone)" stroke="#EC0000" stroke-width="1.6" stroke-dasharray="8 4"/>
+  </g>
+
+  <!-- Zone label -->
+  <g transform="translate(85, 830)">
+    <!-- GitHub octocat (simplified) -->
+    <g>
+      <circle cx="16" cy="16" r="14" fill="#1F1F1F"/>
+      <path d="M16 7 Q9 7 9 14 Q9 18 12 20 L12 23 Q10 22 9 23 L9 25 Q10 24 12 25 L12 27 L20 27 L20 25 Q22 24 23 25 L23 23 Q22 22 20 23 L20 20 Q23 18 23 14 Q23 7 16 7 Z" fill="#FFFFFF"/>
+      <circle cx="13" cy="14" r="1.5" fill="#1F1F1F"/>
+      <circle cx="19" cy="14" r="1.5" fill="#1F1F1F"/>
+    </g>
+    <text x="42" y="22" font-size="16" font-weight="700" fill="#EC0000">GitHub Enterprise</text>
+    <text x="232" y="22" font-size="12" fill="#666">· Gobernanza, calidad y auditoría</text>
+  </g>
+
+  <!-- CODEOWNERS card -->
+  <g transform="translate(90, 855)" filter="url(#cardShadow)">
+    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
+    <g transform="translate(18, 18)">
+      <!-- People icon -->
+      <circle cx="11" cy="10" r="6" fill="#EC0000"/>
+      <path d="M0 30 Q0 18 11 18 Q22 18 22 30" fill="#EC0000"/>
+      <circle cx="26" cy="13" r="5" fill="#B30000"/>
+      <path d="M16 32 Q16 22 26 22 Q36 22 36 32" fill="#B30000" opacity="0.85"/>
+    </g>
+    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">CODEOWNERS</text>
+    <text x="68" y="50" font-size="10.5" fill="#555">Review obligatoria por equipo dueño del agente</text>
+    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">.github/CODEOWNERS</text>
+  </g>
+
+  <!-- Eval Gate card -->
+  <g transform="translate(430, 855)" filter="url(#cardShadow)">
+    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
+    <g transform="translate(18, 18)">
+      <!-- Shield with check + bolt -->
+      <path d="M22 4 L40 12 V28 Q40 42 22 50 Q4 42 4 28 V12 Z" fill="#EC0000"/>
+      <path d="M22 14 L16 26 L22 26 L20 36 L28 22 L22 22 Z" fill="#FFFFFF"/>
+    </g>
+    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">Eval Gate</text>
+    <text x="68" y="50" font-size="10.5" fill="#555">Dataset dorado contra GPT-4o · bloquea merge</text>
+    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">evals/run_evals.py · 4/4 PASS</text>
+  </g>
+
+  <!-- GitHub Actions card -->
+  <g transform="translate(770, 855)" filter="url(#cardShadow)">
+    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
+    <g transform="translate(18, 18)">
+      <!-- Gear icon -->
+      <g transform="translate(8, 8)">
+        <circle cx="14" cy="14" r="8" fill="none" stroke="#EC0000" stroke-width="3"/>
+        <circle cx="14" cy="14" r="3" fill="#EC0000"/>
+        <g stroke="#EC0000" stroke-width="3" stroke-linecap="round">
+          <line x1="14" y1="2" x2="14" y2="6"/>
+          <line x1="14" y1="22" x2="14" y2="26"/>
+          <line x1="2" y1="14" x2="6" y2="14"/>
+          <line x1="22" y1="14" x2="26" y2="14"/>
+          <line x1="5" y1="5" x2="8" y2="8"/>
+          <line x1="20" y1="20" x2="23" y2="23"/>
+          <line x1="5" y1="23" x2="8" y2="20"/>
+          <line x1="20" y1="8" x2="23" y2="5"/>
+        </g>
+      </g>
+    </g>
+    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">GitHub Actions</text>
+    <text x="68" y="50" font-size="10.5" fill="#555">Federated OIDC · sin secretos en CI</text>
+    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">eval-on-pr.yml + deploy-agent.yml</text>
+  </g>
+
+  <!-- Compliance overview card (right) -->
+  <g transform="translate(1110, 855)" filter="url(#cardShadow)">
+    <rect width="230" height="78" rx="10" fill="#1F1F1F" stroke="#EC0000" stroke-width="1.5"/>
+    <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="700" fill="#EC0000" letter-spacing="2">REGULATORY</text>
+    <text x="115" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">Banco-grade</text>
+    <text x="115" y="60" text-anchor="middle" font-size="10" fill="#BBB">Mismo control que software</text>
+    <text x="115" y="72" text-anchor="middle" font-size="10" fill="#BBB">bancario crítico</text>
+  </g>
+
+  <!-- Governance arrows pointing up (dotted, "protege & audita") -->
+  <path d="M250 855 Q250 760 320 645" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
+  <path d="M590 855 Q590 745 720 645" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
+  <path d="M930 855 Q930 700 965 432" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
+  <text x="940" y="760" font-size="10" fill="#B30000" font-style="italic" opacity="0.75">protege &amp; audita</text>
+
+</svg>
