@@ -30,28 +30,28 @@ function getStatusStyles(status: RuleStatus) {
   switch (status) {
     case 'checking':
       return {
-        icon: <Loader2 className="h-5 w-5 animate-spin text-primary-400" />,
-        row: 'border-primary-500/30 bg-primary-500/10',
+        icon: <Loader2 className="h-5 w-5 animate-spin text-primary-600" />,
+        row: 'border-primary-200 bg-primary-50',
       };
     case 'passed':
       return {
-        icon: <CheckCircle2 className="h-5 w-5 text-emerald-300" />,
-        row: 'border-emerald-400/20 bg-emerald-500/10',
+        icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
+        row: 'border-emerald-200 bg-emerald-50',
       };
     case 'warning':
       return {
-        icon: <AlertTriangle className="h-5 w-5 text-amber-300" />,
-        row: 'border-amber-400/20 bg-amber-500/10',
+        icon: <AlertTriangle className="h-5 w-5 text-amber-600" />,
+        row: 'border-amber-200 bg-amber-50',
       };
     case 'failed':
       return {
-        icon: <XCircle className="h-5 w-5 text-rose-300" />,
-        row: 'border-rose-400/20 bg-rose-500/10',
+        icon: <XCircle className="h-5 w-5 text-red-600" />,
+        row: 'border-red-200 bg-red-50',
       };
     default:
       return {
-        icon: <Circle className="h-5 w-5 text-slate-500" />,
-        row: 'border-white/10 bg-surface-800',
+        icon: <Circle className="h-5 w-5 text-gray-400" />,
+        row: 'border-gray-200 bg-gray-50',
       };
   }
 }
@@ -131,21 +131,21 @@ export default function ComplianceChecklistPanel({
   }, []);
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-surface-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
+    <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl shadow-gray-200/60">
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 shadow-inner shadow-white/5">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 text-gray-700">
           <Scale className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Compliance agent</p>
-          <h3 className="text-lg font-semibold text-white">Validación de cumplimiento</h3>
-          {phaseLabel ? <p className="mt-1 text-xs text-slate-400">{phaseLabel}</p> : null}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gray-500">Compliance agent</p>
+          <h3 className="text-lg font-semibold text-gray-900">Validación de cumplimiento</h3>
+          {phaseLabel ? <p className="mt-1 text-xs text-gray-500">{phaseLabel}</p> : null}
         </div>
       </div>
 
       <div className="space-y-3">
         {allRulesPending ? (
-          <div className="rounded-xl border border-primary-500/15 bg-primary-500/5 px-4 py-3 text-xs font-medium text-slate-300 transition-opacity duration-300">
+          <div className="rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-xs font-medium text-gray-700 transition-opacity duration-300">
             {COMPLIANCE_WARMING_MESSAGES[warmingMessageIndex]}
           </div>
         ) : null}
@@ -161,18 +161,18 @@ export default function ComplianceChecklistPanel({
               className={cx(
                 'flex items-center gap-4 rounded-xl border p-4 transition-colors duration-300',
                 statusStyles.row,
-                visualStatus === 'pending' && 'text-slate-400',
-                visualStatus === 'checking' && active && 'shadow-[0_0_24px_rgba(236,0,0,0.12)]',
+                visualStatus === 'pending' && 'text-gray-500',
+                visualStatus === 'checking' && active && 'shadow-md shadow-primary-100/60',
               )}
               style={shouldPulse ? { animation: 'pulseRow 0.6s ease-out both' } : undefined}
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
                 {statusStyles.icon}
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-base font-medium text-white">{rule.label}</p>
-                {rule.detail ? <p className="mt-1 text-xs text-slate-400">{rule.detail}</p> : null}
+                <p className="text-base font-medium text-gray-900">{rule.label}</p>
+                {rule.detail ? <p className="mt-1 text-xs text-gray-500">{rule.detail}</p> : null}
               </div>
             </div>
           );

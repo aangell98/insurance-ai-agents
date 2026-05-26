@@ -216,6 +216,24 @@ body {
   animation-fill-mode: forwards;
 }
 
+@keyframes toastCountdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.animate-toast-countdown {
+  animation: toastCountdown 5.2s linear forwards;
+}
+
+@keyframes fadeInSoft {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeInSoft 0.45s ease-out both;
+}
+
 @keyframes ringPulse {
   0% {
     opacity: 0;
@@ -335,6 +353,27 @@ body {
   }
 }
 
+/* Pendular suave para la aguja en estado de carga */
+@keyframes gaugePendulum {
+  0%   { transform: rotate(-130deg); }
+  50%  { transform: rotate(-50deg); }
+  100% { transform: rotate(-130deg); }
+}
+
+/* Cometa que recorre el arco del gauge */
+@keyframes gaugeCometSweep {
+  0%   { stroke-dashoffset: 0; opacity: 0.0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { stroke-dashoffset: -302; opacity: 0.0; }
+}
+
+/* Pulso radial para el pivot/bulbo */
+@keyframes loadingPulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50%      { transform: scale(1.25); opacity: 0.95; }
+}
+
 @keyframes thermoBreathe {
   0% {
     transform: scaleY(0.2);
@@ -345,6 +384,31 @@ body {
   100% {
     transform: scaleY(0.2);
   }
+}
+
+/* Mercurio que sube y baja con curva suave en estado de carga */
+@keyframes thermoFlow {
+  0%   { transform: scaleY(0.08); }
+  35%  { transform: scaleY(0.85); }
+  65%  { transform: scaleY(0.45); }
+  100% { transform: scaleY(0.08); }
+}
+
+/* Línea horizontal escáner que viaja arriba/abajo por el tubo */
+@keyframes thermoScan {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  50%  { transform: translateY(-160px); opacity: 0.9; }
+  90%  { opacity: 0.9; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+/* Burbujas que suben por el tubo del termómetro durante carga */
+@keyframes bubbleRise {
+  0%   { transform: translateY(0); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(-170px); opacity: 0; }
 }
 
 @keyframes shimmer {

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Bell,
   Loader2,
   Pause,
   Play,
@@ -19,11 +20,12 @@ import RiskGaugePanel from './autoplay/RiskGaugePanel';
 import type { FraudProbability } from './autoplay/RiskGaugePanel';
 import ComplianceChecklistPanel from './autoplay/ComplianceChecklistPanel';
 import type { ComplianceRule, RuleStatus } from './autoplay/ComplianceChecklistPanel';
+import SlideNavigator from './autoplay/SlideNavigator';
+import type { SlideDescriptor, SlideStatus } from './autoplay/SlideNavigator';
+import DecisionSlidePanel from './autoplay/DecisionSlidePanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const DEMO_ORDER = ['low_risk', 'high_amount', 'human_review', 'fraudulent', 'prompt_injection'] as const;
-
-const AGENT_NAMES: AgentName[] = ['intake', 'risk', 'compliance', 'decision'];
 
 const STAGE_TO_AGENT: Record<Stage, AgentName> = {
   intake: 'intake',
@@ -60,7 +62,119 @@ interface Notice {
   id: string;
   text: string;
   kind: NoticeKind;
+  actionLabel?: string;
+  onAction?: () => void;
 }
+
+// Slide state =================================================================
+// Cada agente del pipeline se vive como una "slide". Cuando un agente termina,
+// se congela su estado en `snapshots[stage]` y el usuario puede navegar entre
+// slides anteriores mientras los siguientes continúan en directo.
+
+interface AgentSnapshot {
+  status: 'completed' | 'failed';
+  durationMs: number;
+  tokens: string;
+  finalized: boolean;
+  intake?: { extractedFields?: ExtractedFieldsView };
+  risk?: { score: number | null; fraudProbability: FraudProbability | null };
+  compliance?: { rules: ComplianceRule[] };
+  decision?: {
+    decision: ClaimResult['decision'];
+    amount: number;
+    reasoning?: string;
+    riskScore: number | null;
+  };
+}
+
+interface SlideState {
+  viewingSlide: Stage;
+  userPinnedSlide: boolean;
+  snapshots: Partial<Record<Stage, AgentSnapshot>>;
+  unseenCompletedSlides: Record<Stage, boolean>;
+}
+
+type SlideAction =
+  | { type: 'CASE_STARTED' }
+  | { type: 'SNAPSHOT_PROVISIONAL'; stage: Stage; snapshot: AgentSnapshot }
+  | { type: 'SNAPSHOT_FINAL'; reconciled: Partial<Record<Stage, AgentSnapshot>> }
+  | { type: 'USER_SELECTED_SLIDE'; slide: Stage }
+  | { type: 'RETURN_TO_LIVE'; liveSlide: Stage }
+  | { type: 'AUTO_FOLLOW_LIVE'; liveSlide: Stage };
+
+const INITIAL_SLIDE_STATE: SlideState = {
+  viewingSlide: 'intake',
+  userPinnedSlide: false,
+  snapshots: {},
+  unseenCompletedSlides: {
+    intake: false,
+    risk_assessment: false,
+    compliance: false,
+    decision: false,
+  },
+};
+
+function slideReducer(state: SlideState, action: SlideAction): SlideState {
+  switch (action.type) {
+    case 'CASE_STARTED':
+      return { ...INITIAL_SLIDE_STATE };
+    case 'SNAPSHOT_PROVISIONAL': {
+      const existing = state.snapshots[action.stage];
+      if (existing?.finalized) return state;
+      const snapshots = { ...state.snapshots, [action.stage]: action.snapshot };
+      const isViewing = state.viewingSlide === action.stage;
+      const unseen = isViewing
+        ? state.unseenCompletedSlides
+        : { ...state.unseenCompletedSlides, [action.stage]: true };
+      return { ...state, snapshots, unseenCompletedSlides: unseen };
+    }
+    case 'SNAPSHOT_FINAL': {
+      const snapshots = { ...state.snapshots };
+      (Object.keys(action.reconciled) as Stage[]).forEach((stage) => {
+        const final = action.reconciled[stage];
+        if (final) snapshots[stage] = final;
+      });
+      return { ...state, snapshots };
+    }
+    case 'USER_SELECTED_SLIDE': {
+      const unseen = { ...state.unseenCompletedSlides, [action.slide]: false };
+      return {
+        ...state,
+        viewingSlide: action.slide,
+        userPinnedSlide: true,
+        unseenCompletedSlides: unseen,
+      };
+    }
+    case 'RETURN_TO_LIVE': {
+      const unseen = { ...state.unseenCompletedSlides, [action.liveSlide]: false };
+      return {
+        ...state,
+        viewingSlide: action.liveSlide,
+        userPinnedSlide: false,
+        unseenCompletedSlides: unseen,
+      };
+    }
+    case 'AUTO_FOLLOW_LIVE': {
+      if (state.userPinnedSlide) return state;
+      if (state.viewingSlide === action.liveSlide) return state;
+      const unseen = { ...state.unseenCompletedSlides, [action.liveSlide]: false };
+      return {
+        ...state,
+        viewingSlide: action.liveSlide,
+        unseenCompletedSlides: unseen,
+      };
+    }
+    default:
+      return state;
+  }
+}
+
+const STAGE_DISPLAY_NAMES: Record<Stage, string> = {
+  intake: 'Intake',
+  risk_assessment: 'Riesgo',
+  compliance: 'Compliance',
+  decision: 'Decisión',
+};
 
 const EMPTY_STAGE_STATUSES: Record<Stage, StageStatus> = {
   intake: 'pending',
@@ -78,49 +192,49 @@ const COMPLETED_STAGE_STATUSES: Record<Stage, StageStatus> = {
 
 const SCENARIO_META: Record<ScenarioKey, { label: string; shortLabel: string; badge: string; glow: string }> = {
   low_risk: {
-    label: '🟢 Bajo Riesgo',
+    label: 'Bajo Riesgo',
     shortLabel: 'Bajo Riesgo',
-    badge: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
-    glow: 'shadow-[0_0_36px_rgba(16,185,129,0.18)]',
+    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    glow: 'shadow-md shadow-emerald-200/50',
   },
   high_amount: {
-    label: '💰 Alto Monto',
+    label: 'Alto Monto',
     shortLabel: 'Alto Monto',
-    badge: 'border-primary-500/30 bg-primary-500/10 text-primary-200',
-    glow: 'shadow-[0_0_36px_rgba(236,0,0,0.18)]',
+    badge: 'border-primary-200 bg-primary-50 text-primary-700',
+    glow: 'shadow-md shadow-primary-200/50',
   },
   human_review: {
-    label: '🟠 Revisión Humana',
+    label: 'Revisión Humana',
     shortLabel: 'Revisión Humana',
-    badge: 'border-amber-400/30 bg-amber-500/10 text-amber-200',
-    glow: 'shadow-[0_0_36px_rgba(245,158,11,0.18)]',
+    badge: 'border-amber-200 bg-amber-50 text-amber-800',
+    glow: 'shadow-md shadow-amber-200/50',
   },
   fraudulent: {
-    label: '🚨 Fraudulento',
+    label: 'Fraudulento',
     shortLabel: 'Fraudulento',
-    badge: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
-    glow: 'shadow-[0_0_36px_rgba(244,63,94,0.18)]',
+    badge: 'border-red-200 bg-red-50 text-red-700',
+    glow: 'shadow-md shadow-red-200/50',
   },
   prompt_injection: {
-    label: '🛡️ Prompt Injection',
+    label: 'Prompt Injection',
     shortLabel: 'Prompt Injection',
-    badge: 'border-primary-500/30 bg-primary-500/10 text-primary-100',
-    glow: 'shadow-[0_0_36px_rgba(236,0,0,0.22)]',
+    badge: 'border-primary-200 bg-primary-50 text-primary-700',
+    glow: 'shadow-md shadow-primary-200/60',
   },
 };
 
 const DECISION_META: Record<ClaimResult['decision'], { label: string; badge: string }> = {
   approve: {
     label: 'Aprobado',
-    badge: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
+    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
   human_review: {
     label: 'Revisión humana',
-    badge: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+    badge: 'border-amber-200 bg-amber-50 text-amber-800',
   },
   reject: {
     label: 'Rechazado',
-    badge: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+    badge: 'border-red-200 bg-red-50 text-red-700',
   },
 };
 
@@ -381,65 +495,62 @@ async function evaluateClaimAbortable(req: ClaimRequest, signal: AbortSignal): P
   return response.json() as Promise<ClaimResult>;
 }
 
-// ===========================================================================
-// ConsolidationStepsPanel: mini-secuencia visual entre Compliance y la
-// DecisionFinale. Da margen al espectador para asimilar la transición.
-// ===========================================================================
-
-const CONSOLIDATION_STEPS = [
-  { label: 'Reconciliando outputs', detail: 'Cruzando salidas de Intake, Risk y Compliance' },
-  { label: 'Calculando confianza', detail: 'Ponderando señales de los 3 agentes' },
-  { label: 'Emitiendo decisión final', detail: 'Generando justificación y audit trail' },
-] as const;
-
-function ConsolidationStepsPanel({ phase }: { phase: 0 | 1 | 2 }) {
-  return (
-    <div className="flex h-full min-h-[420px] flex-col items-center justify-center px-6 py-10">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">Consolidación</p>
-      <h3 className="mt-3 bg-gradient-to-r from-white via-primary-100 to-primary-200 bg-clip-text text-center text-2xl font-semibold tracking-tight text-transparent xl:text-3xl">
-        Preparando la decisión final
-      </h3>
-      <ul className="mt-8 w-full max-w-md space-y-3">
-        {CONSOLIDATION_STEPS.map((step, idx) => {
-          const isActive = idx === phase;
-          const isDone = idx < phase;
-          return (
-            <li
-              key={step.label}
-              className={`flex items-start gap-3 rounded-2xl border px-4 py-3 transition-all duration-300 ${
-                isDone
-                  ? 'border-emerald-400/30 bg-emerald-500/10'
-                  : isActive
-                    ? 'border-primary-500/40 bg-primary-500/12 animate-pulse-soft'
-                    : 'border-white/10 bg-white/5 opacity-60'
-              }`}
-            >
-              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                isDone
-                  ? 'bg-emerald-400 text-slate-950'
-                  : isActive
-                    ? 'bg-primary-400 text-white'
-                    : 'bg-white/10 text-slate-500'
-              }`}>
-                {isDone ? '✓' : isActive ? '•' : idx + 1}
-              </span>
-              <div className="flex-1">
-                <p className={`text-sm font-semibold ${isActive ? 'text-primary-100' : isDone ? 'text-emerald-50' : 'text-slate-300'}`}>{step.label}</p>
-                <p className="mt-1 text-xs text-slate-400">{step.detail}</p>
-              </div>
-              {isActive ? (
-                <div className="mt-1 flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" />
-                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" style={{ animationDelay: '0.18s' }} />
-                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" style={{ animationDelay: '0.36s' }} />
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
+function buildAgentSnapshot(
+  stage: Stage,
+  stageStatus: StageStatus,
+  tokens: string,
+  durationMs: number,
+  result: ClaimResult | null,
+  scenarioAmountFallback: number,
+): AgentSnapshot {
+  const base: AgentSnapshot = {
+    status: stageStatus === 'failed' ? 'failed' : 'completed',
+    durationMs: durationMs > 0 ? durationMs : 0,
+    tokens,
+    finalized: !!result,
+  };
+  if (stage === 'intake') {
+    const extractedFields = getExtractedFields(result) ?? parseStreamingIntake(tokens);
+    base.intake = { extractedFields };
+  } else if (stage === 'risk_assessment') {
+    const live = parseStreamingRisk(tokens);
+    base.risk = {
+      score: getRiskScore(result) ?? live.score,
+      fraudProbability: getFraudProbabilityTyped(result) ?? live.fraud,
+    };
+  } else if (stage === 'compliance') {
+    let rules: ComplianceRule[];
+    if (result) {
+      rules = buildComplianceRules(result, COMPLETED_STAGE_STATUSES);
+    } else {
+      // Snapshot provisional sin result: en lugar de mostrar todas las reglas
+      // como 'pending' (lo que se vería como "Completado" pero vacío), inferir
+      // un estado plausible a partir del JSON streamed.
+      const parsedCompliant = parseStreamingCompliance(tokens).compliant;
+      const baseRules: ComplianceRule[] = [
+        { id: 'policy_valid',     label: 'Póliza vigente',                       status: 'passed' },
+        { id: 'coverage',          label: 'Cobertura aplica al incidente',        status: 'passed' },
+        { id: 'amount_threshold',  label: 'Importe dentro del límite automático', status: 'passed' },
+        { id: 'fraud_indicators',  label: 'Sin patrones de fraude detectados',   status: parsedCompliant === false ? 'failed' : 'passed' },
+        { id: 'documentation',     label: 'Documentación completa',               status: 'passed' },
+      ];
+      rules = baseRules;
+    }
+    base.compliance = { rules };
+  } else if (stage === 'decision') {
+    if (result) {
+      const intake = result.intake_result as Record<string, unknown> | undefined;
+      const data = (intake?.extracted_data ?? {}) as Record<string, unknown>;
+      const amount = typeof data.estimated_amount === 'number' ? data.estimated_amount : scenarioAmountFallback;
+      base.decision = {
+        decision: result.decision,
+        amount,
+        reasoning: result.reasoning,
+        riskScore: getRiskScore(result),
+      };
+    }
+  }
+  return base;
 }
 
 export default function AutoPlayDemo({ open, onClose }: Props) {
@@ -472,18 +583,15 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [finishedCount, setFinishedCount] = useState(0);
   const [currentResult, setCurrentResult] = useState<ClaimResult | null>(null);
-  const [decisionFinale, setDecisionFinale] = useState<{ item: DemoItem; key: number } | null>(null);
+  const [finaleVisible, setFinaleVisible] = useState(false);
   const [stageDurations, setStageDurations] = useState<Record<Stage, number>>(() => ({
     intake: 0,
     risk_assessment: 0,
     compliance: 0,
     decision: 0,
   }));
-  // displayedActiveStage: lo que el espectador ve en el panel viz. Se retrasa
-  // respecto al stage real para garantizar un mínimo de tiempo de visibilidad.
-  const [displayedActiveStage, setDisplayedActiveStage] = useState<Stage>('intake');
-  // consolidationPhase: micro-fase visual entre compliance y DecisionFinale para
-  // que la decisión no salga "instantánea".
+  // Fase visual mostrada en la slide de Decisión mientras se consolida la salida
+  // de los 3 agentes anteriores antes de mostrar el veredicto final.
   const [consolidationPhase, setConsolidationPhase] = useState<null | 0 | 1 | 2>(null);
   const stageStartsRef = useRef<Record<Stage, number>>({
     intake: 0,
@@ -491,11 +599,30 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     compliance: 0,
     decision: 0,
   });
-  const lastDisplayChangeRef = useRef(0);
+
+  // --- Slide state (navegación por agentes) ---------------------------------
+  const [slideState, dispatchSlide] = useReducer(slideReducer, INITIAL_SLIDE_STATE);
+  const prevStageStatusesRef = useRef<Record<Stage, StageStatus>>({ ...EMPTY_STAGE_STATUSES });
+  const viewingSlideRef = useRef<Stage>('intake');
+  const userPinnedRef = useRef(false);
+  const lastAutoChangeRef = useRef(0);
+  const pendingToastStagesRef = useRef<Set<Stage>>(new Set());
+  const toastTimerRef = useRef<number | null>(null);
+  const snapshotsRef = useRef<Partial<Record<Stage, AgentSnapshot>>>({});
+  const currentScenarioAmountRef = useRef<number>(0);
+  const finalizedResultRef = useRef<ClaimResult | null>(null);
+  // Dwell mínimo (ms) durante el cual la slide live no se auto-cambia: evita
+  // saltos imperceptibles cuando un agente termina extremadamente rápido.
+  const MIN_DWELL_MS = 1800;
 
   const clearNoticeTimers = useCallback(() => {
     noticeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     noticeTimersRef.current = [];
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    pendingToastStagesRef.current.clear();
   }, []);
 
   const stopPing = useCallback(() => {
@@ -507,21 +634,31 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
 
   const cleanupActiveCase = useCallback((abortRequest: boolean, clearFinale = abortRequest) => {
     stopPing();
-    if (clearFinale) setDecisionFinale(null);
+    if (clearFinale) setFinaleVisible(false);
     if (abortRequest) controllerRef.current?.abort();
     controllerRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
   }, [stopPing]);
 
-  const pushNotice = useCallback((text: string, kind: NoticeKind = 'error') => {
-    const id = crypto.randomUUID();
-    setNotices((previous) => [...previous, { id, text, kind }]);
-    const timer = window.setTimeout(() => {
-      setNotices((previous) => previous.filter((notice) => notice.id !== id));
-      noticeTimersRef.current = noticeTimersRef.current.filter((item) => item !== timer);
-    }, 5200);
-    noticeTimersRef.current.push(timer);
+  const pushNotice = useCallback(
+    (text: string, kind: NoticeKind = 'error', options?: { actionLabel?: string; onAction?: () => void }) => {
+      const id = crypto.randomUUID();
+      setNotices((previous) => [
+        ...previous,
+        { id, text, kind, actionLabel: options?.actionLabel, onAction: options?.onAction },
+      ]);
+      const timer = window.setTimeout(() => {
+        setNotices((previous) => previous.filter((notice) => notice.id !== id));
+        noticeTimersRef.current = noticeTimersRef.current.filter((item) => item !== timer);
+      }, 5200);
+      noticeTimersRef.current.push(timer);
+    },
+    [],
+  );
+
+  const dismissNotice = useCallback((id: string) => {
+    setNotices((previous) => previous.filter((notice) => notice.id !== id));
   }, []);
 
   const closeDemo = useCallback(() => {
@@ -551,7 +688,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         skipRequestedRef.current = false;
         return 'skip' as const;
       }
-      if (pausedRef.current) {
+      if (pausedRef.current || userPinnedRef.current) {
         await sleep(150);
         continue;
       }
@@ -618,11 +755,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     setCurrentScenarioKey(null);
     setCurrentClaimId('');
     setStageStatuses({ ...EMPTY_STAGE_STATUSES });
-    setDecisionFinale(null);
+    setFinaleVisible(false);
     setFeedItems([]);
     setNotices([]);
     setElapsedSeconds(0);
     setFinishedCount(0);
+    dispatchSlide({ type: 'CASE_STARTED' });
+    snapshotsRef.current = {};
+    prevStageStatusesRef.current = { ...EMPTY_STAGE_STATUSES };
 
     const runDemo = async () => {
       // Best-effort: pre-cache the token. We DON'T abort if it fails — many
@@ -681,9 +821,21 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         setCurrentResult(null);
         setStageDurations({ intake: 0, risk_assessment: 0, compliance: 0, decision: 0 });
         stageStartsRef.current = { intake: 0, risk_assessment: 0, compliance: 0, decision: 0 };
-        // Reset pacing refs per case
-        setDisplayedActiveStage('intake');
-        lastDisplayChangeRef.current = Date.now();
+        // Reset slide state al iniciar cada caso. Limpia snapshots, pin del
+        // usuario, notificaciones pendientes y toasts visibles para que el
+        // siguiente caso comience completamente "en directo" desde intake.
+        dispatchSlide({ type: 'CASE_STARTED' });
+        snapshotsRef.current = {};
+        prevStageStatusesRef.current = { ...EMPTY_STAGE_STATUSES };
+        pendingToastStagesRef.current.clear();
+        if (toastTimerRef.current !== null) {
+          window.clearTimeout(toastTimerRef.current);
+          toastTimerRef.current = null;
+        }
+        finalizedResultRef.current = null;
+        setNotices([]);
+        lastAutoChangeRef.current = Date.now();
+        currentScenarioAmountRef.current = demoScenario.scenario.estimated_amount;
         setConsolidationPhase(null);
 
         const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
@@ -705,12 +857,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             setStageStatuses((previous) => nextStageStatuses(previous, stage, nextStatus));
           } else if (update.type === 'token') {
             const agent = update.agent;
-            const stage: Stage = agent === 'risk'
-              ? 'risk_assessment'
-              : (agent === 'intake' || agent === 'compliance' || agent === 'decision')
-                ? agent
-                : 'intake';
-            setStageTokens((previous) => ({ ...previous, [stage]: previous[stage] + update.text }));
+            // Backend MAF emite tokens con agent="risk_assessment" (no "risk").
+            // Aceptamos ambos por compatibilidad y descartamos agentes
+            // desconocidos en lugar de mezclarlos con intake (bug previo).
+            let stage: Stage | null = null;
+            if (agent === 'risk' || agent === 'risk_assessment') stage = 'risk_assessment';
+            else if (agent === 'intake' || agent === 'compliance' || agent === 'decision') stage = agent;
+            if (stage === null) return;
+            setStageTokens((previous) => ({ ...previous, [stage as Stage]: previous[stage as Stage] + update.text }));
           }
         });
 
@@ -751,8 +905,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           };
           setFeedItems((previous) => [...previous, item]);
 
-          // Mini-secuencia de consolidación: 3 pasos visibles antes del overlay
-          // final. Convierte una transición instantánea en una mini-experiencia.
+          // Mini-secuencia de consolidación: 3 pasos visibles dentro de la
+          // slide de Decisión. Convierte una transición instantánea en una
+          // mini-experiencia de "trabajo final" antes de mostrar el veredicto.
           const CONSOLIDATION_STEP_MS = 850;
           for (const phase of [0, 1, 2] as const) {
             setConsolidationPhase(phase);
@@ -767,10 +922,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             }
           }
           setConsolidationPhase(null);
-
-          if (!skippedCurrent) {
-            setDecisionFinale({ item, key: Date.now() });
-          }
+          // NOTA: ya no se dispara DecisionFinale automáticamente. La slide de
+          // Decisión muestra el veredicto en el panel y el usuario puede abrir
+          // la pantalla final celebratoria con el botón "Ver pantalla final".
         } catch (error) {
           if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
@@ -859,85 +1013,235 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     ? 0
     : Math.max(0, Math.round((totalScenarios - finishedCount) * averageCaseSeconds + Math.max(totalScenarios - finishedCount - 1, 0) * 2));
 
-  // Active agent: the stage currently 'processing'. Fallback to the latest completed if all idle.
-  const activeAgent: AgentName = useMemo(() => {
+  // backendActiveStage: estado real en el backend. Es el stage que actualmente
+  // procesa el pipeline (o el último completado si todos quietos). Esto es
+  // independiente de qué slide está viendo el usuario.
+  const backendActiveStage: Stage = useMemo(() => {
     const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
     const processing = order.find((s) => stageStatuses[s] === 'processing');
-    if (processing) return STAGE_TO_AGENT[processing];
-    // none processing → return last completed
+    if (processing) return processing;
+    if (consolidationPhase !== null) return 'decision';
+    if (currentResult) return 'decision';
     const reversed = [...order].reverse();
     const lastCompleted = reversed.find((s) => stageStatuses[s] === 'completed');
-    if (lastCompleted) return STAGE_TO_AGENT[lastCompleted];
+    if (lastCompleted) return lastCompleted;
     return 'intake';
-  }, [stageStatuses]);
+  }, [stageStatuses, consolidationPhase, currentResult]);
 
-  const activeStage: Stage = useMemo(() => (
-    activeAgent === 'risk' ? 'risk_assessment' : activeAgent
-  ), [activeAgent]);
+  const viewingSlide = slideState.viewingSlide;
+  const viewingSnapshot = slideState.snapshots[viewingSlide];
 
-  // Sincroniza displayedActiveStage ← activeStage con un MÍNIMO de 4.5 s por
-  // panel para que el espectador tenga tiempo a fijar la vista. Si el LLM tarda
-  // más, no se altera nada (cambia inmediatamente cuando el delay ya se cumplió).
-  const MIN_STAGE_DISPLAY_MS = 4500;
+  // Mantener refs sincronizadas para closures (efectos sin re-suscripción).
+  useEffect(() => { viewingSlideRef.current = slideState.viewingSlide; }, [slideState.viewingSlide]);
+  useEffect(() => { userPinnedRef.current = slideState.userPinnedSlide; }, [slideState.userPinnedSlide]);
+  useEffect(() => { snapshotsRef.current = slideState.snapshots; }, [slideState.snapshots]);
+
+  // --- Auto-follow del agente en vivo ---------------------------------------
+  // Si el usuario no ha clavado una slide, viewingSlide debe seguir al agente
+  // que está procesando en backend. Respetamos un dwell mínimo para no saltar
+  // entre slides imperceptiblemente cuando un agente termina muy rápido.
   useEffect(() => {
-    if (activeStage === displayedActiveStage) return;
-    const elapsed = Date.now() - lastDisplayChangeRef.current;
-    const wait = Math.max(0, MIN_STAGE_DISPLAY_MS - elapsed);
+    if (status !== 'running') return;
+    if (slideState.userPinnedSlide) return;
+    if (slideState.viewingSlide === backendActiveStage) return;
+    const elapsed = Date.now() - lastAutoChangeRef.current;
+    const wait = Math.max(0, MIN_DWELL_MS - elapsed);
     const timer = window.setTimeout(() => {
-      setDisplayedActiveStage(activeStage);
-      lastDisplayChangeRef.current = Date.now();
+      dispatchSlide({ type: 'AUTO_FOLLOW_LIVE', liveSlide: backendActiveStage });
+      lastAutoChangeRef.current = Date.now();
     }, wait);
     return () => window.clearTimeout(timer);
-  }, [activeStage, displayedActiveStage]);
+  }, [backendActiveStage, slideState.userPinnedSlide, slideState.viewingSlide, status]);
 
-  // Mientras la consolidationPhase está activa, el "agente activo" es 'decision'
-  // pero el panel viz muestra una mini secuencia de pasos.
+  // --- Snapshot capture (provisional) ---------------------------------------
+  // Cuando un stage transita de processing/pending → completed/failed, congelar
+  // su estado actual como snapshot. Si el usuario no está mirando esa slide,
+  // encolar una notificación agregada (debounce 450ms).
+  //
+  // NOTA: la slide de decisión se omite intencionalmente para el caso
+  // 'completed' — su snapshot se construye en SNAPSHOT_FINAL cuando llega
+  // currentResult (evita mostrar "completado" sin veredicto durante los ms
+  // entre el WS event y la resolución HTTP). Sí capturamos 'failed' aquí.
+  useEffect(() => {
+    if (status !== 'running') return;
+    const prev = prevStageStatusesRef.current;
+    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    const newlyCompleted: Stage[] = [];
+    order.forEach((stage) => {
+      const prevStatus = prev[stage];
+      const currStatus = stageStatuses[stage];
+      if (stage === 'decision' && currStatus === 'completed') return;
+      const transitioned = (prevStatus === 'processing' || prevStatus === 'pending')
+        && (currStatus === 'completed' || currStatus === 'failed');
+      if (!transitioned) return;
+      const snapshot = buildAgentSnapshot(
+        stage,
+        currStatus,
+        stageTokens[stage],
+        stageDurations[stage],
+        currentResult,
+        currentScenarioAmountRef.current,
+      );
+      dispatchSlide({ type: 'SNAPSHOT_PROVISIONAL', stage, snapshot });
+      if (currStatus === 'completed' && viewingSlideRef.current !== stage) {
+        newlyCompleted.push(stage);
+      }
+    });
+    if (newlyCompleted.length > 0) {
+      newlyCompleted.forEach((s) => pendingToastStagesRef.current.add(s));
+      if (toastTimerRef.current === null) {
+        toastTimerRef.current = window.setTimeout(() => {
+          const stages = Array.from(pendingToastStagesRef.current);
+          pendingToastStagesRef.current.clear();
+          toastTimerRef.current = null;
+          const currentViewing = viewingSlideRef.current;
+          const filtered = stages.filter((s) => s !== currentViewing);
+          if (filtered.length === 0) return;
+          const names = filtered.map((s) => STAGE_DISPLAY_NAMES[s]);
+          const text = filtered.length === 1
+            ? `${names[0]} completó su análisis`
+            : `${filtered.length} agentes completaron · ${names.join(' · ')}`;
+          const jumpTo = filtered[filtered.length - 1];
+          pushNotice(text, 'info', {
+            actionLabel: 'Ver slide',
+            onAction: () => dispatchSlide({ type: 'USER_SELECTED_SLIDE', slide: jumpTo }),
+          });
+        }, 450);
+      }
+    }
+    prevStageStatusesRef.current = { ...stageStatuses };
+  }, [stageStatuses, stageTokens, stageDurations, currentResult, status, pushNotice]);
 
-  const agentStatus: AgentStatus = useMemo(() => {
-    const stage: Stage = AGENT_NAMES.indexOf(activeAgent) >= 0
-      ? (activeAgent === 'risk' ? 'risk_assessment' : activeAgent)
-      : 'intake';
-    const s = stageStatuses[stage];
+  // --- Snapshot finalization (cuando llega el resultado completo) -----------
+  // Reconcilia todos los snapshots con los datos finales y, en concreto,
+  // crea por primera vez el snapshot de 'decision' (que se omite en el efecto
+  // de captura provisional para evitar mostrar "completed" sin veredicto).
+  useEffect(() => {
+    if (!currentResult) return;
+    if (finalizedResultRef.current === currentResult) return;
+    finalizedResultRef.current = currentResult;
+    if (status !== 'running') return;
+    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    const reconciled: Partial<Record<Stage, AgentSnapshot>> = {};
+    order.forEach((stage) => {
+      reconciled[stage] = buildAgentSnapshot(
+        stage,
+        'completed',
+        stageTokens[stage],
+        stageDurations[stage],
+        currentResult,
+        currentScenarioAmountRef.current,
+      );
+    });
+    dispatchSlide({ type: 'SNAPSHOT_FINAL', reconciled });
+    // Si el usuario no está viendo la slide de decisión, encolar notificación
+    // específica (la decision se acaba de "completar de verdad").
+    if (viewingSlideRef.current !== 'decision') {
+      pendingToastStagesRef.current.add('decision');
+      if (toastTimerRef.current === null) {
+        toastTimerRef.current = window.setTimeout(() => {
+          const stages = Array.from(pendingToastStagesRef.current);
+          pendingToastStagesRef.current.clear();
+          toastTimerRef.current = null;
+          const currentViewing = viewingSlideRef.current;
+          const filtered = stages.filter((s) => s !== currentViewing);
+          if (filtered.length === 0) return;
+          const names = filtered.map((s) => STAGE_DISPLAY_NAMES[s]);
+          const text = filtered.length === 1
+            ? `${names[0]} completó su análisis`
+            : `${filtered.length} agentes completaron · ${names.join(' · ')}`;
+          const jumpTo = filtered[filtered.length - 1];
+          pushNotice(text, 'info', {
+            actionLabel: 'Ver slide',
+            onAction: () => dispatchSlide({ type: 'USER_SELECTED_SLIDE', slide: jumpTo }),
+          });
+        }, 450);
+      }
+    }
+  }, [currentResult, status, stageTokens, stageDurations, pushNotice]);
+
+  // --- Slides descriptor para SlideNavigator --------------------------------
+  const slideDescriptors: SlideDescriptor[] = useMemo(() => {
+    const order: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    return order.map((stage) => {
+      const snapshot = slideState.snapshots[stage];
+      let slideStatusValue: SlideStatus;
+      // Caso especial decision: mantener 'live' mientras no llegue el veredicto
+      // final, incluso si ya hay un snapshot provisional generado por el WS.
+      const decisionLackingFinal = stage === 'decision'
+        && (consolidationPhase !== null || (currentResult === null && stageStatuses.decision === 'processing'));
+      if (snapshot && !decisionLackingFinal) {
+        slideStatusValue = snapshot.status === 'failed' ? 'failed' : 'completed';
+      } else if (
+        stage === backendActiveStage
+        && (
+          stageStatuses[stage] === 'processing'
+          || (stage === 'decision' && (consolidationPhase !== null || currentResult !== null))
+        )
+      ) {
+        slideStatusValue = 'live';
+      } else if (decisionLackingFinal) {
+        slideStatusValue = 'live';
+      } else {
+        slideStatusValue = 'pending';
+      }
+      return {
+        key: stage,
+        status: slideStatusValue,
+        hasSnapshot: !!snapshot,
+        unseen: !!slideState.unseenCompletedSlides[stage],
+      };
+    });
+  }, [
+    slideState.snapshots,
+    slideState.unseenCompletedSlides,
+    backendActiveStage,
+    stageStatuses,
+    consolidationPhase,
+    currentResult,
+  ]);
+
+  // --- Datos del panel para la slide visible --------------------------------
+  // AgentThinkingPanel se vincula a la slide visible (no al agente live):
+  // si el usuario revisa Intake, ve los pensamientos congelados de Intake.
+  const viewingAgentStatus: AgentStatus = useMemo(() => {
+    if (viewingSnapshot) return viewingSnapshot.status === 'failed' ? 'failed' : 'completed';
+    const s = stageStatuses[viewingSlide];
     if (s === 'processing') return 'thinking';
     if (s === 'completed') return 'completed';
     if (s === 'failed') return 'failed';
+    if (viewingSlide === 'decision' && consolidationPhase !== null) return 'thinking';
     return 'idle';
-  }, [activeAgent, stageStatuses]);
+  }, [viewingSnapshot, viewingSlide, stageStatuses, consolidationPhase]);
 
-  const thoughtTokens = stageTokens[activeAgent === 'risk' ? 'risk_assessment' : activeAgent];
-  const activeDurationSeconds = (() => {
-    const stage: Stage = activeAgent === 'risk' ? 'risk_assessment' : activeAgent;
-    const ms = stageDurations[stage];
+  const viewingThoughtTokens = viewingSnapshot?.tokens ?? stageTokens[viewingSlide];
+  const viewingDurationSeconds = (() => {
+    const ms = viewingSnapshot?.durationMs ?? stageDurations[viewingSlide];
     return ms > 0 ? ms / 1000 : undefined;
   })();
 
-  const extractedFields = useMemo<ExtractedFieldsView | undefined>(() => {
-    // Si ya tenemos el resultado completo, usarlo; si no, parsear los tokens en vivo
+  const liveExtractedFields = useMemo<ExtractedFieldsView | undefined>(() => {
     const fromResult = getExtractedFields(currentResult);
     if (fromResult) return fromResult;
     return parseStreamingIntake(stageTokens.intake);
   }, [currentResult, stageTokens.intake]);
 
-  const riskScore = useMemo<number | null>(() => {
+  const liveRiskScore = useMemo<number | null>(() => {
     const fromResult = getRiskScore(currentResult);
     if (fromResult !== null) return fromResult;
     return parseStreamingRisk(stageTokens.risk_assessment).score;
   }, [currentResult, stageTokens.risk_assessment]);
 
-  const fraudProbabilityTyped = useMemo<FraudProbability | null>(() => {
+  const liveFraudProbability = useMemo<FraudProbability | null>(() => {
     const fromResult = getFraudProbabilityTyped(currentResult);
     if (fromResult !== null) return fromResult;
     return parseStreamingRisk(stageTokens.risk_assessment).fraud;
   }, [currentResult, stageTokens.risk_assessment]);
 
-  const complianceRules = useMemo<ComplianceRule[]>(() => {
-    // If we have the full result, build deterministically; otherwise show staggered
-    // "checking" states based on how much of the compliance JSON has streamed.
+  const liveComplianceRules = useMemo<ComplianceRule[]>(() => {
     if (currentResult || stageStatuses.compliance === 'pending') {
       return buildComplianceRules(currentResult, stageStatuses);
     }
-    // Streaming preview: progressively mark rules as 'checking' or 'passed' depending
-    // on tokens received so far.
     const tokens = stageTokens.compliance;
     const parsedCompliant = parseStreamingCompliance(tokens).compliant;
     const baseRules: ComplianceRule[] = [
@@ -948,8 +1252,6 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       { id: 'documentation',     label: 'Documentación completa',               status: 'pending' },
     ];
     if (stageStatuses.compliance !== 'processing') return baseRules;
-    // We don't have proper per-rule signals while streaming, so simulate progress:
-    // each ~120 chars of tokens advances one rule from checking → passed.
     const charsPerRule = 150;
     const advanced = Math.min(baseRules.length, Math.floor(tokens.length / charsPerRule));
     const result = baseRules.map((rule, idx) => {
@@ -957,7 +1259,6 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       if (idx === advanced) return { ...rule, status: 'checking' as RuleStatus };
       return rule;
     });
-    // If compliance JSON already said compliant=false, mark last 1-2 as failed/warning at the end.
     if (parsedCompliant === false && advanced >= 3) {
       result[3] = { ...result[3], status: 'failed' };
     }
@@ -970,10 +1271,21 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     if (status === 'finished') return `Demo completada · ${finishedCount} de ${totalScenarios} casos ejecutados`;
     if (currentScenarioKey) {
       const base = `Procesando caso ${Math.min(currentIndex + 1, totalScenarios)} de ${totalScenarios} · Quedan ~${remainingSeconds} segundos`;
+      if (slideState.userPinnedSlide) return `${base} · Demo en pausa mientras revisas slides`;
       return paused ? `${base} · pausa activa tras este caso` : base;
     }
     return 'Inicializando la demo automática…';
-  }, [currentIndex, currentScenarioKey, fatalError, finishedCount, paused, remainingSeconds, status, totalScenarios]);
+  }, [
+    currentIndex,
+    currentScenarioKey,
+    fatalError,
+    finishedCount,
+    paused,
+    remainingSeconds,
+    slideState.userPinnedSlide,
+    status,
+    totalScenarios,
+  ]);
 
   const handleSkip = useCallback(() => {
     if (status !== 'running') return;
@@ -985,17 +1297,17 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[140] bg-surface-950/95 backdrop-blur-md" role="dialog" aria-modal="true">
-      <div className="flex h-full flex-col">
-        <header className="border-b border-white/10 bg-surface-950/80 px-6 py-5 xl:px-10">
+    <div className="fixed inset-0 z-[140] bg-gray-900/40 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <div className="flex h-full flex-col bg-white">
+        <header className="border-b border-gray-200 bg-white px-6 py-5 xl:px-10">
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
             <div className="flex items-start gap-3">
-              <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-white/30">
+              <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-200">
                 <img src="/santander-logo.avif" alt="Santander" className="h-6 w-auto" />
               </div>
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-white">Demo automática — 5 casos reales</h2>
-                <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática — 5 casos reales</h2>
+                <p className="mt-1 text-sm text-gray-600">{subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1003,7 +1315,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                 type="button"
                 onClick={() => setPaused((value) => !value)}
                 disabled={status !== 'running'}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                 {paused ? 'Reanudar' : 'Pausar'}
@@ -1012,7 +1324,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                 type="button"
                 onClick={handleSkip}
                 disabled={status !== 'running'}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <SkipForward className="h-4 w-4" />
                 Saltar al siguiente
@@ -1020,7 +1332,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
               <button
                 type="button"
                 onClick={closeDemo}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 <X className="h-4 w-4" />
                 Cerrar
@@ -1029,14 +1341,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-6 py-6 xl:px-10 xl:py-8">
+        <main className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6 xl:px-10 xl:py-8">
           <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
             {status === 'loading' && (
               <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="w-full max-w-xl rounded-[28px] border border-white/10 bg-white/5 p-10 text-center backdrop-blur-sm">
-                  <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-400" />
-                  <h3 className="mt-5 text-2xl font-semibold text-white">Preparando la demo automática</h3>
-                  <p className="mt-2 text-sm leading-7 text-slate-400">
+                <div className="w-full max-w-xl rounded-[28px] border border-gray-200 bg-white p-10 text-center shadow-xl shadow-gray-200/60">
+                  <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+                  <h3 className="mt-5 text-2xl font-semibold text-gray-900">Preparando la demo automática</h3>
+                  <p className="mt-2 text-sm leading-7 text-gray-600">
                     Cargando los 5 escenarios, conectando el pipeline y preparando el feed en tiempo real.
                   </p>
                 </div>
@@ -1045,14 +1357,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
 
             {status === 'error' && (
               <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="w-full max-w-2xl rounded-[28px] border border-rose-500/20 bg-rose-500/10 p-10 text-center backdrop-blur-sm">
-                  <AlertTriangle className="mx-auto h-12 w-12 text-rose-300" />
-                  <h3 className="mt-5 text-2xl font-semibold text-white">No se pudo lanzar la demo</h3>
-                  <p className="mt-3 text-sm leading-7 text-rose-100/85">{fatalError || 'Se produjo un error inesperado al inicializar la demo.'}</p>
+                <div className="w-full max-w-2xl rounded-[28px] border border-red-200 bg-red-50 p-10 text-center shadow-xl shadow-red-100/50">
+                  <AlertTriangle className="mx-auto h-12 w-12 text-red-600" />
+                  <h3 className="mt-5 text-2xl font-semibold text-gray-900">No se pudo lanzar la demo</h3>
+                  <p className="mt-3 text-sm leading-7 text-red-700">{fatalError || 'Se produjo un error inesperado al inicializar la demo.'}</p>
                   <button
                     type="button"
                     onClick={closeDemo}
-                    className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                    className="mt-8 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
                   >
                     Volver al dashboard
                   </button>
@@ -1062,40 +1374,40 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
 
             {status === 'finished' && (
               <div className="flex min-h-[70vh] items-center justify-center">
-                <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(236,0,0,0.18),_transparent_45%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(17,24,39,0.92))] p-10 text-center xl:p-14">
+                <div className="w-full max-w-5xl rounded-[32px] border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-primary-50/40 p-10 text-center shadow-xl shadow-gray-200/60 xl:p-14">
                   <div className="mx-auto max-w-3xl">
-                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-primary-300">Cierre de la demo</p>
-                    <h3 className="mt-4 text-4xl font-semibold tracking-tight text-white xl:text-5xl">
+                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-primary-700">Cierre de la demo</p>
+                    <h3 className="mt-4 text-4xl font-semibold tracking-tight text-gray-900 xl:text-5xl">
                       ✨ {finishedCount} casos procesados en {formatElapsed(elapsedSeconds)}
                     </h3>
-                    <p className="mt-4 text-lg text-slate-300">
-                      Con análisis manual habría tomado <strong className="text-white">3 horas 45 minutos</strong>
+                    <p className="mt-4 text-lg text-gray-700">
+                      Con análisis manual habría tomado <strong className="text-gray-900">3 horas 45 minutos</strong>
                     </p>
                   </div>
 
                   <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Aprobación automática</p>
-                      <p className="mt-3 text-3xl font-semibold text-emerald-300">{approvalRate}%</p>
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Aprobación automática</p>
+                      <p className="mt-3 text-3xl font-semibold text-emerald-700">{approvalRate}%</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Fraudes detectados</p>
-                      <p className="mt-3 text-3xl font-semibold text-rose-300">{fraudDetectedCount}</p>
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Fraudes detectados</p>
+                      <p className="mt-3 text-3xl font-semibold text-red-700">{fraudDetectedCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Decisión automática</p>
-                      <p className="mt-3 text-3xl font-semibold text-primary-300">{automaticDecisionCount}</p>
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Decisión automática</p>
+                      <p className="mt-3 text-3xl font-semibold text-primary-700">{automaticDecisionCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total procesado</p>
-                      <p className="mt-3 text-3xl font-semibold text-white">{currencyFormatter.format(totalAmount)}</p>
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Total procesado</p>
+                      <p className="mt-3 text-3xl font-semibold text-gray-900">{currencyFormatter.format(totalAmount)}</p>
                     </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={closeDemo}
-                    className="mt-10 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                    className="mt-10 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
                   >
                     Volver al dashboard
                   </button>
@@ -1114,97 +1426,134 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                   elapsedSeconds={elapsedSeconds}
                 />
 
-                {notices.length > 0 && (
-                  <section className="space-y-3">
-                    {notices.map((notice) => (
-                      <div
-                        key={notice.id}
-                        className={`rounded-2xl border px-4 py-3 text-sm ${
-                          notice.kind === 'error'
-                            ? 'border-rose-500/20 bg-rose-500/10 text-rose-100'
-                            : 'border-primary-500/20 bg-primary-500/10 text-primary-100'
-                        }`}
-                      >
-                        {notice.text}
-                      </div>
-                    ))}
-                  </section>
-                )}
-
                 {/* Scenario header */}
-                <section className={`rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(236,0,0,0.14),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(2,6,23,0.96))] p-5 xl:p-6 ${currentScenarioMeta?.glow ?? ''}`}>
+                <section className={`rounded-[28px] border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-primary-50/30 p-5 xl:p-6 ${currentScenarioMeta?.glow ?? ''}`}>
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium ${currentScenarioMeta?.badge ?? 'border-white/10 bg-white/5 text-slate-200'}`}>
+                      <div className={`inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium ${currentScenarioMeta?.badge ?? 'border-gray-200 bg-gray-50 text-gray-700'}`}>
                         {currentScenarioMeta?.label ?? 'Preparando escenarios…'}
                       </div>
-                      <div className="text-sm text-slate-400">
-                        <span className="font-mono text-xs text-slate-500">{currentClaimId || '—'}</span>
-                        <span className="mx-2 text-slate-700">·</span>
-                        <span className="text-white font-semibold">{currencyFormatter.format(currentScenario?.estimated_amount ?? 0)}</span>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-mono text-xs text-gray-500">{currentClaimId || '—'}</span>
+                        <span className="mx-2 text-gray-300">·</span>
+                        <span className="text-gray-900 font-semibold">{currencyFormatter.format(currentScenario?.estimated_amount ?? 0)}</span>
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-                      <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Cliente</p>
-                        <p className="mt-0.5 text-sm font-medium text-white">{currentScenario?.customer_id ?? '—'}</p>
+                      <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Cliente</p>
+                        <p className="mt-0.5 text-sm font-medium text-gray-900">{currentScenario?.customer_id ?? '—'}</p>
                       </div>
-                      <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Póliza</p>
-                        <p className="mt-0.5 text-sm font-medium text-white">{currentScenario?.policy_id ?? '—'}</p>
+                      <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Póliza</p>
+                        <p className="mt-0.5 text-sm font-medium text-gray-900">{currentScenario?.policy_id ?? '—'}</p>
                       </div>
                     </div>
                   </div>
                 </section>
 
+                {/* Slide navigator: tabs por agente, navegación libre */}
+                <SlideNavigator
+                  slides={slideDescriptors}
+                  viewingSlide={viewingSlide}
+                  liveSlide={backendActiveStage}
+                  isPinned={slideState.userPinnedSlide}
+                  onSelect={(slide) => dispatchSlide({ type: 'USER_SELECTED_SLIDE', slide })}
+                  onReturnToLive={() => dispatchSlide({ type: 'RETURN_TO_LIVE', liveSlide: backendActiveStage })}
+                />
+
                 {/* Main two-column area: agent thinking + per-agent viz */}
                 <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
                   <AgentThinkingPanel
-                    agent={activeAgent}
-                    status={agentStatus}
-                    thoughtTokens={thoughtTokens}
-                    durationSeconds={activeDurationSeconds}
+                    agent={STAGE_TO_AGENT[viewingSlide]}
+                    status={viewingAgentStatus}
+                    thoughtTokens={viewingThoughtTokens}
+                    durationSeconds={viewingDurationSeconds}
                   />
 
-                  <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(236,0,0,0.10),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-5 xl:p-6">
-                    {consolidationPhase !== null ? (
-                      <ConsolidationStepsPanel phase={consolidationPhase} />
-                    ) : (
-                      <>
-                        {displayedActiveStage === 'intake' && (
-                          <IntakeExtractionPanel
-                            scenarioText={currentScenario?.description ?? ''}
-                            active={stageStatuses.intake === 'processing' || stageStatuses.intake === 'completed'}
-                            extractedFields={extractedFields}
-                            phaseLabel={stageStatuses.intake === 'completed' ? 'Datos extraídos' : 'Leyendo el parte del siniestro'}
-                          />
-                        )}
-                        {displayedActiveStage === 'risk_assessment' && (
-                          <RiskGaugePanel
-                            active={stageStatuses.risk_assessment !== 'pending'}
-                            targetScore={riskScore}
-                            fraudProbability={fraudProbabilityTyped}
-                            phaseLabel={stageStatuses.risk_assessment === 'completed' ? 'Evaluación de riesgo' : 'Calculando score y patrones de fraude'}
-                          />
-                        )}
-                        {(displayedActiveStage === 'compliance' || displayedActiveStage === 'decision') && (
-                          <ComplianceChecklistPanel
-                            active={stageStatuses.compliance !== 'pending'}
-                            rules={complianceRules}
-                            phaseLabel={stageStatuses.compliance === 'completed' ? 'Validación regulatoria' : 'Aplicando reglas y umbrales'}
-                          />
-                        )}
-                      </>
+                  <div className="rounded-[28px] border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-primary-50/30 p-5 xl:p-6">
+                    {viewingSlide === 'intake' && (
+                      <IntakeExtractionPanel
+                        scenarioText={currentScenario?.description ?? ''}
+                        active={viewingSnapshot ? true : stageStatuses.intake === 'processing' || stageStatuses.intake === 'completed'}
+                        extractedFields={viewingSnapshot?.intake?.extractedFields ?? liveExtractedFields}
+                        phaseLabel={
+                          viewingSnapshot
+                            ? 'Datos extraídos'
+                            : stageStatuses.intake === 'completed'
+                              ? 'Datos extraídos'
+                              : 'Leyendo el parte del siniestro'
+                        }
+                      />
+                    )}
+                    {viewingSlide === 'risk_assessment' && (
+                      <RiskGaugePanel
+                        active={viewingSnapshot ? true : stageStatuses.risk_assessment !== 'pending'}
+                        targetScore={viewingSnapshot?.risk?.score ?? liveRiskScore}
+                        fraudProbability={viewingSnapshot?.risk?.fraudProbability ?? liveFraudProbability}
+                        phaseLabel={
+                          viewingSnapshot
+                            ? 'Evaluación de riesgo'
+                            : stageStatuses.risk_assessment === 'completed'
+                              ? 'Evaluación de riesgo'
+                              : 'Calculando score y patrones de fraude'
+                        }
+                      />
+                    )}
+                    {viewingSlide === 'compliance' && (
+                      <ComplianceChecklistPanel
+                        active={viewingSnapshot ? true : stageStatuses.compliance !== 'pending'}
+                        rules={viewingSnapshot?.compliance?.rules ?? liveComplianceRules}
+                        phaseLabel={
+                          viewingSnapshot
+                            ? 'Validación regulatoria'
+                            : stageStatuses.compliance === 'completed'
+                              ? 'Validación regulatoria'
+                              : 'Aplicando reglas y umbrales'
+                        }
+                      />
+                    )}
+                    {viewingSlide === 'decision' && (
+                      <DecisionSlidePanel
+                        decision={
+                          viewingSnapshot?.decision?.decision
+                          ?? (currentResult ? currentResult.decision : null)
+                        }
+                        amount={
+                          viewingSnapshot?.decision?.amount
+                          ?? currentScenario?.estimated_amount
+                          ?? 0
+                        }
+                        scenarioLabel={currentScenarioMeta?.shortLabel ?? '—'}
+                        reasoning={viewingSnapshot?.decision?.reasoning ?? currentResult?.reasoning}
+                        riskScore={viewingSnapshot?.decision?.riskScore ?? liveRiskScore}
+                        durationMs={viewingSnapshot?.durationMs ?? stageDurations.decision}
+                        status={
+                          viewingSnapshot?.status === 'failed'
+                            ? 'failed'
+                            : consolidationPhase !== null
+                              ? 'processing'
+                              : (viewingSnapshot?.decision?.decision || currentResult)
+                                ? 'completed'
+                                : 'processing'
+                        }
+                        consolidationPhase={consolidationPhase}
+                        onShowOverlay={
+                          (viewingSnapshot?.decision?.decision || currentResult)
+                            ? () => setFinaleVisible(true)
+                            : undefined
+                        }
+                      />
                     )}
                   </div>
                 </section>
 
                 {/* Compact feed at the bottom */}
-                <section className="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-md shadow-gray-200/50">
+                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                     <div className="flex items-center gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Feed</p>
-                      <p className="text-sm text-slate-400">{feedItems.length} decisión(es)</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-500">Feed</p>
+                      <p className="text-sm text-gray-600">{feedItems.length} decisión(es)</p>
                     </div>
                   </div>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -1214,37 +1563,30 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                       const isActive = idx === currentIndex && status === 'running' && !item;
                       const isPending = !item && !isActive;
                       const decisionMeta = item ? DECISION_META[item.result.decision] : null;
-                      const leadingIcon = item
-                        ? (demo.key === 'prompt_injection' ? '🛡️'
-                          : item.result.decision === 'approve' ? '✅'
-                          : item.result.decision === 'human_review' ? '⚠️'
-                          : '❌')
-                        : isActive ? '⏳' : '·';
                       return (
                         <div
                           key={demo.key}
                           className={`rounded-xl border px-3 py-2.5 text-xs transition ${
                             isActive
-                              ? 'border-primary-400/40 bg-primary-500/10 animate-pulse-glow'
+                              ? 'border-primary-300 bg-primary-50 animate-pulse-glow'
                               : isPending
-                                ? 'border-white/5 bg-white/[0.02] opacity-60'
-                                : 'border-white/10 bg-slate-950/40'
+                                ? 'border-gray-200 bg-gray-50 opacity-70'
+                                : 'border-gray-200 bg-white'
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-lg">{leadingIcon}</span>
                             {decisionMeta ? (
                               <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${decisionMeta.badge}`}>
                                 {decisionMeta.label}
                               </span>
                             ) : (
-                              <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                              <span className="text-[10px] uppercase tracking-wider text-gray-500">
                                 {isActive ? 'En curso' : isPending ? 'Pendiente' : '—'}
                               </span>
                             )}
                           </div>
-                          <p className="mt-1.5 text-sm font-semibold text-white truncate">{meta.shortLabel}</p>
-                          <p className="text-[10px] text-slate-500 truncate">
+                          <p className="mt-1.5 text-sm font-semibold text-gray-900 truncate">{meta.shortLabel}</p>
+                          <p className="text-[10px] text-gray-500 truncate">
                             {currencyFormatter.format(demo.scenario.estimated_amount)}
                             {item ? ` · ${formatCaseDuration(item.durationMs)}` : ''}
                           </p>
@@ -1258,14 +1600,84 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           </div>
         </main>
 
-        {decisionFinale && (
+        {finaleVisible && currentResult && currentScenarioKey && (
           <DecisionFinale
-            key={decisionFinale.key}
-            decision={decisionFinale.item.result.decision}
-            amount={decisionFinale.item.scenario.estimated_amount}
-            scenarioLabel={SCENARIO_META[decisionFinale.item.scenarioKey].shortLabel}
-            onDone={() => setDecisionFinale(null)}
+            key={`${currentScenarioKey}-finale`}
+            decision={currentResult.decision}
+            amount={currentScenario?.estimated_amount ?? 0}
+            scenarioLabel={SCENARIO_META[currentScenarioKey].shortLabel}
+            onDone={() => setFinaleVisible(false)}
           />
+        )}
+
+        {/* Toast stack: notificaciones flotantes abajo a la derecha */}
+        {notices.length > 0 && (
+          <div
+            className="pointer-events-none fixed bottom-6 right-6 z-[170] flex w-[360px] max-w-[calc(100vw-3rem)] flex-col gap-3"
+            aria-live="polite"
+            aria-atomic="false"
+          >
+            {notices.map((notice) => {
+              const isError = notice.kind === 'error';
+              return (
+                <div
+                  key={notice.id}
+                  className={`pointer-events-auto animate-slide-in-right overflow-hidden rounded-2xl border bg-white/95 shadow-xl shadow-gray-900/10 backdrop-blur-sm ring-1 ring-black/5 ${
+                    isError ? 'border-red-100' : 'border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-start gap-3 p-4">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        isError
+                          ? 'bg-red-50 text-red-600 ring-1 ring-red-100'
+                          : 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
+                      }`}
+                    >
+                      {isError ? <AlertTriangle className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${
+                        isError ? 'text-red-600' : 'text-primary-600'
+                      }`}>
+                        {isError ? 'Aviso' : 'Notificación'}
+                      </p>
+                      <p className="mt-1 break-words text-sm leading-snug text-gray-900">{notice.text}</p>
+                      {notice.actionLabel && notice.onAction && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            notice.onAction?.();
+                            dismissNotice(notice.id);
+                          }}
+                          className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                            isError
+                              ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                              : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                          }`}
+                        >
+                          {notice.actionLabel}
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dismissNotice(notice.id)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                      aria-label="Cerrar notificación"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div
+                    className={`h-0.5 w-full origin-left ${
+                      isError ? 'bg-red-500/70' : 'bg-primary-500/70'
+                    } animate-toast-countdown`}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

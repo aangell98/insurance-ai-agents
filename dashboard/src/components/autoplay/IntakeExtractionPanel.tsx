@@ -34,36 +34,36 @@ const HIGHLIGHT_RULES: Array<{
     tone: 'amount',
     label: 'Monto',
     regex: /\d+[.,]?\d*\s*(?:€|euros?)/gi,
-    className: 'bg-emerald-400/15 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.2)]',
-    dotClassName: 'bg-emerald-300',
+    className: 'bg-emerald-100 text-emerald-800 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]',
+    dotClassName: 'bg-emerald-500',
   },
   {
     tone: 'incident',
     label: 'Tipo',
     regex: /\b(?:colisi[oó]n|incendio|robo|inundaci[oó]n|granizo|vandalismo|fire|collision)\b/gi,
-    className: 'bg-amber-400/15 text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.22)]',
-    dotClassName: 'bg-amber-300',
+    className: 'bg-amber-100 text-amber-800 shadow-[0_0_0_1px_rgba(245,158,11,0.3)]',
+    dotClassName: 'bg-amber-500',
   },
   {
     tone: 'vehicle',
     label: 'Vehículo',
     regex: /\b(?:tesla|bmw|audi|seat|coche|veh[ií]culo|moto)\b/gi,
-    className: 'bg-primary-400/15 text-primary-200 shadow-[0_0_0_1px_rgba(236,0,0,0.18)]',
-    dotClassName: 'bg-primary-300',
+    className: 'bg-primary-100 text-primary-800 shadow-[0_0_0_1px_rgba(236,0,0,0.25)]',
+    dotClassName: 'bg-primary-500',
   },
   {
     tone: 'date',
     label: 'Fecha',
     regex: /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi,
-    className: 'bg-primary-500/15 text-primary-300 shadow-[0_0_0_1px_rgba(236,0,0,0.22)]',
+    className: 'bg-primary-50 text-primary-700 shadow-[0_0_0_1px_rgba(236,0,0,0.25)]',
     dotClassName: 'bg-primary-400',
   },
   {
     tone: 'location',
     label: 'Ubicación',
     regex: /\b(?:Madrid|Barcelona|Valencia|Sevilla|parking|calle|carretera|autopista|A-\d+|M-\d+)\b/gi,
-    className: 'bg-primary-300/15 text-primary-100 shadow-[0_0_0_1px_rgba(236,0,0,0.16)]',
-    dotClassName: 'bg-primary-200',
+    className: 'bg-primary-50 text-primary-700 shadow-[0_0_0_1px_rgba(236,0,0,0.2)]',
+    dotClassName: 'bg-primary-300',
   },
 ];
 
@@ -284,19 +284,19 @@ export default function IntakeExtractionPanel({
   }, [active, highlightMatches, scenarioText, visibleHighlights]);
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-surface-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
+    <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl shadow-gray-200/60">
       <div className="grid gap-6 xl:grid-cols-2">
         <div className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Lectura del parte</p>
-            <h3 className="mt-2 text-lg font-semibold text-white">Texto del siniestro</h3>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gray-500">Lectura del parte</p>
+            <h3 className="mt-2 text-lg font-semibold text-gray-900">Texto del siniestro</h3>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-xs text-slate-300">
+          <div className="flex flex-wrap gap-3 text-xs text-gray-600">
             {HIGHLIGHT_RULES.map((rule) => (
               <div
                 key={rule.tone}
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1"
+                className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1"
               >
                 <span className={cx('h-2.5 w-2.5 rounded-full', rule.dotClassName)} />
                 <span>{rule.label}</span>
@@ -306,12 +306,12 @@ export default function IntakeExtractionPanel({
 
           <div
             ref={scrollRef}
-            className="scrollbar-clean max-h-[360px] overflow-y-auto rounded-xl border border-white/10 bg-surface-800 p-5"
+            className="scrollbar-clean max-h-[360px] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-5"
           >
             {hasScenarioText ? (
-              <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">{renderedScenarioText}</p>
+              <p className="whitespace-pre-wrap text-sm leading-7 text-gray-800">{renderedScenarioText}</p>
             ) : (
-              <div className="flex min-h-[160px] items-center justify-center text-sm text-slate-500">
+              <div className="flex min-h-[160px] items-center justify-center text-sm text-gray-500">
                 Esperando descripción del siniestro…
               </div>
             )}
@@ -320,13 +320,13 @@ export default function IntakeExtractionPanel({
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-500/20 bg-primary-500/10 text-primary-200 shadow-inner shadow-white/5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-200 bg-primary-50 text-primary-700">
               <FileSearch className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">Intake agent</p>
-              <h3 className="text-lg font-semibold text-white">Campos extraídos</h3>
-              {phaseLabel ? <p className="mt-1 text-xs text-slate-400">{phaseLabel}</p> : null}
+              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gray-500">Intake agent</p>
+              <h3 className="text-lg font-semibold text-gray-900">Campos extraídos</h3>
+              {phaseLabel ? <p className="mt-1 text-xs text-gray-500">{phaseLabel}</p> : null}
             </div>
           </div>
 
@@ -339,68 +339,68 @@ export default function IntakeExtractionPanel({
             {extractedItems.length > 0 ? extractedItems.map((item, index) => (
               <div
                 key={item.id}
-                className="flex items-start gap-3 rounded-lg border border-emerald-700/40 bg-emerald-900/30 p-3 text-emerald-100"
+                className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800"
                 style={active ? { animation: `slideInLeft 0.45s ease-out ${index * 200}ms both` } : undefined}
               >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-emerald-50">✓ {item.label}: {item.value}</p>
+                  <p className="text-sm font-medium text-emerald-800">✓ {item.label}: {item.value}</p>
                 </div>
               </div>
             )) : showGhostExtraction ? (
               <>
-                <div className="rounded-xl border border-primary-500/10 bg-surface-800/90 p-4 shadow-inner shadow-primary-900/20">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-primary-300 animate-pulse" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary-500 animate-pulse" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Captura del parte</p>
-                      <p className="mt-1 text-sm text-slate-300 transition-opacity duration-300">{INTAKE_DETECTION_STEPS[detectionStepIndex]}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Captura del parte</p>
+                      <p className="mt-1 text-sm text-gray-700 transition-opacity duration-300">{INTAKE_DETECTION_STEPS[detectionStepIndex]}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-surface-800/90 p-4">
-                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">
                     <span>Extracción estructurada</span>
                     <span>streaming</span>
                   </div>
-                  <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
+                  <div className="relative h-2.5 overflow-hidden rounded-full bg-gray-200">
                     <div
-                      className="absolute inset-y-0 left-0 w-[62%] rounded-full bg-gradient-to-r from-primary-400/0 via-primary-300/95 to-primary-500/0"
+                      className="absolute inset-y-0 left-0 w-[62%] rounded-full bg-gradient-to-r from-primary-500/0 via-primary-500/70 to-primary-500/0"
                       style={{ animation: 'shimmer 1.6s ease-in-out infinite' }}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-primary-500/10 bg-surface-800/90 p-4 shadow-inner shadow-primary-900/20">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-primary-300 animate-pulse" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary-500 animate-pulse" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Verificación previa</p>
-                      <p className="mt-1 text-sm text-slate-300 transition-opacity duration-300">{INTAKE_VALIDATION_STEPS[validationStepIndex]}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Verificación previa</p>
+                      <p className="mt-1 text-sm text-gray-700 transition-opacity duration-300">{INTAKE_VALIDATION_STEPS[validationStepIndex]}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-surface-800/90 p-4">
-                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">
                     <span>Cobertura y anexos</span>
                     <span>verificando</span>
                   </div>
-                  <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
+                  <div className="relative h-2.5 overflow-hidden rounded-full bg-gray-200">
                     <div
-                      className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-primary-400/0 via-primary-300/90 to-primary-500/0"
+                      className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-primary-500/0 via-primary-500/70 to-primary-500/0"
                       style={{ animation: 'shimmer 1.8s ease-in-out infinite', animationDelay: '0.18s' }}
                     />
                   </div>
                 </div>
               </>
             ) : (
-              <div className="rounded-xl border border-dashed border-white/10 bg-surface-800/80 p-4 text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
                 Esperando extracción estructurada.
               </div>
             )}

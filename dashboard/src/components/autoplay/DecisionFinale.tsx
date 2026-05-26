@@ -41,31 +41,31 @@ const DECISION_META: Record<DecisionFinaleProps['decision'], DecisionMeta> = {
     icon: CheckCircle2,
     title: 'APROBADO',
     subtitle: 'Resolución automática emitida correctamente.',
-    tintClass: 'bg-emerald-500/20',
-    cardClass: 'bg-gradient-to-br from-emerald-500/18 via-surface-950/92 to-teal-500/12 shadow-[0_0_90px_rgba(16,185,129,0.26)]',
-    badgeClass: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
-    iconShellClass: 'border-emerald-300/30 bg-emerald-400/12 text-emerald-100 shadow-[0_0_80px_rgba(16,185,129,0.35)]',
-    titleGradient: 'from-white via-emerald-100 to-teal-200',
+    tintClass: 'bg-emerald-500/10',
+    cardClass: 'bg-white border-emerald-200 shadow-lg shadow-emerald-100/70',
+    badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    iconShellClass: 'border-emerald-200 bg-emerald-50 text-emerald-600 shadow-md shadow-emerald-200/50',
+    titleGradient: 'text-emerald-700',
   },
   human_review: {
     icon: Users,
     title: 'REVISIÓN HUMANA',
     subtitle: 'Supera umbral de aprobación automática.',
-    tintClass: 'bg-amber-500/20',
-    cardClass: 'bg-gradient-to-br from-amber-500/18 via-surface-950/92 to-orange-500/12 shadow-[0_0_90px_rgba(251,191,36,0.22)]',
-    badgeClass: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
-    iconShellClass: 'border-amber-300/30 bg-amber-400/12 text-amber-100 shadow-[0_0_80px_rgba(251,191,36,0.3)]',
-    titleGradient: 'from-white via-amber-100 to-orange-200',
+    tintClass: 'bg-amber-500/10',
+    cardClass: 'bg-white border-amber-200 shadow-lg shadow-amber-100/70',
+    badgeClass: 'border-amber-200 bg-amber-50 text-amber-800',
+    iconShellClass: 'border-amber-200 bg-amber-50 text-amber-600 shadow-md shadow-amber-200/50',
+    titleGradient: 'text-amber-700',
   },
   reject: {
     icon: XCircle,
     title: 'RECHAZADO',
     subtitle: 'Posible fraude detectado.',
-    tintClass: 'bg-red-600/20',
-    cardClass: 'bg-gradient-to-br from-red-600/20 via-surface-950/92 to-red-500/10 shadow-[0_0_90px_rgba(220,38,38,0.26)]',
-    badgeClass: 'border-red-400/25 bg-red-500/10 text-red-300',
-    iconShellClass: 'border-red-400/35 bg-red-500/12 text-red-300 shadow-[0_0_80px_rgba(220,38,38,0.34)]',
-    titleGradient: 'from-white via-red-100 to-red-300',
+    tintClass: 'bg-red-500/10',
+    cardClass: 'bg-white border-red-200 shadow-lg shadow-red-100/70',
+    badgeClass: 'border-red-200 bg-red-50 text-red-700',
+    iconShellClass: 'border-red-200 bg-red-50 text-red-600 shadow-md shadow-red-200/50',
+    titleGradient: 'text-red-700',
   },
 };
 
@@ -139,15 +139,15 @@ export default function DecisionFinale({ decision, amount, scenarioLabel, onDone
       ) : null}
 
       <div className="relative flex h-full items-center justify-center p-6 md:p-10">
-        <div className={`relative w-full max-w-3xl overflow-hidden rounded-[36px] border border-white/10 px-8 py-12 text-center animate-pop-in ${meta.cardClass}`}>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),transparent_44%)]" />
+        <div className={`relative w-full max-w-3xl overflow-hidden rounded-[36px] border px-8 py-12 text-center animate-pop-in ${meta.cardClass}`}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.04),transparent_44%)]" />
 
           {decision === 'human_review' ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               {[0, 1, 2].map((ring) => (
                 <div
                   key={ring}
-                  className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-300/25 animate-ring-pulse"
+                  className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-300/40 animate-ring-pulse"
                   style={{ animationDelay: `${ring * 0.35}s` }}
                 />
               ))}
@@ -163,10 +163,10 @@ export default function DecisionFinale({ decision, amount, scenarioLabel, onDone
               {scenarioLabel}
             </div>
 
-            <h2 className={`mt-8 bg-gradient-to-r ${meta.titleGradient} bg-clip-text text-4xl font-black uppercase tracking-[0.14em] text-transparent md:text-6xl`}>
+            <h2 className={`mt-8 text-4xl font-black uppercase tracking-[0.14em] md:text-6xl ${meta.titleGradient}`}>
               {`${meta.title} · ${amountLabel}`}
             </h2>
-            <p className="mt-4 text-base leading-7 text-slate-200 md:text-lg">{meta.subtitle}</p>
+            <p className="mt-4 text-base leading-7 text-gray-700 md:text-lg">{meta.subtitle}</p>
           </div>
         </div>
       </div>

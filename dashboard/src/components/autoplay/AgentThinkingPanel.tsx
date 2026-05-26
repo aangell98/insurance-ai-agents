@@ -46,37 +46,37 @@ const AGENT_META: Record<AgentName, AgentMeta> = {
     icon: FileSearch,
     title: 'Agente de Extracción',
     role: 'Extrae y estructura datos del parte.',
-    accentClasses: 'text-primary-200',
-    haloClasses: 'from-primary-500/18 via-primary-400/14 to-primary-600/18',
+    accentClasses: 'text-primary-600',
+    haloClasses: 'from-primary-500/25 via-primary-400/20 to-primary-600/25',
   },
   risk: {
     icon: ShieldAlert,
     title: 'Agente de Riesgo',
     role: 'Evalúa probabilidad de fraude y riesgo.',
-    accentClasses: 'text-primary-100',
-    haloClasses: 'from-primary-600/18 via-primary-500/14 to-primary-700/18',
+    accentClasses: 'text-primary-600',
+    haloClasses: 'from-primary-600/25 via-primary-500/20 to-primary-700/25',
   },
   compliance: {
     icon: Scale,
     title: 'Agente de Compliance',
     role: 'Verifica cobertura, reglas y cumplimiento regulatorio.',
-    accentClasses: 'text-primary-200',
-    haloClasses: 'from-primary-500/16 via-primary-400/12 to-primary-600/16',
+    accentClasses: 'text-primary-600',
+    haloClasses: 'from-primary-500/22 via-primary-400/18 to-primary-600/22',
   },
   decision: {
     icon: CheckCircle2,
     title: 'Decisión Final',
     role: 'Consolida señales y emite la resolución final del caso.',
-    accentClasses: 'text-primary-100',
-    haloClasses: 'from-primary-400/18 via-primary-500/12 to-primary-600/18',
+    accentClasses: 'text-primary-600',
+    haloClasses: 'from-primary-400/25 via-primary-500/18 to-primary-600/25',
   },
 };
 
 const STATUS_CLASSES: Record<AgentStatus, string> = {
-  idle: 'border-white/10 bg-white/5 text-slate-300',
-  thinking: 'border-primary-300/30 bg-primary-500/12 text-primary-100',
-  completed: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
-  failed: 'border-rose-300/20 bg-rose-400/10 text-rose-100',
+  idle: 'border-gray-200 bg-gray-50 text-gray-600',
+  thinking: 'border-primary-200 bg-primary-50 text-primary-700',
+  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  failed: 'border-red-200 bg-red-50 text-red-700',
 };
 
 const EMPTY_THINKING_MESSAGES = [
@@ -133,9 +133,17 @@ function getStatusLabel(status: AgentStatus, durationSeconds?: number) {
   return 'Listo para arrancar';
 }
 
-function getPlaceholder(status: AgentStatus) {
+function getPlaceholder(status: AgentStatus, agent: AgentName) {
   if (status === 'failed') return 'El razonamiento del agente no pudo completarse.';
-  if (status === 'completed') return 'El agente terminó sin emitir trazas adicionales.';
+  if (status === 'completed') {
+    const completedByAgent: Record<AgentName, string> = {
+      intake: 'Extracción finalizada · campos consolidados a la derecha.',
+      risk: 'Evaluación de riesgo emitida · revisa el scoring y la señal de fraude.',
+      compliance: 'Validación regulatoria completada · checklist actualizado.',
+      decision: 'Decisión consolidada · veredicto disponible en la slide de decisión.',
+    };
+    return completedByAgent[agent];
+  }
   return 'Esperando tokens del orquestador para comenzar el razonamiento.';
 }
 
@@ -526,8 +534,8 @@ export default function AgentThinkingPanel({
   }, [showTopFade]);
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-surface-900 via-surface-900/95 to-surface-950 p-7 shadow-2xl shadow-black/35 md:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_42%)]" />
+    <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white p-7 shadow-xl shadow-gray-200/60 md:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(236,0,0,0.04),transparent_42%)]" />
       <div className={`pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-gradient-to-br blur-3xl ${haloClasses}`} />
 
       <div className="relative flex flex-col gap-8">
@@ -535,7 +543,7 @@ export default function AgentThinkingPanel({
           <div className="flex items-start gap-5">
             <div
               className={[
-                'flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-surface-800/95 via-surface-900 to-surface-950 shadow-[0_0_42px_rgba(15,23,42,0.45)]',
+                'flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md shadow-gray-200/60',
                 status === 'thinking' ? 'animate-agent-glow' : '',
               ].join(' ')}
             >
@@ -545,17 +553,17 @@ export default function AgentThinkingPanel({
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">Agente activo</p>
-              <h2 className="mt-3 bg-gradient-to-r from-white via-primary-100 to-primary-200 bg-clip-text text-3xl font-semibold tracking-tight text-transparent md:text-4xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-gray-500">Agente activo</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">
                 {title}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{role}</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">{role}</p>
             </div>
           </div>
 
           {status === 'completed' ? (
-            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-emerald-50 shadow-inner shadow-white/5 lg:min-w-[260px]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-100/70">Resumen</p>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 lg:min-w-[260px]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-700">Resumen</p>
               <div className="mt-2 space-y-1.5 text-sm font-medium leading-6">
                 {completedSummary.length > 0 ? (
                   completedSummary.map((line) => <p key={line}>{line}</p>)
@@ -563,36 +571,36 @@ export default function AgentThinkingPanel({
                   <p>✓ Completado</p>
                 )}
               </div>
-              <p className="mt-3 text-xs text-emerald-100/70">{durationLabel ? `Completado en ${durationLabel}` : 'Completado'}</p>
+              <p className="mt-3 text-xs text-emerald-700">{durationLabel ? `Completado en ${durationLabel}` : 'Completado'}</p>
             </div>
           ) : (
-            <div className={`inline-flex items-center self-start rounded-full border px-4 py-2 text-sm font-medium shadow-inner shadow-white/5 ${STATUS_CLASSES[status]}`}>
+            <div className={`inline-flex items-center self-start rounded-full border px-4 py-2 text-sm font-medium ${STATUS_CLASSES[status]}`}>
               {getStatusLabel(status, durationSeconds)}
             </div>
           )}
         </div>
 
-        <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-surface-800/70 shadow-inner shadow-black/25">
+        <div className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-gray-50">
           <div
             ref={scrollRef}
             style={scrollMaskStyle}
             className="scrollbar-clean min-h-[180px] max-h-[400px] overflow-y-auto px-6 py-6"
           >
             {!hasThoughts && status === 'thinking' ? (
-              <div className="flex min-h-[132px] flex-col justify-center gap-4 text-primary-100">
+              <div className="flex min-h-[132px] flex-col justify-center gap-4 text-primary-700">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">{EMPTY_THINKING_MESSAGES[thinkingMessageIndex]}</span>
-                  <div className="flex items-center gap-2 text-primary-200">
+                  <div className="flex items-center gap-2 text-primary-600">
                     {[0, 1, 2].map((dot) => (
                       <span
                         key={dot}
-                        className="h-2.5 w-2.5 rounded-full bg-primary-300/90 animate-pulse-soft"
+                        className="h-2.5 w-2.5 rounded-full bg-primary-500 animate-pulse-soft"
                         style={{ animationDelay: `${dot * 0.18}s` }}
                       />
                     ))}
                   </div>
                 </div>
-                <p className="max-w-xl text-sm leading-6 text-slate-400">
+                <p className="max-w-xl text-sm leading-6 text-gray-600">
                   Mostraremos la traza del agente en cuanto empiecen a llegar tokens útiles.
                 </p>
               </div>
@@ -602,20 +610,20 @@ export default function AgentThinkingPanel({
                   <div
                     key={field.path}
                     className={[
-                      'animate-slide-in-right rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 shadow-[0_10px_30px_rgba(2,6,23,0.18)]',
-                      field.depth === 1 ? 'ml-7 border-primary-500/20 bg-primary-500/5' : 'border-white/8',
+                      'animate-slide-in-right rounded-2xl border px-4 py-3 shadow-sm shadow-gray-200/60',
+                      field.depth === 1 ? 'ml-7 border-primary-200 bg-primary-50' : 'border-gray-200 bg-white',
                     ].join(' ')}
                   >
                     <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                          <span className={field.depth === 1 ? 'text-[13px] font-medium text-primary-100' : 'text-sm font-semibold text-slate-100'}>
+                          <span className={field.depth === 1 ? 'text-[13px] font-medium text-primary-700' : 'text-sm font-semibold text-gray-900'}>
                             {field.label}
                           </span>
-                          <span className="break-words text-[13px] leading-6 text-slate-300">{formatDetectedValue(field)}</span>
+                          <span className="break-words text-[13px] leading-6 text-gray-700">{formatDetectedValue(field)}</span>
                         </div>
                       </div>
                     </div>
@@ -623,36 +631,36 @@ export default function AgentThinkingPanel({
                 ))}
 
                 {status === 'thinking' ? (
-                  <div className="flex items-center gap-2 px-1 pt-1 text-xs font-medium text-primary-200/85">
-                    <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" />
+                  <div className="flex items-center gap-2 px-1 pt-1 text-xs font-medium text-primary-700">
+                    <span className="h-2 w-2 rounded-full bg-primary-500 animate-pulse-soft" />
                     Recibiendo más campos del análisis…
                   </div>
                 ) : null}
               </div>
             ) : showJsonLoading ? (
-              <div className="flex min-h-[132px] flex-col justify-center gap-3 text-primary-100">
+              <div className="flex min-h-[132px] flex-col justify-center gap-3 text-primary-700">
                 <div className="flex items-center gap-3">
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary-300 animate-pulse-soft" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary-500 animate-pulse-soft" />
                   <span className="text-sm font-medium">Transformando salida estructurada en un resumen legible…</span>
                 </div>
-                <p className="max-w-xl text-sm leading-6 text-slate-400">
+                <p className="max-w-xl text-sm leading-6 text-gray-600">
                   Los tokens ya están entrando. Iremos mostrando cada campo cuando quede cerrado.
                 </p>
               </div>
             ) : hasThoughts ? (
-              <p className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">
+              <p className="whitespace-pre-wrap text-[15px] leading-7 text-gray-800">
                 {thoughtTokens}
-                {status === 'thinking' ? <span className="ml-1 animate-blink text-primary-400">▌</span> : null}
+                {status === 'thinking' ? <span className="ml-1 animate-blink text-primary-600">▌</span> : null}
               </p>
             ) : (
-              <div className="flex min-h-[132px] items-center text-sm leading-6 text-slate-500">
-                {getPlaceholder(status)}
+              <div className="flex min-h-[132px] items-center text-sm leading-6 text-gray-500">
+                {getPlaceholder(status, agent)}
               </div>
             )}
           </div>
 
           {showTopFade ? (
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-surface-900 via-surface-900/70 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-gray-50 via-gray-50/70 to-transparent" />
           ) : null}
         </div>
       </div>
