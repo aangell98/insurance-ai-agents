@@ -30,8 +30,8 @@ function getStatusStyles(status: RuleStatus) {
   switch (status) {
     case 'checking':
       return {
-        icon: <Loader2 className="h-5 w-5 animate-spin text-sky-300" />,
-        row: 'border-sky-400/20 bg-sky-500/10',
+        icon: <Loader2 className="h-5 w-5 animate-spin text-primary-400" />,
+        row: 'border-primary-500/30 bg-primary-500/10',
       };
     case 'passed':
       return {
@@ -145,7 +145,7 @@ export default function ComplianceChecklistPanel({
 
       <div className="space-y-3">
         {allRulesPending ? (
-          <div className="rounded-xl border border-sky-400/10 bg-sky-500/5 px-4 py-3 text-xs font-medium text-slate-300 transition-opacity duration-300">
+          <div className="rounded-xl border border-primary-500/15 bg-primary-500/5 px-4 py-3 text-xs font-medium text-slate-300 transition-opacity duration-300">
             {COMPLIANCE_WARMING_MESSAGES[warmingMessageIndex]}
           </div>
         ) : null}
@@ -162,7 +162,7 @@ export default function ComplianceChecklistPanel({
                 'flex items-center gap-4 rounded-xl border p-4 transition-colors duration-300',
                 statusStyles.row,
                 visualStatus === 'pending' && 'text-slate-400',
-                visualStatus === 'checking' && active && 'shadow-[0_0_24px_rgba(14,165,233,0.1)]',
+                visualStatus === 'checking' && active && 'shadow-[0_0_24px_rgba(236,0,0,0.12)]',
               )}
               style={shouldPulse ? { animation: 'pulseRow 0.6s ease-out both' } : undefined}
             >

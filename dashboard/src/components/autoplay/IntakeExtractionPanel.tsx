@@ -48,22 +48,22 @@ const HIGHLIGHT_RULES: Array<{
     tone: 'vehicle',
     label: 'Vehículo',
     regex: /\b(?:tesla|bmw|audi|seat|coche|veh[ií]culo|moto)\b/gi,
-    className: 'bg-cyan-400/15 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.22)]',
-    dotClassName: 'bg-cyan-300',
+    className: 'bg-primary-400/15 text-primary-200 shadow-[0_0_0_1px_rgba(236,0,0,0.18)]',
+    dotClassName: 'bg-primary-300',
   },
   {
     tone: 'date',
     label: 'Fecha',
     regex: /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi,
-    className: 'bg-violet-400/15 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]',
-    dotClassName: 'bg-violet-300',
+    className: 'bg-primary-500/15 text-primary-300 shadow-[0_0_0_1px_rgba(236,0,0,0.22)]',
+    dotClassName: 'bg-primary-400',
   },
   {
     tone: 'location',
     label: 'Ubicación',
     regex: /\b(?:Madrid|Barcelona|Valencia|Sevilla|parking|calle|carretera|autopista|A-\d+|M-\d+)\b/gi,
-    className: 'bg-fuchsia-400/15 text-fuchsia-200 shadow-[0_0_0_1px_rgba(232,121,249,0.22)]',
-    dotClassName: 'bg-fuchsia-300',
+    className: 'bg-primary-300/15 text-primary-100 shadow-[0_0_0_1px_rgba(236,0,0,0.16)]',
+    dotClassName: 'bg-primary-200',
   },
 ];
 
@@ -320,7 +320,7 @@ export default function IntakeExtractionPanel({
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200 shadow-inner shadow-white/5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-500/20 bg-primary-500/10 text-primary-200 shadow-inner shadow-white/5">
               <FileSearch className="h-5 w-5" />
             </div>
             <div>
@@ -349,10 +349,10 @@ export default function IntakeExtractionPanel({
               </div>
             )) : showGhostExtraction ? (
               <>
-                <div className="rounded-xl border border-cyan-400/10 bg-surface-800/90 p-4 shadow-inner shadow-cyan-500/5">
+                <div className="rounded-xl border border-primary-500/10 bg-surface-800/90 p-4 shadow-inner shadow-primary-900/20">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 animate-pulse" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary-300 animate-pulse" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Captura del parte</p>
@@ -368,16 +368,16 @@ export default function IntakeExtractionPanel({
                   </div>
                   <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
                     <div
-                      className="absolute inset-y-0 left-0 w-[62%] rounded-full bg-gradient-to-r from-cyan-400/0 via-cyan-300/95 to-teal-300/0"
+                      className="absolute inset-y-0 left-0 w-[62%] rounded-full bg-gradient-to-r from-primary-400/0 via-primary-300/95 to-primary-500/0"
                       style={{ animation: 'shimmer 1.6s ease-in-out infinite' }}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-violet-400/10 bg-surface-800/90 p-4 shadow-inner shadow-violet-500/5">
+                <div className="rounded-xl border border-primary-500/10 bg-surface-800/90 p-4 shadow-inner shadow-primary-900/20">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-violet-300 animate-pulse" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-primary-300 animate-pulse" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Verificación previa</p>
@@ -393,7 +393,7 @@ export default function IntakeExtractionPanel({
                   </div>
                   <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800">
                     <div
-                      className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-violet-400/0 via-fuchsia-300/90 to-sky-300/0"
+                      className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-primary-400/0 via-primary-300/90 to-primary-500/0"
                       style={{ animation: 'shimmer 1.8s ease-in-out infinite', animationDelay: '0.18s' }}
                     />
                   </div>

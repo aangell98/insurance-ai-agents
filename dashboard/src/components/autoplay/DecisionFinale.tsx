@@ -61,11 +61,11 @@ const DECISION_META: Record<DecisionFinaleProps['decision'], DecisionMeta> = {
     icon: XCircle,
     title: 'RECHAZADO',
     subtitle: 'Posible fraude detectado.',
-    tintClass: 'bg-rose-500/20',
-    cardClass: 'bg-gradient-to-br from-rose-500/18 via-surface-950/92 to-orange-500/12 shadow-[0_0_90px_rgba(244,63,94,0.24)]',
-    badgeClass: 'border-rose-300/20 bg-rose-400/10 text-rose-100',
-    iconShellClass: 'border-rose-300/30 bg-rose-400/12 text-rose-100 shadow-[0_0_80px_rgba(244,63,94,0.34)]',
-    titleGradient: 'from-white via-rose-100 to-orange-200',
+    tintClass: 'bg-red-600/20',
+    cardClass: 'bg-gradient-to-br from-red-600/20 via-surface-950/92 to-red-500/10 shadow-[0_0_90px_rgba(220,38,38,0.26)]',
+    badgeClass: 'border-red-400/25 bg-red-500/10 text-red-300',
+    iconShellClass: 'border-red-400/35 bg-red-500/12 text-red-300 shadow-[0_0_80px_rgba(220,38,38,0.34)]',
+    titleGradient: 'from-white via-red-100 to-red-300',
   },
 };
 
@@ -124,7 +124,7 @@ export default function DecisionFinale({ decision, amount, scenarioLabel, onDone
   return (
     <div className="pointer-events-none fixed inset-0 z-[200] overflow-hidden">
       <div className={`absolute inset-0 backdrop-blur-sm ${meta.tintClass}`} />
-      {decision === 'reject' ? <div className="absolute inset-0 bg-rose-500/10 animate-pulse-soft" /> : null}
+      {decision === 'reject' ? <div className="absolute inset-0 bg-red-500/10 animate-pulse-soft" /> : null}
 
       {decision === 'approve' ? (
         <div className="absolute inset-0 overflow-hidden">

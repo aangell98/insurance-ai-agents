@@ -86,8 +86,8 @@ const SCENARIO_META: Record<ScenarioKey, { label: string; shortLabel: string; ba
   high_amount: {
     label: '💰 Alto Monto',
     shortLabel: 'Alto Monto',
-    badge: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200',
-    glow: 'shadow-[0_0_36px_rgba(34,211,238,0.18)]',
+    badge: 'border-primary-500/30 bg-primary-500/10 text-primary-200',
+    glow: 'shadow-[0_0_36px_rgba(236,0,0,0.18)]',
   },
   human_review: {
     label: '🟠 Revisión Humana',
@@ -104,8 +104,8 @@ const SCENARIO_META: Record<ScenarioKey, { label: string; shortLabel: string; ba
   prompt_injection: {
     label: '🛡️ Prompt Injection',
     shortLabel: 'Prompt Injection',
-    badge: 'border-violet-400/30 bg-violet-500/10 text-violet-200',
-    glow: 'shadow-[0_0_36px_rgba(139,92,246,0.22)]',
+    badge: 'border-primary-500/30 bg-primary-500/10 text-primary-100',
+    glow: 'shadow-[0_0_36px_rgba(236,0,0,0.22)]',
   },
 };
 
@@ -396,7 +396,7 @@ function ConsolidationStepsPanel({ phase }: { phase: 0 | 1 | 2 }) {
   return (
     <div className="flex h-full min-h-[420px] flex-col items-center justify-center px-6 py-10">
       <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">Consolidación</p>
-      <h3 className="mt-3 bg-gradient-to-r from-white via-violet-100 to-teal-100 bg-clip-text text-center text-2xl font-semibold tracking-tight text-transparent xl:text-3xl">
+      <h3 className="mt-3 bg-gradient-to-r from-white via-primary-100 to-primary-200 bg-clip-text text-center text-2xl font-semibold tracking-tight text-transparent xl:text-3xl">
         Preparando la decisión final
       </h3>
       <ul className="mt-8 w-full max-w-md space-y-3">
@@ -410,7 +410,7 @@ function ConsolidationStepsPanel({ phase }: { phase: 0 | 1 | 2 }) {
                 isDone
                   ? 'border-emerald-400/30 bg-emerald-500/10'
                   : isActive
-                    ? 'border-cyan-400/40 bg-cyan-500/12 animate-pulse-soft'
+                    ? 'border-primary-500/40 bg-primary-500/12 animate-pulse-soft'
                     : 'border-white/10 bg-white/5 opacity-60'
               }`}
             >
@@ -418,20 +418,20 @@ function ConsolidationStepsPanel({ phase }: { phase: 0 | 1 | 2 }) {
                 isDone
                   ? 'bg-emerald-400 text-slate-950'
                   : isActive
-                    ? 'bg-cyan-400 text-slate-950'
+                    ? 'bg-primary-400 text-white'
                     : 'bg-white/10 text-slate-500'
               }`}>
                 {isDone ? '✓' : isActive ? '•' : idx + 1}
               </span>
               <div className="flex-1">
-                <p className={`text-sm font-semibold ${isActive ? 'text-cyan-50' : isDone ? 'text-emerald-50' : 'text-slate-300'}`}>{step.label}</p>
+                <p className={`text-sm font-semibold ${isActive ? 'text-primary-100' : isDone ? 'text-emerald-50' : 'text-slate-300'}`}>{step.label}</p>
                 <p className="mt-1 text-xs text-slate-400">{step.detail}</p>
               </div>
               {isActive ? (
                 <div className="mt-1 flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" />
-                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" style={{ animationDelay: '0.18s' }} />
-                  <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse-soft" style={{ animationDelay: '0.36s' }} />
+                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" />
+                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" style={{ animationDelay: '0.18s' }} />
+                  <span className="h-2 w-2 rounded-full bg-primary-300 animate-pulse-soft" style={{ animationDelay: '0.36s' }} />
                 </div>
               ) : null}
             </li>
@@ -989,9 +989,12 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       <div className="flex h-full flex-col">
         <header className="border-b border-white/10 bg-surface-950/80 px-6 py-5 xl:px-10">
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white">🎬 Demo automática — 5 casos reales</h2>
-              <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+            <div className="flex items-start gap-3">
+              <img src="/santander-logo.avif" alt="Santander" className="h-7 w-auto shrink-0 opacity-90" />
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-white">Demo automática — 5 casos reales</h2>
+                <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -1057,7 +1060,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
 
             {status === 'finished' && (
               <div className="flex min-h-[70vh] items-center justify-center">
-                <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_45%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(17,24,39,0.92))] p-10 text-center xl:p-14">
+                <div className="w-full max-w-5xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(236,0,0,0.18),_transparent_45%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(17,24,39,0.92))] p-10 text-center xl:p-14">
                   <div className="mx-auto max-w-3xl">
                     <p className="text-sm font-semibold uppercase tracking-[0.35em] text-primary-300">Cierre de la demo</p>
                     <h3 className="mt-4 text-4xl font-semibold tracking-tight text-white xl:text-5xl">
@@ -1079,7 +1082,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Decisión automática</p>
-                      <p className="mt-3 text-3xl font-semibold text-cyan-300">{automaticDecisionCount}</p>
+                      <p className="mt-3 text-3xl font-semibold text-primary-300">{automaticDecisionCount}</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total procesado</p>
@@ -1117,7 +1120,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                         className={`rounded-2xl border px-4 py-3 text-sm ${
                           notice.kind === 'error'
                             ? 'border-rose-500/20 bg-rose-500/10 text-rose-100'
-                            : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-100'
+                            : 'border-primary-500/20 bg-primary-500/10 text-primary-100'
                         }`}
                       >
                         {notice.text}
@@ -1127,7 +1130,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                 )}
 
                 {/* Scenario header */}
-                <section className={`rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.14),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(2,6,23,0.96))] p-5 xl:p-6 ${currentScenarioMeta?.glow ?? ''}`}>
+                <section className={`rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(236,0,0,0.14),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(2,6,23,0.96))] p-5 xl:p-6 ${currentScenarioMeta?.glow ?? ''}`}>
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium ${currentScenarioMeta?.badge ?? 'border-white/10 bg-white/5 text-slate-200'}`}>
@@ -1161,7 +1164,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                     durationSeconds={activeDurationSeconds}
                   />
 
-                  <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.10),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-5 xl:p-6">
+                  <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(236,0,0,0.10),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-5 xl:p-6">
                     {consolidationPhase !== null ? (
                       <ConsolidationStepsPanel phase={consolidationPhase} />
                     ) : (

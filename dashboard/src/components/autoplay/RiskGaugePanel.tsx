@@ -81,10 +81,10 @@ export default function RiskGaugePanel({
   const warmingUp = active && targetScore === null && fraudProbability === null;
   const fraudMeta = active && fraudProbability ? FRAUD_META[fraudProbability] : null;
   const fillScale = fraudMeta?.scale ?? (fraudPending ? 0.14 : 0);
-  const fillColor = fraudMeta?.color ?? (warmingUp ? '#f87171' : fraudPending ? '#38bdf8' : '#64748b');
+  const fillColor = fraudMeta?.color ?? (warmingUp ? '#EC0000' : fraudPending ? '#EC0000' : '#64748b');
   const pillLabel = fraudMeta?.label ?? (fraudPending ? 'CALCULANDO' : '—');
   const pillTone = fraudMeta?.pill ?? (fraudPending
-    ? `border-sky-400/20 bg-sky-500/10 text-sky-200${warmingUp ? '' : ' animate-pulse'}`
+    ? `border-primary-500/30 bg-primary-500/12 text-primary-100${warmingUp ? '' : ' animate-pulse'}`
     : 'border-white/10 bg-white/5 text-slate-400');
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function RiskGaugePanel({
   return (
     <section className="rounded-[28px] border border-white/10 bg-surface-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 shadow-inner shadow-white/5">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-500/20 bg-primary-500/10 text-primary-200 shadow-inner shadow-white/5">
           <ShieldAlert className="h-5 w-5" />
         </div>
         <div>
@@ -116,7 +116,7 @@ export default function RiskGaugePanel({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-surface-800/90 p-5">
+        <div className="rounded-2xl border border-primary-500/20 bg-surface-800/90 p-5">
           {warmingUp ? (
             <p className="mb-3 text-center text-xs font-medium text-slate-400 transition-opacity duration-300">
               {RISK_WARMING_MESSAGES[warmingMessageIndex]}
@@ -163,7 +163,7 @@ export default function RiskGaugePanel({
               cx="150"
               cy="150"
               r="18"
-              fill={riskPending ? 'rgba(56, 189, 248, 0.18)' : 'rgba(15, 23, 42, 0.92)'}
+              fill={riskPending ? 'rgba(236, 0, 0, 0.18)' : 'rgba(15, 23, 42, 0.92)'}
               className={riskPending && !warmingUp ? 'animate-pulse' : undefined}
             />
             <g
@@ -185,17 +185,17 @@ export default function RiskGaugePanel({
                 y1="150"
                 x2="236"
                 y2="150"
-                stroke={active ? '#f8fafc' : '#94a3b8'}
+                stroke={active ? '#fecaca' : '#94a3b8'}
                 strokeWidth="6"
                 strokeLinecap="round"
               />
             </g>
-            <circle cx="150" cy="150" r="11" fill={active ? '#e2e8f0' : '#64748b'} />
+            <circle cx="150" cy="150" r="11" fill={active ? '#fecaca' : '#64748b'} />
             <circle cx="150" cy="150" r="4" fill="#0f172a" />
           </svg>
 
           <div className={cx('mt-4 text-center', riskPending && !warmingUp && 'animate-pulse')}>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Risk Score</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-300">Risk Score</p>
             <p className={cx('mt-2 text-4xl font-semibold tracking-tight', scoreTone)}>
               {scoreLabel}
               <span className="ml-2 text-xl text-slate-500">/ 100</span>
@@ -203,7 +203,7 @@ export default function RiskGaugePanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-surface-800/90 p-5">
+        <div className="rounded-2xl border border-primary-500/20 bg-surface-800/90 p-5">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Fraud signal</p>
             <h3 className="mt-2 text-base font-semibold text-white">Probabilidad de fraude</h3>

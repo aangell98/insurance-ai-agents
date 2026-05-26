@@ -4,9 +4,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-        accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
-        surface: { 800: '#1e293b', 850: '#172033', 900: '#0f172a', 950: '#020617' },
+        // Paleta Santander: rojo corporativo como primario
+        primary: {
+          50:  '#FFF1F1',
+          100: '#FFE0E0',
+          200: '#FFB8B8',
+          300: '#FF8585',
+          400: '#FF4D4D',
+          500: '#EC0000', // Santander Red oficial
+          600: '#CC0000',
+          700: '#A50000',
+          800: '#7A0000',
+          900: '#4D0000',
+        },
+        // Alias semánticos para acceso rápido
+        santander: {
+          red:       '#EC0000',
+          'red-700': '#A50000',
+          'red-50':  '#FFF1F1',
+          dark:      '#1F1F1F',
+          gray:      '#65686A',
+          'gray-light': '#F1F2F4',
+        },
+        accent: { 400: '#FFD24C', 500: '#FFC107', 600: '#E0A800' },
+        // Light surfaces para hero, cards, header
+        surface: {
+          0:   '#FFFFFF',
+          50:  '#F8FAFC',
+          100: '#F1F5F9',
+          150: '#E5E7EB',
+          200: '#CBD5E1',
+          // mantenemos tonos oscuros para zonas tipo "panel de control"
+          800: '#1F2937',
+          850: '#111827',
+          900: '#0F172A',
+          950: '#020617',
+        },
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

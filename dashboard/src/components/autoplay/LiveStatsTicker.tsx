@@ -16,6 +16,7 @@ interface TickerStatProps {
   label: string;
   value: string;
   accentClasses: string;
+  valueClasses: string;
 }
 
 function easeOutCubic(progress: number) {
@@ -99,7 +100,7 @@ function formatElapsed(seconds: number) {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
-function TickerStat({ icon: Icon, label, value, accentClasses }: TickerStatProps) {
+function TickerStat({ icon: Icon, label, value, accentClasses, valueClasses }: TickerStatProps) {
   return (
     <div className="flex items-center gap-4 px-4 py-3 lg:px-5">
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-inner shadow-white/5 ${accentClasses}`}>
@@ -107,7 +108,7 @@ function TickerStat({ icon: Icon, label, value, accentClasses }: TickerStatProps
       </div>
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</div>
-        <div className="mt-1 bg-gradient-to-r from-white via-violet-200 to-teal-200 bg-clip-text text-2xl font-semibold leading-none text-transparent tabular-nums">
+        <div className={`mt-1 text-2xl font-semibold leading-none tabular-nums ${valueClasses}`}>
           {value}
         </div>
       </div>
@@ -129,42 +130,46 @@ export default function LiveStatsTicker({
   const animatedFrauds = useAnimatedNumber(fraudsDetected);
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-teal-400/10 shadow-[0_0_40px_rgba(2,6,23,0.45)] backdrop-blur-xl">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(139,92,246,0.14),transparent_30%),radial-gradient(circle_at_right,rgba(45,212,191,0.12),transparent_26%)]" />
+    <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-r from-primary-600/12 via-primary-500/10 to-primary-700/12 shadow-[0_0_40px_rgba(2,6,23,0.45)] backdrop-blur-xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(236,0,0,0.14),transparent_30%),radial-gradient(circle_at_right,rgba(236,0,0,0.12),transparent_26%)]" />
       <div className="relative grid divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
         <TickerStat
           icon={Wallet}
           label="€ procesados"
           value={formatCurrency(animatedProcessed)}
-          accentClasses="border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+          accentClasses="border-primary-500/30 bg-primary-500/15 text-primary-200"
+          valueClasses="text-primary-200"
         />
         <TickerStat
           icon={CheckCircle2}
           label="Casos completados"
           value={formatFraction(animatedCompleted, totalCases)}
-          accentClasses="border-sky-400/20 bg-sky-500/10 text-sky-200"
+          accentClasses="border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+          valueClasses="text-emerald-300"
         />
         <TickerStat
           icon={Cpu}
           label="% automatización"
           value={formatPercent(animatedAutomation)}
-          accentClasses="border-violet-400/20 bg-violet-500/10 text-violet-200"
+          accentClasses="border-amber-400/20 bg-amber-500/10 text-amber-200"
+          valueClasses="text-amber-300"
         />
         <TickerStat
           icon={ShieldAlert}
           label="Fraudes detectados"
           value={Math.max(0, Math.round(animatedFrauds)).toLocaleString('es-ES')}
-          accentClasses="border-rose-400/20 bg-rose-500/10 text-rose-200"
+          accentClasses="border-primary-500/30 bg-primary-500/15 text-primary-200"
+          valueClasses="text-primary-200"
         />
 
         <div className="flex items-center justify-center px-5 py-4 xl:min-w-[132px]">
           <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-2 shadow-inner shadow-white/5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-500/30 bg-primary-500/12 text-primary-200">
               <Clock3 className="h-[18px] w-[18px]" />
             </div>
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Tiempo</div>
-              <div className="mt-1 bg-gradient-to-r from-white via-cyan-200 to-teal-200 bg-clip-text text-lg font-semibold leading-none text-transparent tabular-nums">
+              <div className="mt-1 text-lg font-semibold leading-none text-primary-100 tabular-nums">
                 {formatElapsed(elapsedSeconds)}
               </div>
             </div>
@@ -173,7 +178,7 @@ export default function LiveStatsTicker({
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px overflow-hidden bg-gradient-to-r from-transparent via-white/15 to-transparent">
-        <div className="h-full w-24 rounded-full bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_20px_rgba(45,212,191,0.85)] animate-ticker-sweep" />
+        <div className="h-full w-24 rounded-full bg-gradient-to-r from-transparent via-primary-400 to-transparent shadow-[0_0_20px_rgba(236,0,0,0.7)] animate-ticker-sweep" />
       </div>
     </div>
   );

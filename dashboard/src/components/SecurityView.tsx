@@ -4,25 +4,25 @@ import { getSecurityIncidents } from '../api';
 import type { SecurityIncident } from '../api';
 
 const SEVERITY_BADGE: Record<string, string> = {
-  critical: 'bg-red-900/40 text-red-400 border-red-800',
-  high: 'bg-orange-900/40 text-orange-400 border-orange-800',
-  medium: 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
-  low: 'bg-blue-900/40 text-blue-400 border-blue-800',
+  critical: 'bg-red-100 text-red-800 border-red-200',
+  high: 'bg-red-50 text-red-700 border-red-200',
+  medium: 'bg-amber-50 text-amber-800 border-amber-200',
+  low: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  open: 'bg-red-900/40 text-red-400 border-red-800',
-  closed: 'bg-gray-800 text-gray-400 border-gray-700',
+  open: 'bg-red-50 text-red-700 border-red-200',
+  closed: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 const TYPE_BADGE: Record<string, { label: string; classes: string }> = {
   prompt_injection: {
     label: 'Prompt injection',
-    classes: 'bg-purple-900/30 border-purple-800 text-purple-300',
+    classes: 'bg-red-50 border-red-200 text-red-700',
   },
   fraud_suspected: {
     label: 'Posible fraude',
-    classes: 'bg-orange-900/30 border-orange-800 text-orange-300',
+    classes: 'bg-amber-50 border-amber-200 text-amber-800',
   },
 };
 
@@ -50,10 +50,10 @@ export default function SecurityView() {
   const refresh = useCallback(() => {
     setLoading(true);
     getSecurityIncidents()
-      .then((res) => {
-        setIncidents(res.incidents);
-        setTotal(res.total);
-        setOpen(res.open);
+      .then((response) => {
+        setIncidents(response.incidents);
+        setTotal(response.total);
+        setOpen(response.open);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -67,117 +67,95 @@ export default function SecurityView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-surface-900 rounded-xl border border-gray-800 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-900/30 border border-red-800 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-red-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50">
+              <Shield className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Incidentes de Seguridad</h2>
-              <p className="text-xs text-gray-400">
-                Intentos de manipulación del sistema detectados por los agentes
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">Incidentes de Seguridad</h2>
+              <p className="text-sm text-gray-600">Intentos de manipulación del sistema detectados por los agentes.</p>
             </div>
           </div>
           <button
             onClick={refresh}
             disabled={loading}
-            className="px-3 py-1.5 text-xs rounded-md border border-gray-700 text-gray-400 hover:text-white hover:border-primary-500 transition-colors flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-surface-800/60 rounded-lg border border-gray-800 p-4">
-            <div className="text-xs text-gray-500 mb-1">Total detectados</div>
-            <div className="text-2xl font-semibold text-white">{total}</div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="mb-1 text-xs uppercase tracking-wide text-gray-500">Total detectados</div>
+            <div className="text-2xl font-semibold text-gray-900">{total}</div>
           </div>
-          <div className="bg-surface-800/60 rounded-lg border border-red-900/40 p-4">
-            <div className="text-xs text-gray-500 mb-1">Abiertos</div>
-            <div className="text-2xl font-semibold text-red-400">{open}</div>
+          <div className="rounded-xl border border-red-700 bg-red-600 p-4 text-white shadow-sm">
+            <div className="mb-1 text-xs uppercase tracking-wide text-red-100">Abiertos</div>
+            <div className="text-2xl font-semibold">{open}</div>
           </div>
-          <div className="bg-surface-800/60 rounded-lg border border-gray-800 p-4">
-            <div className="text-xs text-gray-500 mb-1">Cerrados</div>
-            <div className="text-2xl font-semibold text-gray-400">{total - open}</div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="mb-1 text-xs uppercase tracking-wide text-gray-500">Cerrados</div>
+            <div className="text-2xl font-semibold text-gray-900">{total - open}</div>
           </div>
         </div>
       </div>
 
-      {/* Incidents list */}
       {incidents.length === 0 ? (
-        <div className="bg-surface-900 rounded-xl border border-gray-800 p-12 text-center">
-          <Shield className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-          <p className="text-gray-500 text-sm">
-            No se han detectado incidentes de seguridad.
-          </p>
-          <p className="text-gray-600 text-xs mt-1">
-            El sistema está monitorizando intentos de manipulación en tiempo real.
-          </p>
+        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <Shield className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+          <p className="text-sm text-gray-600">No se han detectado incidentes de seguridad.</p>
+          <p className="mt-1 text-xs text-gray-500">El sistema está monitorizando intentos de manipulación en tiempo real.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {incidents.map((inc) => (
+          {incidents.map((incident) => (
             <div
-              key={`${inc.claim_id}-${inc.detected_at}`}
-              className="bg-surface-900 rounded-xl border border-red-900/40 p-5"
+              key={`${incident.claim_id}-${incident.detected_at}`}
+              className="rounded-xl border border-red-200 bg-white p-5 shadow-sm transition-colors hover:border-red-300"
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-red-900/30 border border-red-800 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-sm font-semibold text-white">
-                      {inc.claim_id}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{incident.claim_id}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${SEVERITY_BADGE[incident.severity] ?? SEVERITY_BADGE.medium}`}>
+                      {incident.severity.toUpperCase()}
                     </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                        SEVERITY_BADGE[inc.severity] ?? SEVERITY_BADGE.medium
-                      }`}
-                    >
-                      {inc.severity.toUpperCase()}
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${STATUS_BADGE[incident.status] ?? STATUS_BADGE.open}`}>
+                      {incident.status === 'open' ? 'ABIERTO' : 'CERRADO'}
                     </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                        STATUS_BADGE[inc.status] ?? STATUS_BADGE.open
-                      }`}
-                    >
-                      {inc.status === 'open' ? 'ABIERTO' : 'CERRADO'}
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${(TYPE_BADGE[incident.incident_type] ?? { classes: 'bg-gray-100 border-gray-200 text-gray-700' }).classes}`}>
+                      {(TYPE_BADGE[incident.incident_type]?.label) ?? incident.incident_type}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] border ${(TYPE_BADGE[inc.incident_type] ?? { classes: 'bg-purple-900/30 border-purple-800 text-purple-300' }).classes}`}>
-                      {(TYPE_BADGE[inc.incident_type]?.label) ?? inc.incident_type}
-                    </span>
-                    <span className="text-[10px] text-gray-500 ml-auto">
-                      {formatDate(inc.detected_at)}
-                    </span>
+                    <span className="ml-auto text-xs text-gray-500">{formatDate(incident.detected_at)}</span>
                   </div>
 
-                  <p className="text-sm text-gray-300 mb-3">{inc.description}</p>
+                  <p className="mb-3 text-sm text-gray-800">{incident.description}</p>
 
-                  <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
-                    <div className="bg-surface-800/60 rounded-md px-3 py-2 border border-gray-800">
-                      <div className="text-gray-500 text-[10px] mb-0.5">Póliza</div>
-                      <div className="text-gray-200 font-mono">{inc.policy_id}</div>
+                  <div className="mb-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                      <div className="mb-0.5 text-[10px] uppercase tracking-wide text-gray-500">Póliza</div>
+                      <div className="font-mono text-gray-800">{incident.policy_id}</div>
                     </div>
-                    <div className="bg-surface-800/60 rounded-md px-3 py-2 border border-gray-800">
-                      <div className="text-gray-500 text-[10px] mb-0.5">Cliente</div>
-                      <div className="text-gray-200 font-mono">{inc.customer_id}</div>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                      <div className="mb-0.5 text-[10px] uppercase tracking-wide text-gray-500">Cliente</div>
+                      <div className="font-mono text-gray-800">{incident.customer_id}</div>
                     </div>
                   </div>
 
-                  <div className="bg-surface-800/60 rounded-md border border-gray-800 p-3">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <FileWarning className="w-3.5 h-3.5 text-yellow-500" />
-                      <span className="text-[10px] uppercase text-gray-500 tracking-wide">
-                        Extracto de la carga maliciosa
-                      </span>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <FileWarning className="h-3.5 w-3.5 text-amber-600" />
+                      <span className="text-[10px] uppercase tracking-wide text-gray-500">Extracto de la carga maliciosa</span>
                     </div>
-                    <pre className="text-[11px] text-gray-400 whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto">
-                      {inc.raw_payload_excerpt}
+                    <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-gray-700">
+                      {incident.raw_payload_excerpt}
                     </pre>
                   </div>
                 </div>

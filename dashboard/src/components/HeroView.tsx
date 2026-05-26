@@ -32,7 +32,14 @@ interface HeroMetric {
   value: number;
   formatter: (value: number) => string;
   description: string;
-  iconClasses: string;
+  valueClass: string;
+}
+
+interface PlatformBadge {
+  icon: LucideIcon;
+  name: string;
+  description: string;
+  featured?: boolean;
 }
 
 const HERO_BADGES: Array<{ icon: LucideIcon; label: string }> = [
@@ -51,13 +58,18 @@ const FLOW_STEPS: Array<{ icon: LucideIcon; title: string; description: string }
   { icon: Gavel, title: 'Decisión', description: 'Aprueba, rechaza o escala con reasoning y trazabilidad completa.' },
 ];
 
-const PLATFORM_STACK: Array<{ icon: LucideIcon; name: string; description: string }> = [
+const PLATFORM_STACK: PlatformBadge[] = [
+  {
+    icon: ShieldCheck,
+    name: 'Santander',
+    description: 'caso de uso de seguros con foco en gobierno, marca y experiencia cliente',
+    featured: true,
+  },
   { icon: Sparkles, name: 'Microsoft Agent Framework', description: 'orquestación multi-agente gobernada' },
   { icon: Sparkles, name: 'Azure OpenAI', description: 'razonamiento, extracción y decisión asistida' },
   { icon: Shield, name: 'Microsoft Entra ID', description: 'identidad, roles y acceso corporativo seguro' },
   { icon: Database, name: 'Azure Cosmos DB', description: 'persistencia auditable de expedientes y resultados' },
-  { icon: ShieldCheck, name: 'Azure API Management', description: 'seguridad, políticas y exposición controlada de APIs' },
-  { icon: Activity, name: 'Application Insights', description: 'observabilidad extremo a extremo y métricas live' },
+  { icon: Activity, name: 'Azure API Management', description: 'seguridad, políticas y exposición controlada de APIs' },
 ];
 
 const FALLBACKS = {
@@ -99,29 +111,33 @@ function useCountUp(target: number, duration = 1_400): number {
   return value;
 }
 
-function CountUpValue({ target, formatter }: { target: number; formatter: (value: number) => string }) {
+function CountUpValue({
+  target,
+  formatter,
+  className,
+}: {
+  target: number;
+  formatter: (value: number) => string;
+  className: string;
+}) {
   const value = useCountUp(target);
 
-  return (
-    <div className="animate-count-up bg-gradient-to-r from-white via-violet-200 to-teal-200 bg-clip-text text-5xl font-semibold tracking-tight text-transparent md:text-6xl">
-      {formatter(value)}
-    </div>
-  );
+  return <div className={className}>{formatter(value)}</div>;
 }
 
-function MetricCard({ icon: Icon, label, value, formatter, description, iconClasses }: HeroMetric) {
+function MetricCard({ icon: Icon, label, value, formatter, description, valueClass }: HeroMetric) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.26em] text-gray-500">{label}</div>
-        </div>
-        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 ${iconClasses}`}>
-          <Icon className="h-7 w-7" />
-        </div>
+    <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <Icon className="pointer-events-none absolute right-5 top-5 h-16 w-16 text-primary-200" />
+      <div className="relative">
+        <div className="text-[11px] uppercase tracking-[0.26em] text-gray-500">{label}</div>
+        <CountUpValue
+          target={value}
+          formatter={formatter}
+          className={`animate-count-up mt-4 text-4xl font-bold tracking-tight md:text-5xl ${valueClass}`}
+        />
+        <p className="mt-3 max-w-[16rem] text-sm leading-relaxed text-gray-600">{description}</p>
       </div>
-      <CountUpValue target={value} formatter={formatter} />
-      <p className="mt-3 text-sm leading-relaxed text-gray-400">{description}</p>
     </div>
   );
 }
@@ -193,7 +209,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         value: processedAmount,
         formatter: formatCurrency,
         description: 'Suma estimada del volumen económico ya gestionado por la plataforma.',
-        iconClasses: 'bg-emerald-500/10 text-emerald-300',
+        valueClass: 'text-primary-600',
       },
       {
         icon: Sparkles,
@@ -201,7 +217,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         value: automationRate,
         formatter: formatPercent,
         description: 'Casos cerrados automáticamente sin escalar a revisión manual.',
-        iconClasses: 'bg-violet-500/10 text-violet-300',
+        valueClass: 'text-gray-900',
       },
       {
         icon: Clock,
@@ -209,7 +225,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         value: minutesSaved,
         formatter: formatInteger,
         description: 'Ahorro directo frente a un proceso manual de 45 minutos por expediente.',
-        iconClasses: 'bg-sky-500/10 text-sky-300',
+        valueClass: 'text-gray-900',
       },
       {
         icon: ShieldAlert,
@@ -217,43 +233,41 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         value: fraudDetected,
         formatter: formatInteger,
         description: 'Rechazos automáticos e incidentes de seguridad detectados en el flujo.',
-        iconClasses: 'bg-rose-500/10 text-rose-300',
+        valueClass: 'text-primary-600',
       },
     ];
   }, [claims, incidents.length, stats]);
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-purple-900/40 via-blue-900/30 to-teal-900/20 px-8 py-10 shadow-2xl shadow-black/20 md:px-12 md:py-14">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/10 to-transparent" />
-        <div className="pointer-events-none absolute -right-20 top-10 h-48 w-48 rounded-full bg-teal-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
+      <section className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-gradient-to-br from-white via-primary-50 to-white px-8 py-10 shadow-lg md:px-12 md:py-14">
+        <div className="pointer-events-none absolute -right-20 top-0 h-52 w-52 rounded-full bg-primary-100/80 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-primary-50 blur-3xl" />
 
-        <div className="relative max-w-4xl space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface-950/40 px-4 py-2 text-xs font-medium text-gray-200 backdrop-blur-sm">
-            <Sparkles className="h-4 w-4 text-violet-300" />
+        <div className="relative mx-auto max-w-4xl space-y-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm">
+            <Sparkles className="h-4 w-4 text-primary-500" />
             Plataforma comercial para tramitación inteligente de siniestros
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">
-              Insurance AI{' '}
-              <span className="bg-gradient-to-r from-fuchsia-300 via-violet-200 to-teal-200 bg-clip-text text-transparent">
-                Claims Intelligence
-              </span>
+            <img src="/santander-logo.avif" alt="Santander" className="mx-auto mb-4 h-14 w-auto" />
+            <h2 className="text-4xl font-semibold tracking-tight md:text-6xl">
+              <span className="text-gray-900">Insurance AI</span>{' '}
+              <span className="text-primary-600">Claims Intelligence</span>
             </h2>
-            <p className="max-w-3xl text-lg leading-relaxed text-slate-200 md:text-xl">
-              Procesamiento de siniestros gobernado, auditable y en segundos. End-to-end.
+            <p className="mx-auto max-w-3xl text-lg leading-relaxed text-gray-600 md:text-xl">
+              Caso de uso: Santander Insurance — Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             {HERO_BADGES.map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface-950/40 px-3 py-2 text-xs text-gray-200 backdrop-blur-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm"
               >
-                <Icon className="h-3.5 w-3.5 text-teal-300" />
+                <Icon className="h-3.5 w-3.5 text-primary-500" />
                 <span>{label}</span>
               </div>
             ))}
@@ -262,7 +276,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
           <button
             type="button"
             onClick={onCTAClick}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-surface-950 transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary-700"
           >
             <Play className="h-4 w-4" fill="currentColor" />
             Probar ahora
@@ -274,7 +288,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-gray-500">KPIs que compra negocio</p>
-            <h3 className="text-2xl font-semibold text-white">Resultado económico, eficiencia y control</h3>
+            <h3 className="text-2xl font-semibold text-gray-900">Resultado económico, eficiencia y control</h3>
           </div>
           <p className="text-sm text-gray-500">Conectado a /api/stats, /api/claims y /api/security/incidents.</p>
         </div>
@@ -287,72 +301,72 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
       </section>
 
       <section className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-        <div className="rounded-3xl border border-red-900/40 bg-red-950/20 p-6">
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-300">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
               <Clock className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.26em] text-red-200/70">Antes</p>
-              <h3 className="text-2xl font-semibold text-white">45 min por caso</h3>
+              <p className="text-xs uppercase tracking-[0.26em] text-gray-500">Antes</p>
+              <h3 className="text-2xl font-semibold text-gray-900">45 min por caso</h3>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-gray-300">
+          <ul className="space-y-3 text-sm text-gray-700">
             <li className="flex items-start gap-3">
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
               <span>Errores humanos al reescribir datos y revisar coberturas.</span>
             </li>
             <li className="flex items-start gap-3">
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
               <span>Sin audit trail trazable para justificar por qué se aprobó o rechazó.</span>
             </li>
             <li className="flex items-start gap-3">
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
               <span>Fraudes e intentos de manipulación que se cuelan hasta fases tardías.</span>
             </li>
           </ul>
         </div>
 
-        <div className="hidden items-center justify-center text-gray-500 md:flex">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-surface-900/70">
+        <div className="hidden items-center justify-center md:flex">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-white text-primary-400 shadow-sm">
             <ArrowRight className="h-7 w-7" />
           </div>
         </div>
 
-        <div className="rounded-3xl border border-emerald-900/40 bg-emerald-950/20 p-6">
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-300">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
               <Zap className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.26em] text-emerald-200/70">Ahora</p>
-              <h3 className="text-2xl font-semibold text-white">30 segundos por caso</h3>
+              <p className="text-xs uppercase tracking-[0.26em] text-primary-600/80">Ahora</p>
+              <h3 className="text-2xl font-semibold text-gray-900">30 segundos por caso</h3>
             </div>
           </div>
-          <ul className="space-y-3 text-sm text-gray-300">
+          <ul className="space-y-3 text-sm text-gray-700">
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
               <span>3 agentes IA colaboran y entregan una decisión lista para negocio.</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
               <span>Audit trail completo para explicar, revisar y gobernar cada expediente.</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
               <span>Fraude, prompt injection y anomalías detectadas automáticamente.</span>
             </li>
           </ul>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-gray-800 bg-surface-900/70 p-6 shadow-xl shadow-black/10">
+      <section className="rounded-3xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Flujo operativo</p>
-            <h3 className="text-2xl font-semibold text-white">De la carga del parte a la decisión final</h3>
+            <h3 className="text-2xl font-semibold text-gray-900">De la carga del parte a la decisión final</h3>
           </div>
-          <div className="hidden rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-xs text-primary-300 md:inline-flex">
+          <div className="hidden rounded-full border border-primary-200 bg-white px-3 py-1 text-xs text-primary-700 md:inline-flex">
             Multi-agent orchestration live
           </div>
         </div>
@@ -364,15 +378,15 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
 
             <div className="grid gap-4 md:grid-cols-5">
               {FLOW_STEPS.map(({ icon: Icon, title, description }, index) => (
-                <div key={title} className="relative rounded-2xl border border-white/10 bg-surface-950/80 p-5">
+                <div key={title} className="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                   <div className="mb-4 flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-500/10 text-primary-300">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.24em] text-gray-600">0{index + 1}</span>
+                    <span className="text-[11px] font-medium uppercase tracking-[0.24em] text-gray-500">0{index + 1}</span>
                   </div>
-                  <h4 className="text-base font-semibold text-white">{title}</h4>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-400">{description}</p>
+                  <h4 className="text-base font-semibold text-gray-900">{title}</h4>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{description}</p>
                 </div>
               ))}
             </div>
@@ -382,28 +396,31 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
 
       <section className="space-y-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Construido sobre</p>
-          <h3 className="text-2xl font-semibold text-white">Stack enterprise listo para producción</h3>
+          <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Powered by</p>
+          <h3 className="text-2xl font-semibold text-gray-900">Stack enterprise listo para producción</h3>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {PLATFORM_STACK.map(({ icon: Icon, name, description }) => (
-            <div key={name} className="flex items-center gap-4 rounded-2xl border border-gray-800 bg-surface-900/70 px-5 py-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5 text-teal-300">
+          {PLATFORM_STACK.map(({ icon: Icon, name, description, featured }) => (
+            <div
+              key={name}
+              className={`flex items-center gap-4 rounded-xl border p-4 shadow-sm ${featured ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-white'}`}
+            >
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${featured ? 'bg-white text-primary-600' : 'bg-primary-50 text-primary-600'}`}>
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">{name}</h4>
-                <p className="text-xs text-gray-400">{description}</p>
+                <h4 className="text-sm font-semibold text-gray-900">{name}</h4>
+                <p className="text-xs text-gray-600">{description}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-primary-500/20 bg-gradient-to-r from-primary-500/10 via-violet-500/10 to-teal-500/10 p-8 text-center">
-        <p className="text-xs uppercase tracking-[0.28em] text-primary-200/70">Siguiente paso</p>
-        <h3 className="mt-3 text-3xl font-semibold text-white">Ver una demo automática ▶</h3>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-gray-300">
+      <section className="rounded-3xl border border-primary-200 bg-gradient-to-r from-primary-50 via-white to-primary-50 p-8 text-center shadow-sm">
+        <p className="text-xs uppercase tracking-[0.28em] text-primary-700">Siguiente paso</p>
+        <h3 className="mt-3 text-3xl font-semibold text-gray-900">Ver una demo automática ▶</h3>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-gray-600">
           Abre el flujo cliente para enseñar en directo cómo los agentes reducen tiempos, detectan fraude y dejan trazabilidad completa.
         </p>
         <button
@@ -412,7 +429,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
             // TODO: cuando autoplay-demo esté listo, abrir el modal en lugar de cambiar tab.
             onCTAClick();
           }}
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary-500 px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-primary-400"
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary-700"
         >
           Ver una demo automática
           <ArrowRight className="h-4 w-4" />

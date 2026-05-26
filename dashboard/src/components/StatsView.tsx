@@ -23,9 +23,9 @@ const DECISION_KEYS = ['approve', 'human_review', 'reject'] as const;
 type DecisionKey = (typeof DECISION_KEYS)[number];
 
 const DECISION_META: Record<DecisionKey, { label: string; color: string }> = {
-  approve: { label: 'Aprobadas', color: '#22c55e' },
-  human_review: { label: 'Revisión humana', color: '#f59e0b' },
-  reject: { label: 'Rechazadas', color: '#ef4444' },
+  approve: { label: 'Aprobadas', color: '#10B981' },
+  human_review: { label: 'Revisión humana', color: '#F59E0B' },
+  reject: { label: 'Rechazadas', color: '#DC2626' },
 };
 
 interface DailyDecisionPoint {
@@ -43,9 +43,7 @@ interface BusinessMetricCardProps {
   value: ReactNode;
   sub: string;
   tooltip: string;
-  cardClass: string;
   valueClass: string;
-  iconClass: string;
 }
 
 interface TechnicalMetricCardProps {
@@ -150,11 +148,11 @@ function InfoTooltip({ text }: { text: string }) {
         type="button"
         title={text}
         aria-label={text}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-500 transition-colors hover:border-primary-400/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
       >
         <Info className="h-3.5 w-3.5" />
       </button>
-      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-lg border border-gray-700 bg-surface-950 px-3 py-2 text-[11px] leading-relaxed text-gray-300 opacity-0 shadow-2xl transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-[11px] leading-relaxed text-white opacity-0 shadow-md transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         {text}
       </span>
     </span>
@@ -167,24 +165,22 @@ function BusinessMetricCard({
   value,
   sub,
   tooltip,
-  cardClass,
   valueClass,
-  iconClass,
 }: BusinessMetricCardProps) {
   return (
-    <div className={`relative rounded-2xl border border-gray-800 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${cardClass}`}>
-      <Icon className={`pointer-events-none absolute right-4 top-4 h-16 w-16 ${iconClass}`} />
+    <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <Icon className="pointer-events-none absolute right-4 top-4 h-16 w-16 text-primary-200" />
       <div className="relative">
         <div className="mb-3 flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
             {label}
           </span>
           <InfoTooltip text={tooltip} />
         </div>
-        <div className={`bg-gradient-to-r bg-clip-text text-4xl font-bold leading-tight text-transparent ${valueClass}`}>
+        <div className={`text-4xl font-bold leading-tight ${valueClass}`}>
           {value}
         </div>
-        <p className="mt-3 max-w-[18rem] text-sm text-gray-300">{sub}</p>
+        <p className="mt-3 max-w-[18rem] text-sm text-gray-600">{sub}</p>
       </div>
     </div>
   );
@@ -192,14 +188,14 @@ function BusinessMetricCard({
 
 function TechnicalMetricCard({ icon: Icon, label, value, sub }: TechnicalMetricCardProps) {
   return (
-    <div className="rounded-xl border border-gray-800 bg-surface-800/60 p-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="mb-3 flex items-center gap-2">
-        <div className="rounded-md bg-surface-950 p-2 text-gray-400">
+        <div className="rounded-md bg-primary-50 p-2 text-primary-600">
           <Icon className="h-4 w-4" />
         </div>
         <span className="text-xs uppercase tracking-[0.2em] text-gray-500">{label}</span>
       </div>
-      <div className="text-2xl font-semibold text-white">{value}</div>
+      <div className="text-2xl font-semibold text-gray-900">{value}</div>
       {sub && <p className="mt-1 text-xs text-gray-500">{sub}</p>}
     </div>
   );
@@ -226,9 +222,9 @@ function DecisionDistribution({ counts }: { counts: Record<DecisionKey, number> 
   });
 
   return (
-    <div className="rounded-2xl border border-gray-800 bg-surface-900 p-6">
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-white">Distribución de decisiones</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Distribución de decisiones</h3>
         <p className="text-xs text-gray-500">
           Qué parte del volumen se resuelve al instante y qué parte requiere revisión.
         </p>
@@ -237,7 +233,7 @@ function DecisionDistribution({ counts }: { counts: Record<DecisionKey, number> 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
         <div className="relative mx-auto h-40 w-40 shrink-0">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
-            <circle cx="60" cy="60" r={radius} fill="none" stroke="#1f2937" strokeWidth="12" />
+            <circle cx="60" cy="60" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="12" />
             {segments.map((segment) => (
               segment.value > 0 ? (
                 <circle
@@ -258,7 +254,7 @@ function DecisionDistribution({ counts }: { counts: Record<DecisionKey, number> 
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-semibold text-white">{formatNumber(total, 0)}</span>
+            <span className="text-3xl font-semibold text-gray-900">{formatNumber(total, 0)}</span>
             <span className="text-[11px] uppercase tracking-[0.2em] text-gray-500">Casos</span>
           </div>
         </div>
@@ -272,12 +268,12 @@ function DecisionDistribution({ counts }: { counts: Record<DecisionKey, number> 
               <div key={key} className="space-y-2">
                 <div className="flex items-center gap-3 text-sm">
                   <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DECISION_META[key].color }} />
-                  <span className="font-medium text-gray-200">{DECISION_META[key].label}</span>
-                  <span className="ml-auto text-gray-400">{formatNumber(percentage, 1)}%</span>
+                  <span className="font-medium text-gray-700">{DECISION_META[key].label}</span>
+                  <span className="ml-auto text-gray-500">{formatNumber(percentage, 1)}%</span>
                   <span className="text-gray-500">{formatNumber(value, 0)}</span>
                 </div>
                 <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-2 w-full overflow-visible rounded-full">
-                  <rect x="0" y="0" width="100" height="8" rx="4" fill="#111827" />
+                  <rect x="0" y="0" width="100" height="8" rx="4" fill="#E5E7EB" />
                   <rect x="0" y="0" width={percentage} height="8" rx="4" fill={DECISION_META[key].color}>
                     <title>{`${DECISION_META[key].label}: ${formatNumber(value, 0)} casos`}</title>
                   </rect>
@@ -303,17 +299,17 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
   const sevenDayAmount = days.reduce((sum, day) => sum + day.amount, 0);
 
   return (
-    <div className="rounded-2xl border border-gray-800 bg-surface-900 p-6">
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-white">Decisiones por día (últimos 7 días)</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Decisiones por día (últimos 7 días)</h3>
           <p className="text-xs text-gray-500">
             Evolución diaria del volumen procesado con desglose approve / revisión / reject.
           </p>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-surface-800/60 px-4 py-3">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
           <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Importe 7 días</div>
-          <div className="text-sm font-semibold text-white">{formatCurrency(sevenDayAmount)}</div>
+          <div className="text-sm font-semibold text-gray-900">{formatCurrency(sevenDayAmount)}</div>
         </div>
       </div>
 
@@ -322,8 +318,8 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
           const y = padding.top + plotHeight - (plotHeight * level);
           return (
             <g key={level}>
-              <line x1={padding.left} y1={y} x2={padding.left + plotWidth} y2={y} stroke="#1f2937" strokeDasharray="4 4" />
-              <text x={padding.left + plotWidth} y={y - 6} textAnchor="end" className="fill-gray-600 text-[10px]">
+              <line x1={padding.left} y1={y} x2={padding.left + plotWidth} y2={y} stroke="#E5E7EB" strokeDasharray="4 4" />
+              <text x={padding.left + plotWidth} y={y - 6} textAnchor="end" className="fill-gray-500 text-[10px]">
                 {formatNumber(maxTotal * level, 0)}
               </text>
             </g>
@@ -353,7 +349,7 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
                 width={barWidth}
                 height={plotHeight}
                 rx={barWidth / 2}
-                fill="#111827"
+                fill="#F3F4F6"
               />
 
               {DECISION_KEYS.map((key) => {
@@ -383,7 +379,7 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
                   x={x + (barWidth / 2)}
                   y={padding.top + plotHeight - accumulatedHeight - 8}
                   textAnchor="middle"
-                  className="fill-gray-400 text-[10px]"
+                  className="fill-gray-500 text-[10px]"
                 >
                   {day.total}
                 </text>
@@ -402,7 +398,7 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
         })}
       </svg>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-400">
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
         {DECISION_KEYS.map((key) => (
           <div key={key} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DECISION_META[key].color }} />
@@ -461,7 +457,7 @@ export default function StatsView() {
 
   if (!stats) {
     return (
-      <div className="rounded-xl border border-gray-800 bg-surface-900 p-6 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-600">
         {loadError ?? 'Cargando estadísticas…'}
       </div>
     );
@@ -489,69 +485,63 @@ export default function StatsView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary-400" />
-          <h2 className="text-lg font-semibold text-white">Estadísticas</h2>
+          <BarChart3 className="h-5 w-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Estadísticas</h2>
         </div>
         <button
           type="button"
           onClick={() => void refresh()}
-          className="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-white"
+          className="flex items-center gap-1.5 text-xs text-gray-600 transition-colors hover:text-primary-600"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Actualizar
         </button>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-primary-900/40 bg-gradient-to-r from-primary-900/20 via-surface-900 to-accent-900/20 p-4 md:grid-cols-3">
-        <div className="rounded-xl border border-gray-800 bg-surface-950/70 p-4">
+      <div className="grid gap-3 rounded-2xl border border-primary-200 bg-primary-50 p-4 md:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Antes</div>
-          <div className="mt-1 text-lg font-semibold text-white">45 min/caso</div>
+          <div className="mt-1 text-lg font-semibold text-gray-900">45 min/caso</div>
           <p className="text-xs text-gray-500">Procesamiento manual</p>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-surface-950/70 p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Ahora</div>
-          <div className="mt-1 text-lg font-semibold text-white">{aiDurationLabel}</div>
+          <div className="mt-1 text-lg font-semibold text-gray-900">{aiDurationLabel}</div>
           <p className="text-xs text-gray-500">Pipeline AI actual</p>
         </div>
-        <div className="rounded-xl border border-primary-800/40 bg-primary-900/20 p-4">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-primary-200/70">Impacto</div>
-          <div className="mt-1 bg-gradient-to-r from-white via-primary-100 to-accent-200 bg-clip-text text-lg font-semibold text-transparent">
+        <div className="rounded-xl border border-primary-200 bg-white p-4">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-primary-900/70">Impacto</div>
+          <div className="mt-1 text-3xl font-bold text-primary-600">
             {speedMultiplier === null ? '—' : `${formatNumber(speedMultiplier, speedMultiplier < 10 ? 1 : 0)}× más rápido`}
           </div>
-          <p className="text-xs text-primary-200/70">Comparativa calculada en runtime</p>
+          <p className="text-xs text-primary-900/70">Comparativa calculada en runtime</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <BusinessMetricCard
           icon={DollarSign}
-          label="Ahorro estimado este mes"
+          label="Ahorro estimado"
           value={estimatedSavings === null ? '—' : formatCurrency(estimatedSavings)}
           sub={savedHours === null ? 'Sin casos todavía para estimar el ahorro.' : `≈ ${formatNumber(savedHours, 1)} h liberadas al equipo este mes`}
-          tooltip="Calculado como (45 min - tiempo real) × casos × 35€/hora (coste medio analista)"
-          cardClass="bg-gradient-to-br from-purple-500/20 via-purple-500/8 to-surface-900"
-          valueClass="from-white via-purple-100 to-fuchsia-300"
-          iconClass="text-purple-300/10"
+          tooltip="Calculado como (45 min - tiempo real) × casos × 35€/hora (coste medio analista)."
+          valueClass="text-primary-600"
         />
         <BusinessMetricCard
           icon={Zap}
-          label="Tiempo medio reducido"
-          value={`${formatNumber(timeSavedPerCaseMinutes, 1)} min ahorrados / caso`}
-          sub={`Baseline manual: 45 min · Con AI: ${aiDurationLabel}`}
+          label="Tiempo reducido"
+          value={`${formatNumber(timeSavedPerCaseMinutes, 1)} min menos por caso`}
+          sub={`De 45 min/caso a ${aiDurationLabel} con IA gobernada`}
           tooltip="Baseline: 45 min/caso manual. Actual: tiempo medio del pipeline."
-          cardClass="bg-gradient-to-br from-teal-500/20 via-teal-500/8 to-surface-900"
-          valueClass="from-white via-teal-100 to-cyan-300"
-          iconClass="text-teal-300/10"
+          valueClass="text-gray-900"
         />
         <BusinessMetricCard
           icon={Bot}
-          label="Tasa de automatización"
+          label="Automatización"
           value={automationRate === null ? '—' : `${formatNumber(automationRate, 1)}%`}
           sub="Casos resueltos sin intervención humana"
-          tooltip="Casos approve + reject (sin revisión humana) / total casos."
-          cardClass="bg-gradient-to-br from-blue-500/20 via-blue-500/8 to-surface-900"
-          valueClass="from-white via-blue-100 to-sky-300"
-          iconClass="text-blue-300/10"
+          tooltip="Casos approve + reject (sin revisión humana) / total de casos."
+          valueClass="text-gray-900"
         />
         <BusinessMetricCard
           icon={ShieldAlert}
@@ -559,9 +549,7 @@ export default function StatsView() {
           value={formatNumber(fraudsPrevented, 0)}
           sub="Rechazos por riesgo + intentos de manipulación detectados"
           tooltip="Casos rejected por riesgo alto + incidentes de seguridad (prompt injection, manipulación)."
-          cardClass="bg-gradient-to-br from-red-500/20 via-red-500/8 to-surface-900"
-          valueClass="from-white via-red-100 to-rose-300"
-          iconClass="text-red-300/10"
+          valueClass="text-primary-600"
         />
       </div>
 
@@ -569,15 +557,15 @@ export default function StatsView() {
 
       <DecisionsByDayChart days={dailyDecisionPoints} />
 
-      <details className="rounded-2xl border border-gray-800 bg-surface-900 p-6">
+      <details className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
           <div>
-            <h3 className="text-sm font-semibold text-white">Métricas técnicas</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Métricas técnicas</h3>
             <p className="text-xs text-gray-500">
               Cerradas por defecto para que la conversación principal siga enfocada en negocio.
             </p>
           </div>
-          <span className="flex items-center gap-2 text-xs text-gray-400">
+          <span className="flex items-center gap-2 text-xs text-gray-500">
             Mostrar detalle
             <ChevronDown className="h-4 w-4" />
           </span>

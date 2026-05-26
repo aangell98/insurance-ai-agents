@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Shield, Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award, LogIn, LogOut, Sparkles, PlayCircle } from 'lucide-react';
+import { Activity, UserCircle, ClipboardList, BarChart3, ScrollText, Users, ShieldAlert, Award, LogIn, LogOut, Sparkles, PlayCircle } from 'lucide-react';
 import ClaimForm from './components/ClaimForm';
 import Pipeline from './components/Pipeline';
 import DecisionPanel from './components/DecisionPanel';
@@ -235,32 +235,35 @@ export default function App() {
   }, [resetPipeline]);
 
   return (
-    <div className="min-h-screen bg-surface-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-surface-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-gray-200 bg-white/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary-600/20">
-              <Shield className="w-6 h-6 text-primary-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-white tracking-tight">
-                Insurance AI <span className="text-primary-400">Claims Intelligence</span>
+          <div className="flex items-center gap-4">
+            <img
+              src="/santander-logo.avif"
+              alt="Santander"
+              className="h-10 w-auto"
+            />
+            <div className="hidden md:block h-10 w-px bg-gray-200" />
+            <div className="hidden md:block">
+              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                Insurance AI <span className="text-primary-600">Claims Intelligence</span>
               </h1>
-              <p className="text-xs text-gray-500">Multi-Agent Decision Platform — Governed & Auditable</p>
+              <p className="text-xs text-gray-500">Multi-Agent Decision Platform — Governed &amp; Auditable</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <Activity className="w-3.5 h-3.5 text-green-400" />
+          <div className="flex items-center gap-3 text-xs text-gray-600">
+            <Activity className="w-3.5 h-3.5 text-green-600" />
             <span>Pipeline Active</span>
-            <span className="mx-2 text-gray-700">|</span>
+            <span className="mx-2 text-gray-300">|</span>
             <span>v1.0.0</span>
             {auth.isOperator && auth.authenticated && (
               <>
-                <span className="mx-2 text-gray-700">|</span>
+                <span className="mx-2 text-gray-300">|</span>
                 <button
                   onClick={() => setAutoplayOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-violet-400/20 bg-gradient-to-r from-violet-600/80 to-teal-500/80 px-3 py-1.5 text-white shadow-lg shadow-violet-900/20 transition hover:from-violet-500 hover:to-teal-400"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-white shadow-sm shadow-primary-900/20 transition hover:bg-primary-700"
                 >
                   <PlayCircle size={14} />
                   <span>Demo automática</span>
@@ -269,31 +272,31 @@ export default function App() {
             )}
             {auth.enabled && (
               <>
-                <span className="mx-2 text-gray-700">|</span>
+                <span className="mx-2 text-gray-300">|</span>
                 {auth.authenticated && auth.account ? (
                   <>
                     {auth.isCustomer && auth.isOperator && (
-                      <div className="flex items-center gap-1 mr-2 rounded-md bg-surface-800 p-0.5 border border-gray-700">
+                      <div className="flex items-center gap-1 mr-2 rounded-md bg-gray-100 p-0.5 border border-gray-200">
                         <button
                           onClick={() => auth.setViewMode('customer')}
                           className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                            auth.viewMode === 'customer' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-gray-200'
+                            auth.viewMode === 'customer' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:text-gray-900'
                           }`}
                         >Cliente</button>
                         <button
                           onClick={() => auth.setViewMode('operator')}
                           className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                            auth.viewMode === 'operator' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-gray-200'
+                            auth.viewMode === 'operator' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:text-gray-900'
                           }`}
                         >Operario</button>
                       </div>
                     )}
-                    <span className="text-gray-400 hidden sm:inline" title={auth.account.username}>
+                    <span className="text-gray-700 hidden sm:inline" title={auth.account.username}>
                       {auth.account.name || auth.account.username}
                     </span>
                     <button
                       onClick={() => auth.logout()}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-gray-400 hover:text-white hover:bg-surface-800 transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                       title="Cerrar sesión"
                     >
                       <LogOut className="w-3.5 h-3.5" />
@@ -302,7 +305,7 @@ export default function App() {
                 ) : (
                   <button
                     onClick={() => auth.login()}
-                    className="flex items-center gap-1 px-3 py-1 rounded bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+                    className="flex items-center gap-1 px-3 py-1 rounded bg-primary-600 hover:bg-primary-700 text-white transition-colors"
                   >
                     <LogIn className="w-3.5 h-3.5" />
                     <span>Iniciar sesión</span>
@@ -322,14 +325,14 @@ export default function App() {
                 onClick={() => setActiveTab(id)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === id
-                    ? 'border-primary-500 text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-700'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {label}
                 {id === 'seguridad' && newIncidentCount > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-lg shadow-red-600/40 animate-pulse">
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-primary-600 text-white shadow-sm shadow-primary-600/30 animate-pulse">
                     {newIncidentCount > 99 ? '99+' : newIncidentCount}
                   </span>
                 )}
@@ -342,13 +345,13 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Login gate cuando AUTH_ENABLED y no autenticado */}
         {auth.enabled && !auth.authenticated && (
-          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-gray-800 bg-surface-900 text-center">
-            <Shield className="w-12 h-12 mx-auto text-primary-400 mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Acceso restringido</h2>
-            <p className="text-sm text-gray-400 mb-6">Inicia sesión con tu cuenta corporativa para acceder a la plataforma.</p>
+          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-gray-200 bg-white shadow-md text-center">
+            <img src="/santander-logo.avif" alt="Santander" className="h-12 w-auto mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Acceso restringido</h2>
+            <p className="text-sm text-gray-600 mb-6">Inicia sesión con tu cuenta corporativa para acceder a la plataforma.</p>
             <button
               onClick={() => auth.login()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-medium transition-colors"
             >
               <LogIn className="w-4 h-4" />
               Iniciar sesión con Microsoft Entra
@@ -357,10 +360,10 @@ export default function App() {
         )}
 
         {auth.enabled && auth.authenticated && !auth.isCustomer && !auth.isOperator && (
-          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-yellow-800 bg-yellow-950/40 text-center">
-            <ShieldAlert className="w-12 h-12 mx-auto text-yellow-400 mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Sin permisos</h2>
-            <p className="text-sm text-gray-400">Tu cuenta no tiene asignados los roles <code className="text-yellow-300">Customer.Submit</code> ni <code className="text-yellow-300">Operator.Review</code>. Solicita acceso al administrador del tenant.</p>
+          <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-amber-300 bg-amber-50 text-center shadow-sm">
+            <ShieldAlert className="w-12 h-12 mx-auto text-amber-600 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Sin permisos</h2>
+            <p className="text-sm text-gray-700">Tu cuenta no tiene asignados los roles <code className="text-amber-700 font-mono">Customer.Submit</code> ni <code className="text-amber-700 font-mono">Operator.Review</code>. Solicita acceso al administrador del tenant.</p>
           </div>
         )}
 
@@ -387,7 +390,7 @@ export default function App() {
             )}
 
             {error && (
-              <div className="p-4 rounded-lg bg-red-900/30 border border-red-800 text-red-300">
+              <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
                 <strong>Error:</strong> {error}
               </div>
             )}
@@ -422,8 +425,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 mt-12 py-6 text-center text-xs text-gray-600">
-        Powered by Azure AI Foundry • Governed by GitHub • Secured by APIM AI Gateway
+      <footer className="border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-500">
+        Powered by Microsoft Agent Framework • Azure AI Foundry • Governed by GitHub • Secured by APIM AI Gateway
       </footer>
 
       {/* Toast notifications (bottom-right) */}

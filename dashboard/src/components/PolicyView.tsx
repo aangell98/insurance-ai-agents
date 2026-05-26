@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import { ScrollText, Plus, Loader2, RefreshCw, ChevronDown, ChevronUp, User, FileText } from 'lucide-react';
 import type { Policy, NewPolicyRequest, PolicyDetail, CustomerHistory } from '../api';
 import { getPolicies, registerPolicy, getPolicyDetail, getCustomers } from '../api';
@@ -12,12 +12,12 @@ const EMPTY_FORM: NewPolicyRequest = {
   end_date: '',
 };
 
-function Field({ label, value }: Readonly<{ label: string; value: any }>) {
+function Field({ label, value }: Readonly<{ label: string; value: unknown }>) {
   if (value === undefined || value === null || value === '') return null;
   return (
     <div className="flex gap-2 text-xs">
-      <span className="text-gray-500 shrink-0">{label}:</span>
-      <span className="text-gray-200">{String(value)}</span>
+      <span className="shrink-0 text-gray-500">{label}:</span>
+      <span className="text-gray-800">{String(value)}</span>
     </div>
   );
 }
@@ -49,7 +49,7 @@ export default function PolicyView() {
     setSuccess('');
     try {
       const newPolicy = await registerPolicy(form);
-      setPolicies(prev => [newPolicy, ...prev]);
+      setPolicies((previous) => [newPolicy, ...previous]);
       setForm({ ...EMPTY_FORM });
       setSuccess(`Póliza ${newPolicy.policy_id} registrada correctamente.`);
       setTimeout(() => setSuccess(''), 4000);
@@ -66,53 +66,75 @@ export default function PolicyView() {
       setDetail(null);
       return;
     }
+
     setExpandedId(id);
     setDetail(null);
     try {
-      const d = await getPolicyDetail(id);
-      setDetail(d);
+      const response = await getPolicyDetail(id);
+      setDetail(response);
     } catch {
       setDetail(null);
     }
   };
 
-  const inputClass = "w-full px-3 py-2 bg-surface-800 border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 text-sm";
-  const labelClass = "block text-xs font-medium text-gray-400 mb-1";
+  const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200';
+  const labelClass = 'mb-1.5 block text-sm font-medium text-gray-700';
   const noCustomers = customers.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="bg-surface-900 rounded-xl border border-gray-800 p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Plus className="w-5 h-5 text-primary-400" />
-          <h2 className="text-lg font-semibold text-white">Registrar Nueva Póliza</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-1 flex items-center gap-2">
+          <Plus className="h-5 w-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Registrar Nueva Póliza</h2>
         </div>
-        <p className="text-xs text-gray-500 mb-6">La póliza se vincula a un cliente existente. Si el cliente no está dado de alta, créalo antes desde la pestaña Clientes.</p>
+        <p className="mb-6 text-sm text-gray-600">
+          La póliza se vincula a un cliente existente. Si el cliente no está dado de alta, créalo antes desde la pestaña Clientes.
+        </p>
 
         {noCustomers && (
-          <div className="mb-4 p-3 rounded-lg bg-yellow-900/30 border border-yellow-800 text-yellow-300 text-sm">
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             No hay clientes registrados. Crea uno primero en la pestaña <strong>Clientes</strong>.
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block md:col-span-2">
               <span className={labelClass}>Cliente *</span>
-              <select value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))} className={inputClass} required disabled={noCustomers}>
+              <select
+                value={form.customer_id}
+                onChange={(e) => setForm((current) => ({ ...current, customer_id: e.target.value }))}
+                className={inputClass}
+                required
+                disabled={noCustomers}
+              >
                 <option value="">— Selecciona un cliente —</option>
-                {customers.map(c => (
-                  <option key={c.customer_id} value={c.customer_id}>{c.customer_id} · {c.name} ({c.risk_profile})</option>
+                {customers.map((customer) => (
+                  <option key={customer.customer_id} value={customer.customer_id}>
+                    {customer.customer_id} · {customer.name} ({customer.risk_profile})
+                  </option>
                 ))}
               </select>
             </label>
             <label className="block">
               <span className={labelClass}>Vehículo *</span>
-              <input type="text" value={form.vehicle} onChange={e => setForm(f => ({ ...f, vehicle: e.target.value }))} placeholder="Toyota Corolla 2023" className={inputClass} required />
+              <input
+                type="text"
+                value={form.vehicle}
+                onChange={(e) => setForm((current) => ({ ...current, vehicle: e.target.value }))}
+                placeholder="Toyota Corolla 2023"
+                className={inputClass}
+                required
+              />
             </label>
             <label className="block">
               <span className={labelClass}>Tipo de cobertura</span>
-              <select value={form.coverage_type} onChange={e => setForm(f => ({ ...f, coverage_type: e.target.value }))} className={inputClass}>
+              <select
+                value={form.coverage_type}
+                onChange={(e) => setForm((current) => ({ ...current, coverage_type: e.target.value }))}
+                className={inputClass}
+              >
                 <option value="Todo Riesgo">Todo Riesgo</option>
                 <option value="Terceros">Terceros</option>
                 <option value="Terceros Ampliado">Terceros Ampliado</option>
@@ -120,93 +142,153 @@ export default function PolicyView() {
             </label>
             <label className="block">
               <span className={labelClass}>Cobertura máxima (€) *</span>
-              <input type="number" value={form.max_coverage || ''} onChange={e => setForm(f => ({ ...f, max_coverage: Number.parseFloat(e.target.value) || 0 }))} placeholder="50000" min="1" className={inputClass} required />
+              <input
+                type="number"
+                value={form.max_coverage || ''}
+                onChange={(e) => setForm((current) => ({ ...current, max_coverage: Number.parseFloat(e.target.value) || 0 }))}
+                placeholder="50000"
+                min="1"
+                className={inputClass}
+                required
+              />
             </label>
             <label className="block">
               <span className={labelClass}>Fecha de inicio</span>
-              <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
+              <input
+                type="date"
+                value={form.start_date}
+                onChange={(e) => setForm((current) => ({ ...current, start_date: e.target.value }))}
+                className={inputClass}
+              />
             </label>
             <label className="block">
               <span className={labelClass}>Fecha de vencimiento</span>
-              <input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className={inputClass} />
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={(e) => setForm((current) => ({ ...current, end_date: e.target.value }))}
+                className={inputClass}
+              />
             </label>
           </div>
 
-          <button type="submit" disabled={submitting || noCustomers} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors">
-            {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Registrando…</> : <><Plus className="w-4 h-4" /> Registrar Póliza</>}
+          <button
+            type="submit"
+            disabled={submitting || noCustomers}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-medium text-white shadow-md transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Registrando…
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" /> Registrar Póliza
+              </>
+            )}
           </button>
         </form>
 
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-        {success && <p className="mt-3 text-sm text-green-400">{success}</p>}
+        {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+        {success && <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{success}</p>}
       </div>
 
-      <div className="bg-surface-900 rounded-xl border border-gray-800 p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 px-6 py-4">
           <div className="flex items-center gap-2">
-            <ScrollText className="w-5 h-5 text-primary-400" />
-            <h2 className="text-lg font-semibold text-white">Pólizas Registradas</h2>
+            <ScrollText className="h-5 w-5 text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Pólizas Registradas</h2>
           </div>
-          <button onClick={refresh} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" /> Actualizar
+          <button
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Actualizar
           </button>
         </div>
 
         {policies.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">No hay pólizas registradas.</p>
+          <p className="px-6 py-8 text-center text-sm text-gray-500">No hay pólizas registradas.</p>
         ) : (
-          <div className="space-y-2">
-            {policies.map((p) => (
-              <div key={p.policy_id} className="border border-gray-800 rounded-lg overflow-hidden">
-                <button onClick={() => toggleRow(p.policy_id)} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-surface-800/60 transition-colors text-left">
-                  <span className="text-white font-mono text-xs w-32 shrink-0">{p.policy_id}</span>
-                  <span className="text-gray-300 text-sm flex-1 min-w-0 truncate">{p.customer_name}</span>
-                  <span className="text-gray-400 text-xs hidden md:inline">{p.vehicle}</span>
-                  <span className="text-gray-400 text-xs hidden md:inline">{p.coverage_type}</span>
-                  <span className="text-gray-300 text-xs">€{p.max_coverage.toLocaleString('es-ES')}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs border bg-green-900/40 text-green-400 border-green-800">{p.status || 'Activa'}</span>
-                  {expandedId === p.policy_id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                </button>
+          <div className="overflow-x-auto">
+            <table className="min-w-[920px] w-full">
+              <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-700">
+                <tr>
+                  <th className="px-4 py-3">Póliza ID</th>
+                  <th className="px-4 py-3">Titular</th>
+                  <th className="px-4 py-3">Vehículo</th>
+                  <th className="px-4 py-3">Cobertura</th>
+                  <th className="px-4 py-3">Máximo</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3 text-right">Detalle</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {policies.map((policy) => (
+                  <Fragment key={policy.policy_id}>
+                    <tr className="cursor-pointer transition-colors hover:bg-gray-50" onClick={() => toggleRow(policy.policy_id)}>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-900">{policy.policy_id}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{policy.customer_name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{policy.vehicle}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{policy.coverage_type}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">€{policy.max_coverage.toLocaleString('es-ES')}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          {policy.status || 'Activa'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-400">
+                        {expandedId === policy.policy_id ? <ChevronUp className="ml-auto h-4 w-4" /> : <ChevronDown className="ml-auto h-4 w-4" />}
+                      </td>
+                    </tr>
 
-                {expandedId === p.policy_id && (
-                  <div className="p-4 bg-surface-800/30 border-t border-gray-800">
-                    {detail ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-surface-950 border border-gray-800 rounded p-3 space-y-1">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <FileText className="w-3.5 h-3.5 text-accent-400" />
-                            <span className="font-semibold text-white text-xs">Datos de la póliza</span>
-                          </div>
-                          <Field label="ID póliza" value={detail.policy_id} />
-                          <Field label="ID cliente" value={detail.customer_id} />
-                          <Field label="Vehículo" value={detail.vehicle} />
-                          <Field label="Cobertura" value={detail.coverage_type} />
-                          <Field label="Máx. cubierto" value={`${detail.max_coverage.toLocaleString('es-ES')}€`} />
-                          <Field label="Estado" value={detail.status} />
-                          <Field label="Inicio" value={detail.start_date} />
-                          <Field label="Vencimiento" value={detail.end_date} />
-                        </div>
-                        {detail.customer_history && (
-                          <div className="bg-surface-950 border border-gray-800 rounded p-3 space-y-1">
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <User className="w-3.5 h-3.5 text-accent-400" />
-                              <span className="font-semibold text-white text-xs">Cliente vinculado</span>
+                    {expandedId === policy.policy_id && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={7} className="border-t border-gray-200 px-4 py-4">
+                          {detail ? (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <div className="mb-2 flex items-center gap-1.5">
+                                  <FileText className="h-4 w-4 text-primary-600" />
+                                  <span className="text-sm font-semibold text-gray-900">Datos de la póliza</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Field label="ID póliza" value={detail.policy_id} />
+                                  <Field label="ID cliente" value={detail.customer_id} />
+                                  <Field label="Vehículo" value={detail.vehicle} />
+                                  <Field label="Cobertura" value={detail.coverage_type} />
+                                  <Field label="Máx. cubierto" value={`${detail.max_coverage.toLocaleString('es-ES')}€`} />
+                                  <Field label="Estado" value={detail.status} />
+                                  <Field label="Inicio" value={detail.start_date} />
+                                  <Field label="Vencimiento" value={detail.end_date} />
+                                </div>
+                              </div>
+                              {detail.customer_history && (
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                  <div className="mb-2 flex items-center gap-1.5">
+                                    <User className="h-4 w-4 text-primary-600" />
+                                    <span className="text-sm font-semibold text-gray-900">Cliente vinculado</span>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Field label="Nombre" value={detail.customer_history.name} />
+                                    <Field label="Antigüedad" value={`${detail.customer_history.years_as_customer} años`} />
+                                    <Field label="Reclamaciones previas" value={detail.customer_history.previous_claims} />
+                                    <Field label="Perfil de riesgo" value={detail.customer_history.risk_profile} />
+                                    <Field label="Historial de pagos" value={detail.customer_history.payment_history} />
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <Field label="Nombre" value={detail.customer_history.name} />
-                            <Field label="Antigüedad" value={`${detail.customer_history.years_as_customer} años`} />
-                            <Field label="Reclamaciones previas" value={detail.customer_history.previous_claims} />
-                            <Field label="Perfil de riesgo" value={detail.customer_history.risk_profile} />
-                            <Field label="Historial de pagos" value={detail.customer_history.payment_history} />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-500">Cargando detalle…</p>
+                          ) : (
+                            <p className="text-sm text-gray-500">Cargando detalle…</p>
+                          )}
+                        </td>
+                      </tr>
                     )}
-                  </div>
-                )}
-              </div>
-            ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

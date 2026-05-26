@@ -37,32 +37,32 @@ const TEXT_TAIL_LIMIT = 220;
 
 const statusStyles: Record<StageStatus, { card: string; icon: string; iconColor: string; pill: string; dot: string }> = {
   pending: {
-    card: 'border-white/10 bg-gradient-to-br from-surface-900 via-surface-900 to-surface-950 shadow-[0_0_0_rgba(0,0,0,0)]',
-    icon: 'border-white/10 bg-white/5',
-    iconColor: 'text-gray-500',
-    pill: 'border-white/10 bg-white/5 text-gray-400',
-    dot: 'bg-gray-600',
+    card: 'border-gray-200 bg-white shadow-sm',
+    icon: 'border-gray-200 bg-gray-50',
+    iconColor: 'text-gray-400',
+    pill: 'border-gray-200 bg-gray-50 text-gray-500',
+    dot: 'bg-gray-300',
   },
   processing: {
-    card: 'border-sky-400/20 bg-gradient-to-br from-sky-500/14 via-violet-500/10 to-teal-400/14 shadow-[0_0_48px_rgba(14,165,233,0.16)]',
-    icon: 'border-sky-400/20 bg-sky-400/10',
-    iconColor: 'text-sky-200',
-    pill: 'border-sky-300/20 bg-sky-400/10 text-sky-100',
-    dot: 'bg-cyan-300 animate-pulse-soft',
+    card: 'border-primary-500 bg-white shadow-md shadow-primary-200/40',
+    icon: 'border-primary-100 bg-primary-50',
+    iconColor: 'text-primary-600',
+    pill: 'border-primary-200 bg-primary-50 text-primary-700',
+    dot: 'bg-primary-500 animate-pulse-soft',
   },
   completed: {
-    card: 'border-emerald-400/20 bg-gradient-to-br from-emerald-500/12 via-surface-900 to-cyan-400/10 shadow-[0_0_30px_rgba(16,185,129,0.1)]',
-    icon: 'border-emerald-400/20 bg-emerald-400/10',
-    iconColor: 'text-emerald-200',
-    pill: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
-    dot: 'bg-emerald-300',
+    card: 'border-emerald-300 bg-emerald-50/50 shadow-sm',
+    icon: 'border-emerald-200 bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    pill: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    dot: 'bg-emerald-500',
   },
   failed: {
-    card: 'border-rose-400/25 bg-gradient-to-br from-rose-500/14 via-surface-900 to-orange-400/10 shadow-[0_0_40px_rgba(244,63,94,0.12)]',
-    icon: 'border-rose-400/20 bg-rose-400/10',
-    iconColor: 'text-rose-200',
-    pill: 'border-rose-300/20 bg-rose-400/10 text-rose-100',
-    dot: 'bg-rose-300',
+    card: 'border-red-300 bg-red-50/50 shadow-sm',
+    icon: 'border-red-200 bg-red-50',
+    iconColor: 'text-red-600',
+    pill: 'border-red-200 bg-red-50 text-red-700',
+    dot: 'bg-red-500',
   },
 };
 
@@ -112,13 +112,13 @@ function formatDecisionLabel(decision: string | null): string {
 function getDecisionTone(decision: string | null): string {
   switch (decision) {
     case 'approve':
-      return 'border-emerald-400/20 bg-emerald-500/10';
+      return 'border-emerald-200 bg-emerald-50';
     case 'human_review':
-      return 'border-amber-400/20 bg-amber-500/10';
+      return 'border-amber-200 bg-amber-50';
     case 'reject':
-      return 'border-rose-400/20 bg-rose-500/10';
+      return 'border-red-200 bg-red-50';
     default:
-      return 'border-white/10 bg-white/5';
+      return 'border-gray-200 bg-gray-50';
   }
 }
 
@@ -212,7 +212,8 @@ function StageCard({
     if (isDecision) {
       const summary = formatDecisionLabel(decision);
       const headline = [summary, confidence].filter(Boolean).join(' · ');
-      return reasoning ? `${headline}\n${reasoning}` : headline;
+      return reasoning ? `${headline}
+${reasoning}` : headline;
     }
 
     if (hasRealTokens) {
@@ -224,12 +225,10 @@ function StageCard({
 
   const bubbleTitle = isDecision ? 'Resolución final' : 'El sistema está pensando';
   const bubbleTone = status === 'failed'
-    ? 'border-rose-400/20 bg-rose-500/10'
+    ? 'border-red-200 bg-red-50'
     : isDecision
       ? getDecisionTone(decision)
-      : status === 'processing'
-        ? 'border-cyan-400/20 bg-slate-950/80'
-        : 'border-white/10 bg-black/20';
+      : 'border-gray-200 bg-gray-50';
   const shouldShowBubble = isDecision ? status === 'completed' || status === 'failed' : status !== 'pending';
   const showCursor = status === 'processing' && !isDecision;
   const durationLabel = formatDuration(durationMs);
@@ -245,28 +244,30 @@ function StageCard({
     : 'El agente arrancará aquí cuando reciba el expediente.';
 
   return (
-    <div className={cx(
-      'relative flex min-h-[19rem] flex-1 overflow-hidden rounded-[28px] border p-5 transition-all duration-500 sm:p-6',
-      stageStyle.card,
-      status === 'processing' && 'animate-pulse-glow',
-    )}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.09),_transparent_48%)] opacity-70" />
-
-      <div className="relative flex h-full w-full flex-col">
+    <div
+      className={cx(
+        'relative flex min-h-[19rem] flex-1 overflow-hidden rounded-[28px] border p-5 transition-all duration-500 sm:p-6',
+        stageStyle.card,
+        status === 'processing' && 'animate-pulse-glow',
+      )}
+    >
+      <div className="flex h-full w-full flex-col">
         <div className="flex items-start justify-between gap-4">
-          <div className={cx(
-            'flex h-16 w-16 items-center justify-center rounded-[22px] border shadow-inner shadow-white/5 sm:h-[4.5rem] sm:w-[4.5rem]',
-            stageStyle.icon,
-          )}>
+          <div
+            className={cx(
+              'flex h-16 w-16 items-center justify-center rounded-[22px] border shadow-sm sm:h-[4.5rem] sm:w-[4.5rem]',
+              stageStyle.icon,
+            )}
+          >
             <Icon className={cx('h-8 w-8 sm:h-9 sm:w-9', stageStyle.iconColor)} />
           </div>
 
           {status === 'completed' ? (
-            <div className="rounded-full bg-emerald-400/10 p-1.5 text-emerald-300">
+            <div className="rounded-full border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-600">
               <CheckCircle2 className="h-5 w-5 animate-pop-in" />
             </div>
           ) : status === 'failed' ? (
-            <div className="rounded-full bg-rose-400/10 p-1.5 text-rose-300">
+            <div className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600">
               <AlertTriangle className="h-5 w-5" />
             </div>
           ) : null}
@@ -274,11 +275,13 @@ function StageCard({
 
         <div className="mt-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.34em] text-gray-500">{stage.label}</div>
-          <p className="mt-2 text-sm leading-6 text-gray-400">{stage.helper}</p>
-          <div className={cx(
-            'mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] backdrop-blur-sm',
-            stageStyle.pill,
-          )}>
+          <p className="mt-2 text-sm leading-6 text-gray-600">{stage.helper}</p>
+          <div
+            className={cx(
+              'mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em]',
+              stageStyle.pill,
+            )}
+          >
             <span className={cx('h-2 w-2 rounded-full', stageStyle.dot)} />
             <span>{pillText}</span>
           </div>
@@ -286,24 +289,20 @@ function StageCard({
 
         <div className="mt-6 flex min-h-[8rem] flex-1 flex-col justify-end">
           {shouldShowBubble ? (
-            <div className={cx(
-              'rounded-2xl border px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-500',
-              bubbleTone,
-              status === 'completed' && 'opacity-60',
-            )}>
+            <div className={cx('rounded-xl border p-3 shadow-sm transition-all duration-500', bubbleTone)}>
               <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-gray-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-300/80" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />
                 {bubbleTitle}
               </div>
               <div className="flex h-[5.75rem] flex-col justify-end overflow-hidden">
-                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-100">
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
                   {bubbleText || (isDecision ? 'La decisión aparecerá aquí al final del flujo.' : 'Esperando respuesta del agente…')}
-                  {showCursor ? <span className="ml-0.5 inline-block animate-blink text-cyan-300">▌</span> : null}
+                  {showCursor ? <span className="ml-0.5 inline-block animate-blink text-primary-500">▌</span> : null}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-gray-500">
+            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-500">
               {placeholderText}
             </div>
           )}
@@ -327,25 +326,31 @@ function ArrowConnector({
   const isFailed = fromStatus === 'failed' || toStatus === 'failed';
 
   return (
-    <div className={cx(
-      'relative flex items-center justify-center overflow-hidden',
-      orientation === 'horizontal' ? 'h-10 w-full' : 'h-12 w-10 rotate-90',
-    )}>
-      <div className={cx(
-        'absolute left-2 right-2 h-px rounded-full transition-colors duration-500',
-        isFailed ? 'bg-rose-400/60' : isSolid ? 'bg-cyan-300/70' : 'bg-white/12',
-      )} />
+    <div
+      className={cx(
+        'relative flex items-center justify-center overflow-hidden',
+        orientation === 'horizontal' ? 'h-10 w-full' : 'h-12 w-10 rotate-90',
+      )}
+    >
+      <div
+        className={cx(
+          'absolute left-2 right-2 h-px rounded-full transition-colors duration-500',
+          isFailed ? 'bg-red-200' : isSolid ? 'bg-primary-300' : 'bg-gray-200',
+        )}
+      />
       {isFlowing ? (
-        <div className="pointer-events-none absolute left-2 top-1/2 h-[3px] w-16 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_18px_rgba(34,211,238,0.75)] animate-light-slide" />
+        <div className="pointer-events-none absolute left-2 top-1/2 h-[3px] w-16 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-primary-400 to-transparent shadow-[0_0_12px_rgba(236,0,0,0.35)] animate-light-slide" />
       ) : null}
-      <div className={cx(
-        'relative z-10 rounded-full border p-1.5 backdrop-blur-sm transition-colors duration-500',
-        isFailed
-          ? 'border-rose-400/20 bg-rose-500/10 text-rose-200'
-          : isSolid
-            ? 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
-            : 'border-white/10 bg-white/5 text-gray-500',
-      )}>
+      <div
+        className={cx(
+          'relative z-10 rounded-full border p-1.5 transition-colors duration-500',
+          isFailed
+            ? 'border-red-200 bg-red-50 text-red-600'
+            : isSolid
+              ? 'border-primary-200 bg-primary-50 text-primary-600'
+              : 'border-gray-200 bg-white text-gray-300',
+        )}
+      >
         <ChevronRight className={cx('h-4 w-4', isFlowing && 'animate-pulse-soft')} />
       </div>
     </div>
@@ -354,10 +359,10 @@ function ArrowConnector({
 
 export default function Pipeline({ statuses, tokens, stageData = {} }: Props) {
   return (
-    <div className="overflow-hidden rounded-[32px] border border-white/10 bg-surface-900/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-sm lg:p-8">
+    <div className="overflow-hidden rounded-[32px] border border-gray-200 bg-white p-6 shadow-sm lg:p-8">
       <div className="mb-6 flex flex-col gap-2 lg:mb-8">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-violet-200/80">Pipeline multi-agente</h3>
-        <p className="max-w-3xl text-sm leading-6 text-gray-400">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-primary-600">Pipeline multi-agente</h3>
+        <p className="max-w-3xl text-sm leading-6 text-gray-600">
           Visualiza cada agente razonando en tiempo real, con señales de actividad, streaming y decisión final auditable.
         </p>
       </div>
