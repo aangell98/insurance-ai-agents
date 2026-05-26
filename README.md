@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="images/microsoft.svg" alt="Microsoft" height="48" />&nbsp;&nbsp;<span style="font-size:32px;color:#888">×</span>&nbsp;&nbsp;<img src="images/SAN.png" alt="Santander" height="56" />
+<img src="images/brand-banner.svg" alt="Microsoft × Santander" width="540" />
 
 # Insurance AI Agents
 ### Governed Multi-Agent Claims Processing — Demo Santander
