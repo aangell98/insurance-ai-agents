@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Shield, AlertTriangle, RefreshCw, FileWarning } from 'lucide-react';
+import { Shield, AlertTriangle, RefreshCw, FileWarning, Loader2 } from 'lucide-react';
 import { getSecurityIncidents } from '../api';
 import type { SecurityIncident } from '../api';
 
@@ -45,7 +45,8 @@ export default function SecurityView() {
   const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
   const [total, setTotal] = useState(0);
   const [open, setOpen] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(() => {
     setLoading(true);
@@ -56,7 +57,10 @@ export default function SecurityView() {
         setOpen(response.open);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -104,7 +108,12 @@ export default function SecurityView() {
         </div>
       </div>
 
-      {incidents.length === 0 ? (
+      {!loaded || (loading && incidents.length === 0) ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white p-12 text-sm text-gray-500 shadow-sm">
+          <Loader2 className="h-5 w-5 animate-spin text-red-500" />
+          Consultando incidentes de seguridad…
+        </div>
+      ) : incidents.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
           <Shield className="mx-auto mb-3 h-12 w-12 text-gray-300" />
           <p className="text-sm text-gray-600">No se han detectado incidentes de seguridad.</p>

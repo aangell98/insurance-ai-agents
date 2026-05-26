@@ -31,10 +31,18 @@ export default function PolicyView() {
   const [success, setSuccess] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PolicyDetail | null>(null);
+  const [listLoading, setListLoading] = useState(true);
+  const [listLoaded, setListLoaded] = useState(false);
 
   const refresh = useCallback(() => {
-    getPolicies().then(setPolicies).catch(() => {});
-    getCustomers().then(setCustomers).catch(() => {});
+    setListLoading(true);
+    Promise.allSettled([
+      getPolicies().then(setPolicies),
+      getCustomers().then(setCustomers),
+    ]).finally(() => {
+      setListLoading(false);
+      setListLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -79,7 +87,7 @@ export default function PolicyView() {
 
   const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200';
   const labelClass = 'mb-1.5 block text-sm font-medium text-gray-700';
-  const noCustomers = customers.length === 0;
+  const noCustomers = listLoaded && customers.length === 0;
 
   return (
     <div className="space-y-6">
@@ -201,13 +209,19 @@ export default function PolicyView() {
           </div>
           <button
             onClick={refresh}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50"
+            disabled={listLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+            <RefreshCw className={`h-3.5 w-3.5 ${listLoading ? 'animate-spin' : ''}`} /> Actualizar
           </button>
         </div>
 
-        {policies.length === 0 ? (
+        {!listLoaded || (listLoading && policies.length === 0) ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-sm text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin text-primary-500" />
+            Cargando pólizas desde la base de datos…
+          </div>
+        ) : policies.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-gray-500">No hay pólizas registradas.</p>
         ) : (
           <div className="overflow-x-auto">

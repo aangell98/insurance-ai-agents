@@ -29,9 +29,18 @@ export default function CustomerView() {
   const [success, setSuccess] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
+  const [listLoading, setListLoading] = useState(true);
+  const [listLoaded, setListLoaded] = useState(false);
 
   const fetchCustomers = useCallback(() => {
-    getCustomers().then(setCustomers).catch(() => {});
+    setListLoading(true);
+    getCustomers()
+      .then(setCustomers)
+      .catch(() => {})
+      .finally(() => {
+        setListLoading(false);
+        setListLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -178,13 +187,19 @@ export default function CustomerView() {
           </div>
           <button
             onClick={fetchCustomers}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50"
+            disabled={listLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+            <RefreshCw className={`h-3.5 w-3.5 ${listLoading ? 'animate-spin' : ''}`} /> Actualizar
           </button>
         </div>
 
-        {customers.length === 0 ? (
+        {!listLoaded || (listLoading && customers.length === 0) ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-sm text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin text-primary-500" />
+            Cargando clientes desde la base de datos…
+          </div>
+        ) : customers.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-gray-500">No hay clientes registrados.</p>
         ) : (
           <div className="overflow-x-auto">

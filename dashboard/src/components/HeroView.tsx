@@ -6,16 +6,20 @@ import {
   CheckCircle2,
   Clock,
   Database,
-  DollarSign,
+  Euro,
   FileSearch,
   Gavel,
+  LayoutGrid,
   Play,
   Scale,
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Siren,
   Sparkles,
+  Timer,
   Upload,
+  UserCheck,
   Zap,
   XCircle,
 } from 'lucide-react';
@@ -29,10 +33,21 @@ interface HeroViewProps {
 interface HeroMetric {
   icon: LucideIcon;
   label: string;
-  value: number;
-  formatter: (value: number) => string;
+  display: string;
   description: string;
   valueClass: string;
+  countTarget?: number;
+  countFormatter?: (value: number) => string;
+}
+
+interface DemoUseCase {
+  key: string;
+  icon: LucideIcon;
+  title: string;
+  amount: number;
+  expected: string;
+  description: string;
+  accent: string;
 }
 
 interface PlatformBadge {
@@ -72,12 +87,55 @@ const PLATFORM_STACK: PlatformBadge[] = [
   { icon: Activity, name: 'Azure API Management', description: 'seguridad, políticas y exposición controlada de APIs' },
 ];
 
-const FALLBACKS = {
-  amountProcessed: 1_247_500,
-  automationRate: 87,
-  minutesSaved: 4_450,
-  fraudDetected: 18,
-};
+const DEMO_USE_CASES: DemoUseCase[] = [
+  {
+    key: 'low_risk',
+    icon: CheckCircle2,
+    title: 'Bajo Riesgo',
+    amount: 2500,
+    expected: 'Aprobación automática',
+    description: 'Colisión leve con parte amistoso firmado. Caso típico de alta frecuencia y bajo importe.',
+    accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  },
+  {
+    key: 'high_amount',
+    icon: Euro,
+    title: 'Alto Monto',
+    amount: 15000,
+    expected: 'Aprobación con auditoría',
+    description: 'Daños severos por temporal sobre vehículo de gama alta. Aprobación con trazabilidad reforzada.',
+    accent: 'text-primary-700 bg-primary-50 border-primary-200',
+  },
+  {
+    key: 'human_review',
+    icon: UserCheck,
+    title: 'Revisión Humana',
+    amount: 32000,
+    expected: 'Escalado a perito',
+    description: 'Siniestro complejo con informe pericial. La IA escala al equipo humano por importe y casuística.',
+    accent: 'text-amber-700 bg-amber-50 border-amber-200',
+  },
+  {
+    key: 'prompt_injection',
+    icon: ShieldAlert,
+    title: 'Prompt Injection',
+    amount: 3000,
+    expected: 'Rechazo + alerta seguridad',
+    description: 'Intento de manipular al agente con instrucciones ocultas. El guardrail lo detecta y bloquea.',
+    accent: 'text-purple-700 bg-purple-50 border-purple-200',
+  },
+  {
+    key: 'fraudulent',
+    icon: Siren,
+    title: 'Fraudulento',
+    amount: 8500,
+    expected: 'Escalado por riesgo alto',
+    description: 'Robo sin testigos ni evidencia. Señales de fraude que disparan revisión humana.',
+    accent: 'text-red-700 bg-red-50 border-red-200',
+  },
+];
+
+const DEMO_TOTAL_EXPOSURE = DEMO_USE_CASES.reduce((sum, item) => sum + item.amount, 0);
 
 function useCountUp(target: number, duration = 1_400): number {
   const [value, setValue] = useState(0);
@@ -125,17 +183,22 @@ function CountUpValue({
   return <div className={className}>{formatter(value)}</div>;
 }
 
-function MetricCard({ icon: Icon, label, value, formatter, description, valueClass }: HeroMetric) {
+function MetricCard({ icon: Icon, label, display, description, valueClass, countTarget, countFormatter }: HeroMetric) {
+  const useCountUpValue = typeof countTarget === 'number' && countFormatter;
   return (
     <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <Icon className="pointer-events-none absolute right-5 top-5 h-16 w-16 text-primary-200" />
       <div className="relative">
         <div className="text-[11px] uppercase tracking-[0.26em] text-gray-500">{label}</div>
-        <CountUpValue
-          target={value}
-          formatter={formatter}
-          className={`animate-count-up mt-4 text-4xl font-bold tracking-tight md:text-5xl ${valueClass}`}
-        />
+        {useCountUpValue ? (
+          <CountUpValue
+            target={countTarget!}
+            formatter={countFormatter!}
+            className={`animate-count-up mt-4 text-4xl font-bold tracking-tight md:text-5xl ${valueClass}`}
+          />
+        ) : (
+          <div className={`animate-count-up mt-4 text-4xl font-bold tracking-tight md:text-5xl ${valueClass}`}>{display}</div>
+        )}
         <p className="mt-3 max-w-[16rem] text-sm leading-relaxed text-gray-600">{description}</p>
       </div>
     </div>
@@ -152,6 +215,10 @@ function formatCurrency(value: number): string {
 
 function formatPercent(value: number): string {
   return `${Math.round(value).toLocaleString('es-ES')}%`;
+}
+
+function formatSeconds(value: number): string {
+  return `${value.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
 }
 
 export default function HeroView({ onCTAClick }: HeroViewProps) {
@@ -189,54 +256,54 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
   }, [refreshHeroData]);
 
   const metrics = useMemo<HeroMetric[]>(() => {
-    const totalAmount = claims.reduce((sum, claim) => sum + (typeof claim.estimated_amount === 'number' ? claim.estimated_amount : 0), 0);
-    const hasAmountData = claims.some(claim => typeof claim.estimated_amount === 'number' && claim.estimated_amount > 0);
     const hasStatsData = stats !== null && stats.total_claims > 0;
-
-    const processedAmount = hasAmountData ? Math.round(totalAmount) : FALLBACKS.amountProcessed;
-    const automationRate = hasStatsData
-      ? Math.round(((stats.approved + stats.rejected) / stats.total_claims) * 100)
-      : FALLBACKS.automationRate;
-    const minutesSaved = hasStatsData ? Math.round(stats.total_claims * 44.5) : FALLBACKS.minutesSaved;
-    const fraudDetected = hasStatsData || incidents.length > 0
-      ? (stats?.rejected ?? 0) + incidents.length
-      : FALLBACKS.fraudDetected;
+    const processedCount = stats?.total_claims ?? 0;
+    const automatedCount = (stats?.approved ?? 0) + (stats?.rejected ?? 0);
+    const automationRate = hasStatsData ? Math.round((automatedCount / stats!.total_claims) * 100) : null;
+    const avgSeconds = hasStatsData && stats!.avg_duration_ms > 0 ? stats!.avg_duration_ms / 1000 : null;
+    const securityIncidents = incidents.length;
 
     return [
       {
-        icon: DollarSign,
-        label: '€ procesados YTD',
-        value: processedAmount,
-        formatter: formatCurrency,
-        description: 'Suma estimada del volumen económico ya gestionado por la plataforma.',
+        icon: LayoutGrid,
+        label: 'Casos de uso demo',
+        display: formatInteger(DEMO_USE_CASES.length),
+        description: 'Escenarios reales preparados: aprobación, alto monto, revisión humana, fraude y prompt injection.',
         valueClass: 'text-primary-600',
+        countTarget: DEMO_USE_CASES.length,
+        countFormatter: formatInteger,
+      },
+      {
+        icon: Euro,
+        label: 'Exposición demo',
+        display: formatCurrency(DEMO_TOTAL_EXPOSURE),
+        description: 'Importe total cubierto por los 5 escenarios de la demo (importe agregado a evaluar).',
+        valueClass: 'text-gray-900',
+        countTarget: DEMO_TOTAL_EXPOSURE,
+        countFormatter: formatCurrency,
       },
       {
         icon: Sparkles,
-        label: '% automatización',
-        value: automationRate,
-        formatter: formatPercent,
-        description: 'Casos cerrados automáticamente sin escalar a revisión manual.',
+        label: 'Procesados en esta sesión',
+        display: hasStatsData ? formatInteger(processedCount) : '—',
+        description: automationRate !== null
+          ? `${automationRate}% resueltos automáticamente (approve + reject), el resto escalado a revisión humana.`
+          : 'Lanza la demo o un caso individual para empezar a alimentar las métricas reales.',
         valueClass: 'text-gray-900',
+        countTarget: hasStatsData ? processedCount : undefined,
+        countFormatter: hasStatsData ? formatInteger : undefined,
       },
       {
-        icon: Clock,
-        label: 'Minutos ahorrados',
-        value: minutesSaved,
-        formatter: formatInteger,
-        description: 'Ahorro directo frente a un proceso manual de 45 minutos por expediente.',
-        valueClass: 'text-gray-900',
-      },
-      {
-        icon: ShieldAlert,
-        label: 'Fraudes detectados',
-        value: fraudDetected,
-        formatter: formatInteger,
-        description: 'Rechazos automáticos e incidentes de seguridad detectados en el flujo.',
+        icon: Timer,
+        label: 'Tiempo medio IA',
+        display: avgSeconds !== null ? formatSeconds(avgSeconds) : '—',
+        description: securityIncidents > 0
+          ? `Pipeline end-to-end medido en vivo. ${securityIncidents} incidente(s) de seguridad detectado(s).`
+          : 'Tiempo end-to-end del pipeline multi-agente, frente a los 45 min del proceso manual.',
         valueClass: 'text-primary-600',
       },
     ];
-  }, [claims, incidents.length, stats]);
+  }, [incidents.length, stats]);
 
   return (
     <div className="space-y-8">
@@ -299,6 +366,33 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
           {metrics.map((metric) => (
             <MetricCard key={metric.label} {...metric} />
           ))}
+        </div>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Casos de uso incluidos</p>
+              <h4 className="text-xl font-semibold text-gray-900">5 escenarios que cubren el ciclo completo</h4>
+            </div>
+            <p className="text-sm text-gray-500">
+              Exposición agregada: <span className="font-semibold text-gray-900">{formatCurrency(DEMO_TOTAL_EXPOSURE)}</span>
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {DEMO_USE_CASES.map(({ icon: Icon, title, amount, expected, description, accent, key }) => (
+              <div key={key} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+                <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${accent}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {title}
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-gray-900">{formatCurrency(amount)}</div>
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-gray-500">{expected}</div>
+                </div>
+                <p className="text-xs leading-relaxed text-gray-600">{description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

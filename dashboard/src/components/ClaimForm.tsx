@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, FileText, Loader2, ImagePlus, X } from 'lucide-react';
+import { Send, FileText, Loader2, ImagePlus, X, CheckCircle2, Euro, UserCheck, ShieldAlert, Siren } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ClaimRequest, Scenario } from '../api';
 import { getScenarios } from '../api';
 
@@ -8,8 +9,17 @@ interface Props {
   loading: boolean;
 }
 
+const SCENARIO_OPTIONS: Array<{ key: string; label: string; Icon: LucideIcon }> = [
+  { key: 'low_risk', label: 'Bajo Riesgo', Icon: CheckCircle2 },
+  { key: 'high_amount', label: 'Alto Monto', Icon: Euro },
+  { key: 'human_review', label: 'Revisión Humana', Icon: UserCheck },
+  { key: 'prompt_injection', label: 'Prompt Injection', Icon: ShieldAlert },
+  { key: 'fraudulent', label: 'Fraudulento', Icon: Siren },
+];
+
 export default function ClaimForm({ onSubmit, loading }: Props) {
   const [scenarios, setScenarios] = useState<Record<string, Scenario>>({});
+  const [scenariosLoaded, setScenariosLoaded] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
   const [form, setForm] = useState<ClaimRequest>({
     policy_id: '',
@@ -22,7 +32,12 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getScenarios().then(setScenarios).catch(() => {});
+    getScenarios()
+      .then((data) => {
+        setScenarios(data);
+      })
+      .catch(() => {})
+      .finally(() => setScenariosLoaded(true));
   }, []);
 
   const updateForm = (patch: Partial<ClaimRequest>) => {
@@ -79,34 +94,39 @@ export default function ClaimForm({ onSubmit, loading }: Props) {
           <FileText className="h-5 w-5 text-primary-600" />
           <h2 className="text-lg font-semibold text-gray-900">Nuevo Siniestro</h2>
         </div>
-        {Object.keys(scenarios).length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(scenarios).map(([key]) => {
-              const label =
-                key === 'low_risk' ? '✅ Bajo Riesgo'
-                  : key === 'high_amount' ? '💰 Alto Monto'
-                    : key === 'human_review' ? '🟠 Revisión Humana'
-                      : key === 'prompt_injection' ? '🛡️ Prompt Injection'
-                        : '🚨 Fraudulento';
-              const isSelected = selectedScenario === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => loadScenario(key)}
-                  className={[
-                    'rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
-                    isSelected
+        <div className="flex flex-wrap items-center gap-2">
+          {!scenariosLoaded && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-gray-400">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Cargando escenarios…
+            </span>
+          )}
+          {SCENARIO_OPTIONS.map(({ key, label, Icon }) => {
+            const available = !!scenarios[key];
+            const isSelected = selectedScenario === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => available && loadScenario(key)}
+                disabled={!available}
+                aria-disabled={!available}
+                title={available ? `Cargar caso: ${label}` : 'Disponible cuando el backend responda'}
+                className={[
+                  'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
+                  !available
+                    ? 'cursor-not-allowed border-dashed border-gray-200 bg-gray-50 text-gray-400 opacity-60'
+                    : isSelected
                       ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
                       : 'border-gray-200 bg-gray-100 text-gray-800 hover:border-primary-300 hover:bg-primary-50',
-                  ].join(' ')}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+                ].join(' ')}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -12,6 +12,7 @@ import {
   FileText,
   User,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import type { ClaimSummary, ClaimAuditDetail } from '../api';
 import { getClaims, getClaimAudit, getClaimImage } from '../api';
@@ -69,9 +70,18 @@ export default function OperatorView() {
   const [detail, setDetail] = useState<ClaimAuditDetail | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [listLoaded, setListLoaded] = useState(false);
 
   const fetchClaims = useCallback(() => {
-    getClaims().then(setClaims).catch(() => {});
+    setListLoading(true);
+    getClaims()
+      .then(setClaims)
+      .catch(() => {})
+      .finally(() => {
+        setListLoading(false);
+        setListLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -128,15 +138,21 @@ export default function OperatorView() {
             </span>
             <button
               onClick={fetchClaims}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50"
+              disabled={listLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={`h-3.5 w-3.5 ${listLoading ? 'animate-spin' : ''}`} />
               Actualizar
             </button>
           </div>
         </div>
 
-        {claims.length === 0 ? (
+        {!listLoaded || (listLoading && claims.length === 0) ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-sm text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin text-primary-500" />
+            Cargando siniestros desde la base de datos…
+          </div>
+        ) : claims.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-gray-500">No hay siniestros procesados aún.</p>
         ) : (
           <div className="overflow-x-auto">
