@@ -283,7 +283,7 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"932\" y=\"460\" font-size=\"11\" fill=\"#444\">policy + customer lookup</text>
   <text x=\"932\" y=\"478\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">agents/claims-intake/agent.py</text>
   <circle cx=\"1182\" cy=\"388\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1182\" y=\"393\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">3</text>
+  <text x=\"1182\" y=\"393\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">4</text>
 
   <g filter=\"url(#cardShadow)\"><rect x=\"845\" y=\"510\" width=\"360\" height=\"120\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#7A52C5\" stroke-width=\"1.5\"/></g>
   <g transform=\"translate(862, 533)\"><polygon points=\"28,4 50,15 50,42 28,53 6,42 6,15\" fill=\"#7A52C5\"/><text x=\"28\" y=\"36\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#FFFFFF\">RA</text></g>
@@ -293,7 +293,7 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"932\" y=\"605\" font-size=\"11\" fill=\"#444\">fraud signal · explainability</text>
   <text x=\"932\" y=\"623\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">agents/risk-assessment/agent.py</text>
   <circle cx=\"1182\" cy=\"533\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1182\" y=\"538\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">4</text>
+  <text x=\"1182\" y=\"538\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">5</text>
 
   <g filter=\"url(#cardShadow)\"><rect x=\"845\" y=\"655\" width=\"360\" height=\"140\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"2.5\"/></g>
   <g transform=\"translate(862, 678)\"><polygon points=\"28,4 50,15 50,42 28,53 6,42 6,15\" fill=\"#7A52C5\"/><text x=\"28\" y=\"36\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#FFFFFF\">CA</text></g>
@@ -305,7 +305,7 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <rect x=\"1065\" y=\"668\" width=\"64\" height=\"18\" rx=\"3\" fill=\"#B30000\"/>
   <text x=\"1097\" y=\"681\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"800\" fill=\"#FFFFFF\">WOW</text>
   <circle cx=\"1182\" cy=\"678\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1182\" y=\"683\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">5</text>
+  <text x=\"1182\" y=\"683\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">6</text>
 
   <g filter=\"url(#cardShadow)\"><rect x=\"1280\" y=\"345\" width=\"320\" height=\"200\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"2.5\"/></g>
   <use href=\"#iconAPIM\" x=\"1300\" y=\"368\" width=\"58\" height=\"58\"/>
@@ -354,44 +354,44 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"1470\" y=\"904\" text-anchor=\"middle\" font-size=\"11\" fill=\"#5A5A5A\">APIM + agents emit traces</text>
   <text x=\"1355\" y=\"934\" font-size=\"10\" fill=\"#444\">X-Agent-Id · safety / cost metrics</text>
 
-  <g transform=\"translate(80, 1027)\"><use href=\"#iconGitHub\" width=\"48\" height=\"48\"/></g>
-  <text x=\"144\" y=\"1048\" font-size=\"15\" font-weight=\"700\" fill=\"#181717\">GitHub Enterprise</text>
-  <text x=\"144\" y=\"1068\" font-size=\"11\" fill=\"#5A5A5A\">source of truth · audit</text>
-  <text x=\"144\" y=\"1086\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">aangell98/insurance-ai-agents</text>
+  <g transform=\"translate(80, 1052)\"><use href=\"#iconGitHub\" width=\"48\" height=\"48\"/></g>
+  <text x=\"144\" y=\"1073\" font-size=\"15\" font-weight=\"700\" fill=\"#181717\">GitHub Enterprise</text>
+  <text x=\"144\" y=\"1093\" font-size=\"11\" fill=\"#5A5A5A\">source of truth · audit</text>
+  <text x=\"144\" y=\"1111\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">aangell98/insurance-ai-agents</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"360\" y=\"1015\" width=\"290\" height=\"100\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
-  <g transform=\"translate(380, 1032)\">
+  <g filter=\"url(#cardShadow)\"><rect x=\"360\" y=\"1040\" width=\"290\" height=\"90\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
+  <g transform=\"translate(380, 1054)\">
     <circle cx=\"14\" cy=\"14\" r=\"9\" fill=\"#B30000\"/>
     <circle cx=\"30\" cy=\"14\" r=\"9\" fill=\"#B30000\" opacity=\"0.85\"/>
     <circle cx=\"22\" cy=\"26\" r=\"9\" fill=\"#B30000\" opacity=\"0.7\"/>
   </g>
-  <text x=\"434\" y=\"1043\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">CODEOWNERS</text>
-  <text x=\"434\" y=\"1062\" font-size=\"11\" fill=\"#5A5A5A\">per-domain review</text>
-  <text x=\"380\" y=\"1090\" font-size=\"10.5\" fill=\"#444\">agents · backend · evals · dashboard · infra</text>
-  <text x=\"380\" y=\"1106\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">.github/CODEOWNERS</text>
+  <text x=\"434\" y=\"1065\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">CODEOWNERS</text>
+  <text x=\"434\" y=\"1083\" font-size=\"11\" fill=\"#5A5A5A\">per-domain review</text>
+  <text x=\"380\" y=\"1108\" font-size=\"10.5\" fill=\"#444\">agents · backend · evals · dashboard · infra</text>
+  <text x=\"380\" y=\"1123\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">.github/CODEOWNERS</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"680\" y=\"1015\" width=\"290\" height=\"100\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
-  <g transform=\"translate(700, 1032)\">
+  <g filter=\"url(#cardShadow)\"><rect x=\"680\" y=\"1040\" width=\"290\" height=\"90\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
+  <g transform=\"translate(700, 1054)\">
     <path d=\"M 18 2 L 34 8 L 34 22 Q 34 32 18 38 Q 2 32 2 22 L 2 8 Z\" fill=\"#B30000\"/>
     <path d=\"M 11 19 L 16 24 L 25 14\" fill=\"none\" stroke=\"#FFFFFF\" stroke-width=\"2.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>
   </g>
-  <text x=\"754\" y=\"1043\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">Eval Gate</text>
-  <text x=\"754\" y=\"1062\" font-size=\"11\" fill=\"#5A5A5A\">golden dataset on every PR</text>
-  <text x=\"700\" y=\"1090\" font-size=\"10.5\" fill=\"#444\">blocks merge if eval pass-rate drops</text>
-  <text x=\"700\" y=\"1106\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">evals/ · eval-on-pr.yml</text>
+  <text x=\"754\" y=\"1065\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">Eval Gate</text>
+  <text x=\"754\" y=\"1083\" font-size=\"11\" fill=\"#5A5A5A\">golden dataset on every PR</text>
+  <text x=\"700\" y=\"1108\" font-size=\"10.5\" fill=\"#444\">blocks merge if eval pass-rate drops</text>
+  <text x=\"700\" y=\"1123\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">evals/ · eval-on-pr.yml</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"1000\" y=\"1015\" width=\"290\" height=\"100\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
-  <use href=\"#iconActions\" x=\"1020\" y=\"1032\" width=\"40\" height=\"40\"/>
-  <text x=\"1074\" y=\"1043\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">GitHub Actions</text>
-  <text x=\"1074\" y=\"1062\" font-size=\"11\" fill=\"#5A5A5A\">federated OIDC → Azure</text>
-  <text x=\"1020\" y=\"1090\" font-size=\"10.5\" fill=\"#444\">build · evals · azd up · provision</text>
-  <text x=\"1020\" y=\"1106\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">.github/workflows/</text>
+  <g filter=\"url(#cardShadow)\"><rect x=\"1000\" y=\"1040\" width=\"290\" height=\"90\" rx=\"10\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
+  <use href=\"#iconActions\" x=\"1020\" y=\"1054\" width=\"40\" height=\"40\"/>
+  <text x=\"1074\" y=\"1065\" font-size=\"13\" font-weight=\"700\" fill=\"#1F1F1F\">GitHub Actions</text>
+  <text x=\"1074\" y=\"1083\" font-size=\"11\" fill=\"#5A5A5A\">federated OIDC → Azure</text>
+  <text x=\"1020\" y=\"1108\" font-size=\"10.5\" fill=\"#444\">build · evals · azd up · provision</text>
+  <text x=\"1020\" y=\"1123\" font-size=\"9.5\" font-style=\"italic\" fill=\"#888\">.github/workflows/</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"1320\" y=\"1015\" width=\"340\" height=\"100\" rx=\"10\" fill=\"#EC0000\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
-  <text x=\"1340\" y=\"1045\" font-size=\"13\" font-weight=\"800\" fill=\"#FFFFFF\" letter-spacing=\"1\">BANCO-GRADE REGULATORY</text>
-  <text x=\"1340\" y=\"1067\" font-size=\"10.5\" fill=\"#FFFFFF\">Same rigor as critical banking software:</text>
-  <text x=\"1340\" y=\"1086\" font-size=\"10.5\" font-weight=\"700\" fill=\"#FFFFFF\">peer review · evals · OIDC · audit · signed PRs</text>
-  <text x=\"1340\" y=\"1104\" font-size=\"10\" fill=\"#FFFFFF\" opacity=\"0.85\">No human can merge without governance checks passing</text>
+  <g filter=\"url(#cardShadow)\"><rect x=\"1320\" y=\"1040\" width=\"340\" height=\"90\" rx=\"10\" fill=\"#EC0000\" stroke=\"#B30000\" stroke-width=\"1.5\"/></g>
+  <text x=\"1340\" y=\"1067\" font-size=\"13\" font-weight=\"800\" fill=\"#FFFFFF\" letter-spacing=\"1\">BANCO-GRADE REGULATORY</text>
+  <text x=\"1340\" y=\"1087\" font-size=\"10.5\" fill=\"#FFFFFF\">Same rigor as critical banking software:</text>
+  <text x=\"1340\" y=\"1104\" font-size=\"10.5\" font-weight=\"700\" fill=\"#FFFFFF\">peer review · evals · OIDC · audit · signed PRs</text>
+  <text x=\"1340\" y=\"1121\" font-size=\"10\" fill=\"#FFFFFF\" opacity=\"0.85\">No human can merge without governance checks passing</text>
 
   <path d=\"M 410 445 L 485 445\" stroke=\"#0078D4\" stroke-width=\"2.4\" fill=\"none\" marker-end=\"url(#arrBlue)\"/>
   <text x=\"412\" y=\"435\" font-size=\"10\" font-weight=\"600\" fill=\"#0078D4\">HTTPS + JWT</text>
@@ -407,7 +407,9 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"648\" y=\"572\" font-size=\"10\" font-weight=\"600\" fill=\"#0078D4\">MI</text>
 
   <path d=\"M 795 445 L 808 445 L 808 282 L 845 282\" stroke=\"#5C2D91\" stroke-width=\"2.4\" fill=\"none\" marker-end=\"url(#arrPurple)\"/>
-  <text x=\"685\" y=\"435\" font-size=\"10\" font-weight=\"600\" fill=\"#5C2D91\">process_claim()</text>
+  <text x=\"815\" y=\"275\" font-size=\"10\" font-weight=\"600\" fill=\"#5C2D91\">process_claim()</text>
+  <circle cx=\"808\" cy=\"333\" r=\"13\" fill=\"#5C2D91\"/>
+  <text x=\"808\" y=\"338\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">3</text>
 
   <path d=\"M 1025 332 L 1025 365\" stroke=\"#5C2D91\" stroke-width=\"2.4\" fill=\"none\" marker-end=\"url(#arrPurple)\"/>
   <text x=\"1035\" y=\"352\" font-size=\"9.5\" fill=\"#5C2D91\">step 1</text>
@@ -435,10 +437,7 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <path d=\"M 1440 705 L 1440 838 L 1180 838 L 1180 855\" stroke=\"#5C2D91\" stroke-width=\"1.8\" fill=\"none\" stroke-dasharray=\"5 3\" marker-end=\"url(#arrPurple)\"/>
   <text x=\"1290\" y=\"832\" font-size=\"10\" font-weight=\"600\" fill=\"#5C2D91\">telemetry</text>
 
-  <path d=\"M 505 1015 L 505 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
-  <path d=\"M 825 1015 L 825 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
-  <path d=\"M 1145 1015 L 1145 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
-  <path d=\"M 1490 1015 L 1490 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
+  <!-- Governance is implied by the dashed red border around the entire band; no extra vertical arrows needed. -->
 </svg>
 """
 
