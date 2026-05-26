@@ -282,8 +282,8 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"932\" y=\"440\" font-size=\"11\" fill=\"#444\">multilingüe · structured-output (Pydantic)</text>
   <text x=\"932\" y=\"460\" font-size=\"11\" fill=\"#444\">policy + customer lookup</text>
   <text x=\"932\" y=\"478\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">agents/claims-intake/agent.py</text>
-  <circle cx=\"1232\" cy=\"425\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1232\" y=\"430\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">3</text>
+  <circle cx=\"1182\" cy=\"388\" r=\"13\" fill=\"#5C2D91\"/>
+  <text x=\"1182\" y=\"393\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">3</text>
 
   <g filter=\"url(#cardShadow)\"><rect x=\"845\" y=\"510\" width=\"360\" height=\"120\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#7A52C5\" stroke-width=\"1.5\"/></g>
   <g transform=\"translate(862, 533)\"><polygon points=\"28,4 50,15 50,42 28,53 6,42 6,15\" fill=\"#7A52C5\"/><text x=\"28\" y=\"36\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#FFFFFF\">RA</text></g>
@@ -292,8 +292,8 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"932\" y=\"585\" font-size=\"11\" fill=\"#444\">policy coverage · historial cliente</text>
   <text x=\"932\" y=\"605\" font-size=\"11\" fill=\"#444\">fraud signal · explainability</text>
   <text x=\"932\" y=\"623\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">agents/risk-assessment/agent.py</text>
-  <circle cx=\"1232\" cy=\"570\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1232\" y=\"575\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">4</text>
+  <circle cx=\"1182\" cy=\"533\" r=\"13\" fill=\"#5C2D91\"/>
+  <text x=\"1182\" y=\"538\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">4</text>
 
   <g filter=\"url(#cardShadow)\"><rect x=\"845\" y=\"655\" width=\"360\" height=\"140\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"2.5\"/></g>
   <g transform=\"translate(862, 678)\"><polygon points=\"28,4 50,15 50,42 28,53 6,42 6,15\" fill=\"#7A52C5\"/><text x=\"28\" y=\"36\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#FFFFFF\">CA</text></g>
@@ -302,16 +302,16 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"932\" y=\"730\" font-size=\"11\" fill=\"#444\">deterministic regex · LLM verdict</text>
   <text x=\"932\" y=\"750\" font-size=\"11\" fill=\"#444\">supervisor override detection · DAN mode</text>
   <text x=\"932\" y=\"768\" font-size=\"10\" font-style=\"italic\" fill=\"#888\">agents/compliance/agent.py · rules.py</text>
-  <rect x=\"1132\" y=\"668\" width=\"64\" height=\"18\" rx=\"3\" fill=\"#B30000\"/>
-  <text x=\"1164\" y=\"681\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"800\" fill=\"#FFFFFF\">WOW</text>
-  <circle cx=\"1232\" cy=\"725\" r=\"13\" fill=\"#5C2D91\"/>
-  <text x=\"1232\" y=\"730\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">5</text>
+  <rect x=\"1065\" y=\"668\" width=\"64\" height=\"18\" rx=\"3\" fill=\"#B30000\"/>
+  <text x=\"1097\" y=\"681\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"800\" fill=\"#FFFFFF\">WOW</text>
+  <circle cx=\"1182\" cy=\"678\" r=\"13\" fill=\"#5C2D91\"/>
+  <text x=\"1182\" y=\"683\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">5</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"1280\" y=\"345\" width=\"380\" height=\"200\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"2.5\"/></g>
+  <g filter=\"url(#cardShadow)\"><rect x=\"1280\" y=\"345\" width=\"320\" height=\"200\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#B30000\" stroke-width=\"2.5\"/></g>
   <use href=\"#iconAPIM\" x=\"1300\" y=\"368\" width=\"58\" height=\"58\"/>
   <text x=\"1372\" y=\"384\" font-size=\"15\" font-weight=\"700\" fill=\"#1F1F1F\">APIM AI Gateway</text>
   <text x=\"1372\" y=\"403\" font-size=\"11\" font-weight=\"600\" fill=\"#B30000\">Single point of policy &amp; audit</text>
-  <line x1=\"1300\" y1=\"435\" x2=\"1640\" y2=\"435\" stroke=\"#E1E4E8\" stroke-width=\"1\"/>
+  <line x1=\"1300\" y1=\"435\" x2=\"1580\" y2=\"435\" stroke=\"#E1E4E8\" stroke-width=\"1\"/>
   <text x=\"1300\" y=\"458\" font-size=\"12\" fill=\"#444\">▸ Content Safety · jailbreak detect</text>
   <text x=\"1300\" y=\"479\" font-size=\"12\" fill=\"#444\">▸ Token-limit · rate-limit per agent</text>
   <text x=\"1300\" y=\"500\" font-size=\"12\" fill=\"#444\">▸ Audit logs · X-Agent-Id header</text>
@@ -320,7 +320,7 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <circle cx=\"1300\" cy=\"362\" r=\"13\" fill=\"#B30000\"/>
   <text x=\"1300\" y=\"367\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#FFFFFF\">7</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"1280\" y=\"585\" width=\"380\" height=\"120\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#0078D4\" stroke-width=\"1.5\"/></g>
+  <g filter=\"url(#cardShadow)\"><rect x=\"1280\" y=\"585\" width=\"320\" height=\"120\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#0078D4\" stroke-width=\"1.5\"/></g>
   <use href=\"#iconAOAI\" x=\"1300\" y=\"605\" width=\"56\" height=\"56\"/>
   <text x=\"1370\" y=\"618\" font-size=\"15\" font-weight=\"700\" fill=\"#1F1F1F\">Azure OpenAI</text>
   <text x=\"1370\" y=\"638\" font-size=\"11\" fill=\"#5A5A5A\">GPT-4o · gpt-4o-mini</text>
@@ -349,10 +349,10 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <text x=\"1114\" y=\"908\" font-size=\"11\" fill=\"#5A5A5A\">Telemetry across the stack</text>
   <text x=\"1050\" y=\"938\" font-size=\"10.5\" fill=\"#444\">trace · latency · token cost · alerts</text>
 
-  <g filter=\"url(#cardShadow)\"><rect x=\"1340\" y=\"855\" width=\"320\" height=\"95\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#74B8E8\" stroke-width=\"1.5\"/></g>
-  <text x=\"1500\" y=\"884\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#1F1F1F\">Telemetry hub</text>
-  <text x=\"1500\" y=\"904\" text-anchor=\"middle\" font-size=\"11\" fill=\"#5A5A5A\">APIM + agents emit traces</text>
-  <text x=\"1355\" y=\"934\" font-size=\"10.5\" fill=\"#444\">X-Agent-Id · token / safety / cost metrics</text>
+  <g filter=\"url(#cardShadow)\"><rect x=\"1340\" y=\"855\" width=\"260\" height=\"95\" rx=\"12\" fill=\"#FFFFFF\" stroke=\"#74B8E8\" stroke-width=\"1.5\"/></g>
+  <text x=\"1470\" y=\"884\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#1F1F1F\">Telemetry hub</text>
+  <text x=\"1470\" y=\"904\" text-anchor=\"middle\" font-size=\"11\" fill=\"#5A5A5A\">APIM + agents emit traces</text>
+  <text x=\"1355\" y=\"934\" font-size=\"10\" fill=\"#444\">X-Agent-Id · safety / cost metrics</text>
 
   <g transform=\"translate(80, 1027)\"><use href=\"#iconGitHub\" width=\"48\" height=\"48\"/></g>
   <text x=\"144\" y=\"1048\" font-size=\"15\" font-weight=\"700\" fill=\"#181717\">GitHub Enterprise</text>
@@ -423,8 +423,8 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <path d=\"M 1205 570 L 1248 570 L 1248 445\" stroke=\"#B30000\" stroke-width=\"2\" fill=\"none\" opacity=\"0.75\"/>
   <path d=\"M 1205 725 L 1248 725 L 1248 445\" stroke=\"#B30000\" stroke-width=\"2\" fill=\"none\" opacity=\"0.75\"/>
 
-  <path d=\"M 1470 545 L 1470 585\" stroke=\"#0078D4\" stroke-width=\"2.4\" fill=\"none\" marker-end=\"url(#arrBlue)\"/>
-  <text x=\"1480\" y=\"570\" font-size=\"10\" font-weight=\"600\" fill=\"#0078D4\">MI token</text>
+  <path d=\"M 1440 545 L 1440 585\" stroke=\"#0078D4\" stroke-width=\"2.4\" fill=\"none\" marker-end=\"url(#arrBlue)\"/>
+  <text x=\"1450\" y=\"570\" font-size=\"10\" font-weight=\"600\" fill=\"#0078D4\">MI token</text>
 
   <path d=\"M 795 510 L 810 510 L 810 838 L 615 838 L 615 855\" stroke=\"#5A5A5A\" stroke-width=\"2.2\" fill=\"none\" marker-end=\"url(#arrGray)\"/>
   <text x=\"700\" y=\"830\" font-size=\"10\" font-weight=\"600\" fill=\"#5A5A5A\">audit write</text>
@@ -432,14 +432,13 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1720 1180\" fo
   <path d=\"M 795 480 L 802 480 L 802 845 L 890 845 L 890 855\" stroke=\"#5A5A5A\" stroke-width=\"2.2\" fill=\"none\" marker-end=\"url(#arrGray)\"/>
   <text x=\"815\" y=\"832\" font-size=\"10\" font-weight=\"600\" fill=\"#5A5A5A\">evidence</text>
 
-  <path d=\"M 1470 705 L 1470 838 L 1180 838 L 1180 855\" stroke=\"#5C2D91\" stroke-width=\"1.8\" fill=\"none\" stroke-dasharray=\"5 3\" marker-end=\"url(#arrPurple)\"/>
-  <text x=\"1310\" y=\"832\" font-size=\"10\" font-weight=\"600\" fill=\"#5C2D91\">telemetry</text>
+  <path d=\"M 1440 705 L 1440 838 L 1180 838 L 1180 855\" stroke=\"#5C2D91\" stroke-width=\"1.8\" fill=\"none\" stroke-dasharray=\"5 3\" marker-end=\"url(#arrPurple)\"/>
+  <text x=\"1290\" y=\"832\" font-size=\"10\" font-weight=\"600\" fill=\"#5C2D91\">telemetry</text>
 
-  <path d=\"M 505 1015 L 505 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.6\"/>
-  <path d=\"M 825 1015 L 825 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.6\"/>
-  <path d=\"M 1145 1015 L 1145 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.6\"/>
-  <path d=\"M 1490 1015 L 1490 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.6\"/>
-  <text x=\"825\" y=\"985\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#B30000\" letter-spacing=\"1\">↑ protege &amp; audita ↑</text>
+  <path d=\"M 505 1015 L 505 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
+  <path d=\"M 825 1015 L 825 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
+  <path d=\"M 1145 1015 L 1145 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
+  <path d=\"M 1490 1015 L 1490 970\" stroke=\"#B30000\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" fill=\"none\" opacity=\"0.5\"/>
 </svg>
 """
 
