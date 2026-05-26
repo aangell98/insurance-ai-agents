@@ -193,10 +193,10 @@
   <text x="162" y="432" font-size="15" font-weight="700" fill="#1F1F1F">Dashboard</text>
   <text x="162" y="452" font-size="11.5" fill="#5A5A5A">React 18 · TypeScript · Vite</text>
   <line x1="96" y1="482" x2="384" y2="482" stroke="#E1E4E8" stroke-width="1"/>
-  <text x="96" y="506" font-size="12" fill="#444">▸ Vistas por rol</text>
-  <text x="96" y="527" font-size="12" fill="#444">▸ Cliente · Operario · Riesgo</text>
-  <text x="96" y="548" font-size="12" fill="#444">▸ Compliance · Demo automática</text>
-  <text x="96" y="569" font-size="12" fill="#444">▸ WebSocket streaming en vivo</text>
+  <text x="96" y="506" font-size="12" fill="#444">▸ Per-role views</text>
+  <text x="96" y="527" font-size="12" fill="#444">▸ Customer · Operator · Risk</text>
+  <text x="96" y="548" font-size="12" fill="#444">▸ Compliance · Auto-demo</text>
+  <text x="96" y="569" font-size="12" fill="#444">▸ Live WebSocket streaming</text>
   <text x="96" y="603" font-size="10" font-style="italic" fill="#888">dashboard/</text>
 
   <g filter="url(#cardShadow)"><rect x="70" y="655" width="340" height="280" rx="12" fill="#FFFFFF" stroke="#D6D9E0" stroke-width="1"/></g>
@@ -251,7 +251,7 @@
   <text x="505" y="668" font-size="11" fill="#444">APIM key · OpenAI key · JWT signing</text>
 
   <g filter="url(#zoneShadow)"><rect x="820" y="185" width="410" height="640" rx="14" fill="url(#mafBand)" stroke="#7A52C5" stroke-width="1.5"/></g>
-  <text x="840" y="212" font-size="11" font-weight="700" fill="#5C2D91" letter-spacing="2.5">MICROSOFT AGENT FRAMEWORK 1.4 · SEQUENTIAL GRAPH</text>
+  <text x="840" y="212" font-size="11" font-weight="700" fill="#5C2D91" letter-spacing="1.5">MICROSOFT AGENT FRAMEWORK · SEQUENTIAL GRAPH</text>
 
   <g filter="url(#cardShadow)"><rect x="845" y="232" width="360" height="100" rx="12" fill="#FFFFFF" stroke="#5C2D91" stroke-width="2"/></g>
   <g transform="translate(862, 252)"><circle cx="27" cy="27" r="27" fill="#5C2D91"/><text x="27" y="36" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF">◆</text></g>
@@ -262,8 +262,8 @@
   <g filter="url(#cardShadow)"><rect x="845" y="365" width="360" height="120" rx="12" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/></g>
   <g transform="translate(862, 388)"><polygon points="28,4 50,15 50,42 28,53 6,42 6,15" fill="#7A52C5"/><text x="28" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#FFFFFF">IA</text></g>
   <text x="932" y="398" font-size="15" font-weight="700" fill="#1F1F1F">Intake Agent</text>
-  <text x="932" y="419" font-size="11.5" fill="#5A5A5A">Extrae datos del parte de siniestro</text>
-  <text x="932" y="440" font-size="11" fill="#444">multilingüe · structured-output (Pydantic)</text>
+  <text x="932" y="419" font-size="11.5" fill="#5A5A5A">Extracts structured claim data</text>
+  <text x="932" y="440" font-size="11" fill="#444">multilingual · structured-output (Pydantic)</text>
   <text x="932" y="460" font-size="11" fill="#444">policy + customer lookup</text>
   <text x="932" y="478" font-size="10" font-style="italic" fill="#888">agents/claims-intake/agent.py</text>
   <circle cx="1182" cy="388" r="13" fill="#5C2D91"/>
@@ -272,8 +272,8 @@
   <g filter="url(#cardShadow)"><rect x="845" y="510" width="360" height="120" rx="12" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/></g>
   <g transform="translate(862, 533)"><polygon points="28,4 50,15 50,42 28,53 6,42 6,15" fill="#7A52C5"/><text x="28" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#FFFFFF">RA</text></g>
   <text x="932" y="543" font-size="15" font-weight="700" fill="#1F1F1F">Risk Agent</text>
-  <text x="932" y="564" font-size="11.5" fill="#5A5A5A">Risk score 0-100 + detección de fraude</text>
-  <text x="932" y="585" font-size="11" fill="#444">policy coverage · historial cliente</text>
+  <text x="932" y="564" font-size="11.5" fill="#5A5A5A">Risk score 0-100 + fraud detection</text>
+  <text x="932" y="585" font-size="11" fill="#444">policy coverage · customer history</text>
   <text x="932" y="605" font-size="11" fill="#444">fraud signal · explainability</text>
   <text x="932" y="623" font-size="10" font-style="italic" fill="#888">agents/risk-assessment/agent.py</text>
   <circle cx="1182" cy="533" r="13" fill="#5C2D91"/>
@@ -282,7 +282,7 @@
   <g filter="url(#cardShadow)"><rect x="845" y="655" width="360" height="140" rx="12" fill="#FFFFFF" stroke="#B30000" stroke-width="2.5"/></g>
   <g transform="translate(862, 678)"><polygon points="28,4 50,15 50,42 28,53 6,42 6,15" fill="#7A52C5"/><text x="28" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#FFFFFF">CA</text></g>
   <text x="932" y="688" font-size="15" font-weight="700" fill="#1F1F1F">Compliance Agent</text>
-  <text x="932" y="709" font-size="11.5" fill="#5A5A5A">Reglas regulatorias + injection guard</text>
+  <text x="932" y="709" font-size="11.5" fill="#5A5A5A">Regulatory rules + injection guard</text>
   <text x="932" y="730" font-size="11" fill="#444">deterministic regex · LLM verdict</text>
   <text x="932" y="750" font-size="11" fill="#444">supervisor override detection · DAN mode</text>
   <text x="932" y="768" font-size="10" font-style="italic" fill="#888">agents/compliance/agent.py · rules.py</text>
@@ -317,15 +317,15 @@
   <use href="#iconCosmos" x="500" y="875" width="50" height="50"/>
   <text x="560" y="892" font-size="14" font-weight="700" fill="#1F1F1F">Cosmos DB</text>
   <text x="560" y="910" font-size="11" fill="#5A5A5A">NoSQL · audit trail</text>
-  <text x="500" y="940" font-size="10.5" fill="#444">claims · trazas · governance log</text>
+  <text x="500" y="940" font-size="10.5" fill="#444">claims · traces · governance log</text>
   <circle cx="726" cy="872" r="13" fill="#5A5A5A"/>
   <text x="726" y="877" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">9</text>
 
   <g filter="url(#cardShadow)"><rect x="760" y="855" width="260" height="95" rx="12" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/></g>
   <use href="#iconStorage" x="775" y="875" width="50" height="50"/>
   <text x="836" y="892" font-size="14" font-weight="700" fill="#1F1F1F">Blob Storage</text>
-  <text x="836" y="910" font-size="11" fill="#5A5A5A">Evidence (PDFs · fotos)</text>
-  <text x="775" y="940" font-size="10.5" fill="#444">partes · daños · documentación</text>
+  <text x="836" y="910" font-size="11" fill="#5A5A5A">Evidence (PDFs · photos)</text>
+  <text x="775" y="940" font-size="10.5" fill="#444">reports · damage · documentation</text>
 
   <g filter="url(#cardShadow)"><rect x="1035" y="855" width="290" height="95" rx="12" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/></g>
   <use href="#iconAppInsights" x="1050" y="872" width="54" height="54"/>
@@ -391,7 +391,6 @@
   <text x="648" y="572" font-size="10" font-weight="600" fill="#0078D4">MI</text>
 
   <path d="M 795 445 L 808 445 L 808 282 L 845 282" stroke="#5C2D91" stroke-width="2.4" fill="none" marker-end="url(#arrPurple)"/>
-  <text x="815" y="275" font-size="10" font-weight="600" fill="#5C2D91">process_claim()</text>
   <circle cx="808" cy="333" r="13" fill="#5C2D91"/>
   <text x="808" y="338" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">3</text>
 
