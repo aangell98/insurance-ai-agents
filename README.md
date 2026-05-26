@@ -37,7 +37,9 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 
 <div align="center">
 
-<img src="images/architecture.svg" alt="Insurance AI Agents — Reference architecture" />
+<img src="images/architecture.svg" alt="Insurance AI Agents — Arquitectura de referencia" />
+
+<sub>🇪🇸 Versión en español arriba · 🇬🇧 <a href="images/architecture-en.svg">English version</a></sub>
 
 </div>
 
