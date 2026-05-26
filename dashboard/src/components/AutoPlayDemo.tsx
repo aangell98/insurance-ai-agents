@@ -990,7 +990,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         <header className="border-b border-white/10 bg-surface-950/80 px-6 py-5 xl:px-10">
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
             <div className="flex items-start gap-3">
-              <img src="/santander-logo.avif" alt="Santander" className="h-7 w-auto shrink-0 opacity-90" />
+              <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-white/30">
+                <img src="/santander-logo.avif" alt="Santander" className="h-6 w-auto" />
+              </div>
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-white">Demo automática — 5 casos reales</h2>
                 <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
