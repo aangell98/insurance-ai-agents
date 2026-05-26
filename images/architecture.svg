@@ -1,435 +1,647 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960" font-family="'Segoe UI', Inter, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1080" font-family="'Segoe UI', system-ui, sans-serif" role="img" aria-label="Insurance AI Agents reference architecture">
+  <title>Insurance AI Agents — Reference Architecture</title>
+  <desc>Multi-agent claims processing demo: React dashboard, FastAPI backend, Microsoft Agent Framework orchestrating Intake / Risk / Compliance agents, Azure OpenAI through APIM AI Gateway, Cosmos DB and Blob Storage for state, Entra ID for identity, App Insights for observability, GitHub Enterprise for governance.</desc>
+
   <defs>
-    <linearGradient id="canvasBg" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#FBFBFD"/>
-      <stop offset="1" stop-color="#EEF2F7"/>
+    <!-- Background gradients -->
+    <linearGradient id="canvasBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAFBFC"/>
+      <stop offset="1" stop-color="#F0F2F5"/>
     </linearGradient>
-    <linearGradient id="azureZone" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#E8F3FC"/>
-      <stop offset="1" stop-color="#D9ECFA"/>
+    <linearGradient id="azureBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EAF4FB"/>
+      <stop offset="1" stop-color="#D6E9F7"/>
     </linearGradient>
-    <linearGradient id="govZone" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#FFF1F1"/>
-      <stop offset="1" stop-color="#FFE3E3"/>
+    <linearGradient id="edgeBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7F8FA"/>
+      <stop offset="1" stop-color="#EAECF1"/>
     </linearGradient>
-    <linearGradient id="agentCard" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#FAF7FF"/>
+    <linearGradient id="govBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF0F0"/>
+      <stop offset="1" stop-color="#FFE0E0"/>
     </linearGradient>
-    <linearGradient id="dataCard" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F4FAFE"/>
+    <linearGradient id="mafBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4EEFB"/>
+      <stop offset="1" stop-color="#E8DCF6"/>
     </linearGradient>
-    <linearGradient id="apimCard" x1="0" x2="1" y1="0" y2="0">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F0F8FE"/>
+    <linearGradient id="headerBg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1F1F1F"/>
+      <stop offset="1" stop-color="#0A0A0A"/>
     </linearGradient>
-    <linearGradient id="azureCloudIcon" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#0078D4"/>
-      <stop offset="1" stop-color="#005A9E"/>
-    </linearGradient>
-    <linearGradient id="openaiIcon" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#10A37F"/>
-      <stop offset="1" stop-color="#0B7A5F"/>
-    </linearGradient>
-    <linearGradient id="cosmosIcon" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#3999D4"/>
-      <stop offset="1" stop-color="#1F6FB7"/>
-    </linearGradient>
-    <linearGradient id="agentIcon" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#7A52C5"/>
-      <stop offset="1" stop-color="#5C2D91"/>
-    </linearGradient>
-    <linearGradient id="santanderIcon" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#EC0000"/>
-      <stop offset="1" stop-color="#B30000"/>
-    </linearGradient>
-    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0B2545" flood-opacity="0.10"/>
+
+    <!-- Card / zone shadows -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.12"/>
     </filter>
-    <filter id="zoneShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#0B2545" flood-opacity="0.08"/>
+    <filter id="zoneShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.06"/>
     </filter>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#1F1F1F"/>
-    </marker>
-    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+
+    <!-- Arrow markers (one per arrow color) -->
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/>
     </marker>
-    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#EC0000"/>
+    <marker id="arrPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5C2D91"/>
     </marker>
+    <marker id="arrGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5A5A5A"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#B30000"/>
+    </marker>
+
+    <!-- ──────────────────────────── ICON SYMBOLS ──────────────────────────── -->
+    <!-- Microsoft official 4-square logo -->
+    <symbol id="logoMicrosoft" viewBox="0 0 23 23">
+      <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
+      <rect x="12" y="1"  width="10" height="10" fill="#7FBA00"/>
+      <rect x="1"  y="12" width="10" height="10" fill="#00A4EF"/>
+      <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+    </symbol>
+
+    <!-- React (simple-icons) -->
+    <symbol id="iconReact" viewBox="0 0 24 24">
+      <path fill="#61DAFB" d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.41 0-.783.093-1.106.278-1.375.793-1.683 3.264-.973 6.365C1.98 8.917 0 10.42 0 12.004c0 1.59 1.99 3.097 5.043 4.03-.704 3.113-.39 5.588.988 6.38.32.187.69.275 1.102.275 1.345 0 3.107-.96 4.888-2.624 1.78 1.654 3.542 2.603 4.887 2.603.41 0 .783-.09 1.106-.275 1.374-.792 1.683-3.263.973-6.365C22.02 15.096 24 13.59 24 12.004c0-1.59-1.99-3.097-5.043-4.032.704-3.11.39-5.587-.988-6.38-.318-.184-.688-.277-1.092-.278zm-.005 1.09v.006c.225 0 .406.044.558.127.666.382.955 1.835.73 3.704-.054.46-.142.945-.25 1.44-.96-.236-2.006-.417-3.107-.534-.66-.905-1.345-1.727-2.035-2.447 1.592-1.48 3.087-2.292 4.105-2.295zm-9.77.02c1.012 0 2.514.808 4.11 2.28-.686.72-1.37 1.537-2.02 2.442-1.107.117-2.154.298-3.113.538-.112-.49-.195-.964-.254-1.42-.23-1.868.054-3.32.714-3.707.19-.09.4-.127.563-.132zm4.882 3.05c.455.468.91.992 1.36 1.564-.44-.02-.89-.034-1.345-.034-.46 0-.915.01-1.36.034.44-.572.895-1.096 1.345-1.565zM12 8.1c.74 0 1.477.034 2.202.093.406.582.802 1.203 1.183 1.86.372.64.71 1.29 1.018 1.946-.308.655-.646 1.31-1.013 1.95-.38.66-.773 1.288-1.18 1.87-.728.063-1.466.098-2.21.098-.74 0-1.477-.035-2.202-.093-.406-.582-.802-1.204-1.183-1.86-.372-.64-.71-1.29-1.018-1.946.303-.657.646-1.313 1.013-1.954.38-.66.773-1.286 1.18-1.868.728-.064 1.466-.098 2.21-.098zm-3.635.254c-.24.377-.48.763-.704 1.16-.225.39-.435.782-.635 1.174-.265-.656-.49-1.31-.676-1.947.64-.15 1.315-.283 2.015-.386zm7.26 0c.695.103 1.365.23 2.006.387-.18.632-.405 1.282-.66 1.933-.2-.39-.41-.783-.64-1.174-.225-.392-.465-.774-.705-1.146zm3.063.675c.484.15.944.317 1.375.498 1.732.74 2.852 1.708 2.852 2.476-.005.768-1.125 1.74-2.857 2.475-.42.18-.88.342-1.355.493-.28-.958-.646-1.956-1.1-2.98.45-1.017.81-2.01 1.085-2.964zm-13.395.004c.278.96.645 1.957 1.1 2.98-.45 1.017-.812 2.01-1.086 2.964-.484-.15-.944-.318-1.37-.5-1.732-.737-2.852-1.706-2.852-2.474 0-.768 1.12-1.742 2.852-2.476.42-.18.88-.342 1.356-.494zm11.678 4.28c.265.657.49 1.312.676 1.948-.64.157-1.316.29-2.016.39.24-.375.48-.762.705-1.158.225-.39.435-.788.636-1.18zm-9.945.02c.2.392.41.783.64 1.175.23.39.465.772.705 1.143-.695-.102-1.365-.23-2.006-.386.18-.63.406-1.282.66-1.933zM17.92 16.32c.112.493.2.968.254 1.423.23 1.868-.054 3.32-.714 3.708-.147.09-.338.128-.563.128-1.012 0-2.514-.807-4.11-2.28.686-.72 1.37-1.536 2.02-2.44 1.107-.118 2.154-.3 3.113-.54zm-11.83.01c.96.234 2.006.415 3.107.532.66.905 1.345 1.727 2.035 2.446-1.595 1.483-3.092 2.295-4.11 2.295-.22-.005-.406-.05-.553-.132-.666-.38-.955-1.834-.73-3.703.054-.46.142-.944.25-1.438zm4.56.64c.44.02.89.034 1.345.034.46 0 .915-.01 1.36-.034-.44.572-.895 1.095-1.345 1.565-.455-.47-.91-.993-1.36-1.565z"/>
+    </symbol>
+
+    <!-- FastAPI (simple-icons) -->
+    <symbol id="iconFastAPI" viewBox="0 0 24 24">
+      <path fill="#009688" d="M12 .0387C5.3729.0384.0003 5.3931 0 11.9988c-.001 6.6066 5.372 11.9628 12 11.9625 6.628.0003 12.001-5.3559 12-11.9625-.0003-6.6057-5.3729-11.9604-12-11.96m-.829 5.4153h7.55l-7.5805 5.3284h5.1828L5.279 18.5436q2.9466-6.5444 5.892-13.0896"/>
+    </symbol>
+
+    <!-- GitHub (simple-icons) -->
+    <symbol id="iconGitHub" viewBox="0 0 24 24">
+      <path fill="#181717" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+    </symbol>
+
+    <!-- GitHub Actions (simple-icons) -->
+    <symbol id="iconActions" viewBox="0 0 24 24">
+      <path fill="#2088FF" d="M10.984 13.836a.5.5 0 0 1-.353-.146l-.745-.743a.5.5 0 1 1 .706-.708l.392.391 1.181-1.18a.5.5 0 0 1 .708.707l-1.535 1.533a.504.504 0 0 1-.354.146zm9.353-.147l1.534-1.532a.5.5 0 0 0-.707-.707l-1.181 1.18-.392-.391a.5.5 0 1 0-.706.708l.746.743a.497.497 0 0 0 .706-.001zM4.527 7.452l2.557-1.585A1 1 0 0 0 7.09 4.17L4.533 2.56A1 1 0 0 0 3 3.406v3.196a1.001 1.001 0 0 0 1.527.85zm2.03-2.436L4 6.602V3.406l2.557 1.61zM24 12.5c0 1.93-1.57 3.5-3.5 3.5a3.503 3.503 0 0 1-3.46-3h-2.08a3.503 3.503 0 0 1-3.46 3 3.502 3.502 0 0 1-3.46-3h-.558c-.972 0-1.85-.399-2.482-1.042V17c0 1.654 1.346 3 3 3h.04c.244-1.693 1.7-3 3.46-3 1.93 0 3.5 1.57 3.5 3.5S13.43 24 11.5 24a3.502 3.502 0 0 1-3.46-3H8c-2.206 0-4-1.794-4-4V9.899A5.008 5.008 0 0 1 0 5c0-2.757 2.243-5 5-5s5 2.243 5 5a5.005 5.005 0 0 1-4.952 4.998A2.482 2.482 0 0 0 7.482 12h.558c.244-1.693 1.7-3 3.46-3a3.502 3.502 0 0 1 3.46 3h2.08a3.503 3.503 0 0 1 3.46-3c1.93 0 3.5 1.57 3.5 3.5zm-15 8c0 1.378 1.122 2.5 2.5 2.5s2.5-1.122 2.5-2.5-1.122-2.5-2.5-2.5S9 19.122 9 20.5zM5 9c2.206 0 4-1.794 4-4S7.206 1 5 1 1 2.794 1 5s1.794 4 4 4zm9 3.5c0-1.378-1.122-2.5-2.5-2.5S9 11.122 9 12.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5zm9 0c0-1.378-1.122-2.5-2.5-2.5S18 11.122 18 12.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5zm-13 8a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0zm2 0a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0zm12 0c0 1.93-1.57 3.5-3.5 3.5a3.503 3.503 0 0 1-3.46-3.002c-.007.001-.013.005-.021.005l-.506.017h-.017a.5.5 0 0 1-.016-.999l.506-.017c.018-.002.035.006.052.007A3.503 3.503 0 0 1 20.5 17c1.93 0 3.5 1.57 3.5 3.5zm-1 0c0-1.378-1.122-2.5-2.5-2.5S18 19.122 18 20.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5z"/>
+    </symbol>
+
+    <!-- Azure APIM (official) -->
+    <symbol id="iconAPIM" viewBox="0 0 18 18">
+      <defs>
+        <linearGradient id="apimA" x1="9" y1="16.82" x2="9" y2="1.18" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#198ab3"/><stop offset=".09" stop-color="#1f9dc4"/>
+          <stop offset=".24" stop-color="#28b5d9"/><stop offset=".4" stop-color="#2dc6e9"/>
+          <stop offset=".57" stop-color="#31d1f2"/><stop offset=".78" stop-color="#32d4f5"/>
+        </linearGradient>
+        <linearGradient id="apimB" x1="8.36" y1="11.35" x2="8.36" y2="14.46" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#c69aeb"/><stop offset="1" stop-color="#6f4bb2"/>
+        </linearGradient>
+      </defs>
+      <path d="M14.18 5.89a4.85 4.85 0 00-4.95-4.71 5 5 0 00-4.75 3.29A4.61 4.61 0 00.5 9a4.67 4.67 0 004.79 4.5 3 3 0 00.42 0h1.2a1.47 1.47 0 01-.11-.56 1.51 1.51 0 01.2-.73H5.29A3.41 3.41 0 011.77 9a3.33 3.33 0 012.91-3.27l.76-.12.25-.73a3.73 3.73 0 013.54-2.43 3.6 3.6 0 013.68 3.45V7l1.09.15a2.59 2.59 0 012.26 2.49 2.63 2.63 0 01-2.62 2.54h-1.23A3.92 3.92 0 008.54 9a.64.64 0 100 1.27 2.65 2.65 0 010 5.29.64.64 0 100 1.27 3.92 3.92 0 003.87-3.34h1.05a.64.64 0 00.2 0 3.91 3.91 0 003.84-3.85 3.86 3.86 0 00-3.32-3.75z" fill="url(#apimA)"/>
+      <rect x="6.8" y="11.35" width="3.12" height="3.12" rx="1.54" fill="url(#apimB)"/>
+    </symbol>
+
+    <!-- Azure Cosmos DB (official) -->
+    <symbol id="iconCosmos" viewBox="0 0 18 18">
+      <defs>
+        <radialGradient id="cosmoA" cx="-105.006" cy="-10.409" r="5.954" gradientTransform="matrix(1.036 0 0 1.027 117.739 19.644)" gradientUnits="userSpaceOnUse">
+          <stop offset=".183" stop-color="#5ea0ef"/><stop offset="1" stop-color="#0078d4"/>
+        </radialGradient>
+        <clipPath id="cosmoB">
+          <path d="M14.969 7.53a6.137 6.137 0 11-7.395-4.543 6.137 6.137 0 017.395 4.543z" fill="none"/>
+        </clipPath>
+      </defs>
+      <path d="M2.954 5.266a.175.175 0 01-.176-.176A2.012 2.012 0 00.769 3.081a.176.176 0 01-.176-.175.176.176 0 01.176-.176A2.012 2.012 0 002.778.72a.175.175 0 01.176-.176.175.175 0 01.176.176 2.012 2.012 0 002.009 2.009.175.175 0 01.176.176.175.175 0 01-.176.176A2.011 2.011 0 003.13 5.09a.177.177 0 01-.176.176zM15.611 17.456a.141.141 0 01-.141-.141 1.609 1.609 0 00-1.607-1.607.141.141 0 01-.141-.14.141.141 0 01.141-.141 1.608 1.608 0 001.607-1.607.141.141 0 01.141-.141.141.141 0 01.141.141 1.608 1.608 0 001.607 1.607.141.141 0 110 .282 1.609 1.609 0 00-1.607 1.607.141.141 0 01-.141.14z" fill="#50e6ff"/>
+      <path d="M14.969 7.53a6.137 6.137 0 11-7.395-4.543 6.137 6.137 0 017.395 4.543z" fill="url(#cosmoA)"/>
+      <g clip-path="url(#cosmoB)" fill="#f2f2f2">
+        <path d="M5.709 13.115a1.638 1.638 0 10.005-3.275 1.307 1.307 0 00.007-.14A1.651 1.651 0 004.06 8.064H2.832a6.251 6.251 0 001.595 5.051zM15.045 7.815c0-.015 0-.03-.007-.044a5.978 5.978 0 00-1.406-2.88 1.825 1.825 0 00-.289-.09 1.806 1.806 0 00-2.3 1.663 2 2 0 00-.2-.013 1.737 1.737 0 00-.581 3.374 1.451 1.451 0 00.541.1h2.03a13.453 13.453 0 002.212-2.11z"/>
+      </g>
+      <path d="M17.191 3.832c-.629-1.047-2.1-1.455-4.155-1.149a14.606 14.606 0 00-2.082.452 6.456 6.456 0 011.528.767c.241-.053.483-.116.715-.151a7.49 7.49 0 011.103-.089 2.188 2.188 0 011.959.725c.383.638.06 1.729-.886 3a16.723 16.723 0 01-4.749 4.051A16.758 16.758 0 014.8 13.7c-1.564.234-2.682 0-3.065-.636s-.06-1.73.886-2.995c.117-.157.146-.234.279-.392a6.252 6.252 0 01.026-1.63 11.552 11.552 0 00-1.17 1.372C.517 11.076.181 12.566.809 13.613a3.165 3.165 0 002.9 1.249 8.434 8.434 0 001.251-.1 17.855 17.855 0 006.219-2.4A17.808 17.808 0 0016.24 8.03c1.243-1.661 1.579-3.15.951-4.198z" fill="#50e6ff"/>
+    </symbol>
+
+    <!-- Azure Storage (official) -->
+    <symbol id="iconStorage" viewBox="0 0 18 18">
+      <defs>
+        <linearGradient id="storA" x1="9" y1="15.83" x2="9" y2="5.79" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#b3b3b3"/><stop offset=".26" stop-color="#c1c1c1"/><stop offset="1" stop-color="#e6e6e6"/>
+        </linearGradient>
+      </defs>
+      <path d="M.5 5.79h17v9.48a.57.57 0 01-.57.57H1.07a.57.57 0 01-.57-.57V5.79z" fill="url(#storA)"/>
+      <path d="M1.07 2.17h15.86a.57.57 0 01.57.57v3.05H.5V2.73a.57.57 0 01.57-.56z" fill="#37c2b1"/>
+      <path d="M2.81 6.89h12.37a.27.27 0 01.26.27v1.4a.27.27 0 01-.26.27H2.81a.27.27 0 01-.26-.27v-1.4a.27.27 0 01.26-.27z" fill="#fff"/>
+      <path d="M2.82 9.68h12.37a.27.27 0 01.26.27v1.41a.27.27 0 01-.26.27H2.82a.27.27 0 01-.26-.27V10a.27.27 0 01.26-.32z" fill="#37c2b1"/>
+      <path d="M2.82 12.5h12.37a.27.27 0 01.26.27v1.41a.27.27 0 01-.26.27H2.82a.27.27 0 01-.26-.27v-1.41a.27.27 0 01.26-.27z" fill="#258277"/>
+    </symbol>
+
+    <!-- Azure Key Vault (official) -->
+    <symbol id="iconKeyVault" viewBox="0 0 18 18">
+      <defs>
+        <radialGradient id="kvA" cx="9" cy="9" r="8.5" gradientUnits="userSpaceOnUse">
+          <stop offset=".18" stop-color="#5ea0ef"/><stop offset=".56" stop-color="#5c9fee"/>
+          <stop offset=".69" stop-color="#559ced"/><stop offset=".78" stop-color="#4a97e9"/>
+          <stop offset=".86" stop-color="#3990e4"/><stop offset=".93" stop-color="#2387de"/>
+          <stop offset=".99" stop-color="#087bd6"/><stop offset="1" stop-color="#0078d4"/>
+        </radialGradient>
+        <radialGradient id="kvB" cx="38.95" cy="182.07" r="9.88" gradientTransform="matrix(.94 0 0 .94 -28.71 -163.24)" gradientUnits="userSpaceOnUse">
+          <stop offset=".27" stop-color="#ffd70f"/><stop offset=".49" stop-color="#ffcb12"/>
+          <stop offset=".88" stop-color="#feac19"/><stop offset="1" stop-color="#fea11b"/>
+        </radialGradient>
+      </defs>
+      <path d="M9 .5A8.5 8.5 0 1017.5 9 8.51 8.51 0 009 .5zm0 15.84A7.34 7.34 0 1116.34 9 7.34 7.34 0 019 16.34z" fill="url(#kvA)"/>
+      <circle cx="9" cy="9" r="7.34" fill="#fff"/>
+      <path d="M13.44 7.33a1.84 1.84 0 000-2.59l-3.15-3.16a1.83 1.83 0 00-2.58 0L4.56 4.74a1.84 1.84 0 000 2.59L7.18 10a.51.51 0 01.15.36v4.88a.63.63 0 00.18.44l1.2 1.2a.41.41 0 00.58 0l1.16-1.16.68-.68a.25.25 0 000-.34l-.49-.49a.27.27 0 010-.37l.49-.49a.25.25 0 000-.34l-.49-.49a.27.27 0 010-.37l.49-.49a.25.25 0 000-.34l-.68-.69v-.25zM9 2.35a1 1 0 010 2.07 1 1 0 110-2.07z" fill="url(#kvB)"/>
+      <path d="M8.18 15.3a.23.23 0 00.38-.17v-4a.24.24 0 00-.11-.2.22.22 0 00-.34.2v4a.28.28 0 00.07.17z" fill="#ff9300" opacity=".75"/>
+      <rect x="6.48" y="5.79" width="5.17" height=".61" rx=".28" fill="#ff9300" opacity=".75"/>
+      <rect x="6.48" y="6.78" width="5.17" height=".61" rx=".28" fill="#ff9300" opacity=".75"/>
+    </symbol>
+
+    <!-- Azure App Insights (official) -->
+    <symbol id="iconAppInsights" viewBox="0 0 18 18">
+      <defs>
+        <radialGradient id="aiA" cx="9" cy="7.35" r="6.42" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#b77af4"/><stop offset=".21" stop-color="#b378f2"/>
+          <stop offset=".43" stop-color="#a672ed"/><stop offset=".65" stop-color="#9267e4"/>
+          <stop offset=".88" stop-color="#7559d8"/><stop offset="1" stop-color="#624fd0"/>
+        </radialGradient>
+        <linearGradient id="aiB" x1="9.02" y1="3.91" x2="9.08" y2="11.49" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#f2f2f2"/><stop offset=".23" stop-color="#f1f1f2" stop-opacity=".99"/>
+          <stop offset=".37" stop-color="#ededf1" stop-opacity=".95"/><stop offset=".48" stop-color="#e7e5f0" stop-opacity=".89"/>
+          <stop offset=".58" stop-color="#dedbee" stop-opacity=".81"/><stop offset=".67" stop-color="#d3ceeb" stop-opacity=".7"/>
+          <stop offset=".76" stop-color="#c4bee8" stop-opacity=".57"/><stop offset=".84" stop-color="#b4abe5" stop-opacity=".41"/>
+          <stop offset=".92" stop-color="#a095e1" stop-opacity=".22"/><stop offset=".99" stop-color="#8b7ddc" stop-opacity=".02"/>
+          <stop offset="1" stop-color="#897bdc" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="M10.23 17.39l.81-.87V14.2H7v2.32l.81.87a.32.32 0 00.19.11h2a.32.32 0 00.23-.11z" fill="#cecece"/>
+      <path d="M9 .5a5.89 5.89 0 00-5.91 6.57c.27 2.47 2.62 3.62 3.29 6.75a.49.49 0 00.47.38h4.3a.49.49 0 00.47-.38c.67-3.13 3-4.28 3.29-6.75A5.89 5.89 0 009 .5zM7 14.2" fill="url(#aiA)"/>
+      <path d="M11.46 3.79a1.4 1.4 0 00-1.35 1.44V6H8v-.77a1.41 1.41 0 00-1.41-1.44 1.4 1.4 0 00-1.35 1.44 1.41 1.41 0 001.35 1.45h.64v6a.36.36 0 00.72 0v-6h2.16v6a.36.36 0 10.72 0v-6h.63a1.4 1.4 0 001.35-1.45 1.4 1.4 0 00-1.35-1.44zM7.23 6h-.68a.74.74 0 01-.68-.77.74.74 0 01.68-.77.74.74 0 01.68.77zm4.28 0h-.68v-.81a.68.68 0 111.35 0 .73.73 0 01-.67.81z" fill="url(#aiB)"/>
+      <path fill="#999" d="M6.96 15.8l4.08-.79v-.45l-4.08.8v.44zM11.04 16.11v-.44l-4.08.81v.04l.31.34 3.77-.75z"/>
+    </symbol>
+
+    <!-- Azure OpenAI (using Cognitive Services icon, the actual brand mark) -->
+    <symbol id="iconAzureOpenAI" viewBox="0 0 18 18">
+      <defs>
+        <linearGradient id="aoaiA" x1="9" y1="19.13" x2="9" y2="-.29" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0078d4"/><stop offset=".16" stop-color="#1380da"/>
+          <stop offset=".53" stop-color="#3c91e5"/><stop offset=".82" stop-color="#559cec"/>
+          <stop offset="1" stop-color="#5ea0ef"/>
+        </linearGradient>
+      </defs>
+      <path d="M18 11.38a4 4 0 00-3.51-3.88 5.1 5.1 0 00-5.25-4.88A5.25 5.25 0 004.22 6 4.8 4.8 0 000 10.67a4.9 4.9 0 005.07 4.71h8.65a.78.78 0 00.22 0 4.1 4.1 0 004.06-4z" fill="url(#aoaiA)"/>
+      <path d="M5.42 10.39h-.88a1.09 1.09 0 100 .49h.88a.2.2 0 01.2.2v4.3h.49v-4.3a.69.69 0 00-.69-.69zm-1.95.88a.64.64 0 11.64-.64.64.64 0 01-.64.64z" fill="#9cebff"/>
+      <path d="M8.94 10.61v-1a.7.7 0 00-.7-.7H6.69a.2.2 0 01-.2-.2V3.4l-.23.12-.26.14v5a.69.69 0 00.69.69h1.55a.21.21 0 01.21.21v1a1.08 1.08 0 00-.85 1.06 1.09 1.09 0 101.34-1.06zm-.25 1.7a.64.64 0 11.64-.64.64.64 0 01-.64.64z" fill="#f2f2f2"/>
+      <path d="M14.53 8.5a1.09 1.09 0 00-.25 2.15v.2a.21.21 0 01-.21.21h-2V7.54a.69.69 0 00-.69-.69h-1.03A1.08 1.08 0 009.29 6a1.09 1.09 0 101.06 1.34h1.07a.2.2 0 01.2.2v7.84h.49v-3.83h2a.7.7 0 00.7-.7v-.2a1.09 1.09 0 00.85-1.06 1.09 1.09 0 00-1.13-1.09zm-5.24-.77a.64.64 0 11.64-.64.64.64 0 01-.64.64zm5.24 2.5a.64.64 0 11.63-.64.64.64 0 01-.63.64z" fill="#9cebff"/>
+    </symbol>
+
+    <!-- Microsoft Entra ID (official AAD style) -->
+    <symbol id="iconEntra" viewBox="0 0 18 18">
+      <defs>
+        <linearGradient id="entrA" x1="13.25" y1="13.02" x2="8.62" y2="4.25" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#1988d9"/><stop offset=".9" stop-color="#54aef0"/>
+        </linearGradient>
+        <linearGradient id="entrB" x1="11.26" y1="10.47" x2="14.46" y2="15.99" gradientUnits="userSpaceOnUse">
+          <stop offset=".1" stop-color="#54aef0"/><stop offset=".29" stop-color="#4fabee"/>
+          <stop offset=".51" stop-color="#41a2e9"/><stop offset=".74" stop-color="#2a93e0"/>
+          <stop offset=".88" stop-color="#1988d9"/>
+        </linearGradient>
+      </defs>
+      <path fill="#50e6ff" d="M1.01 10.19l7.92 5.14 8.06-5.16L18 11.35l-9.07 5.84L0 11.35l1.01-1.16z"/>
+      <path fill="#fff" d="M1.61 9.53L8.93.81l7.47 8.73-7.47 4.72-7.32-4.73z"/>
+      <path fill="#50e6ff" d="M8.93.81v13.45L1.61 9.53 8.93.81z"/>
+      <path fill="url(#entrA)" d="M8.93.81v13.45l7.47-4.72L8.93.81z"/>
+      <path fill="#53b1e0" d="M8.93 7.76l7.47 1.78-7.47 4.72v-6.5z"/>
+      <path fill="#9cebff" d="M8.93 14.26L1.61 9.53l7.32-1.77v6.5z"/>
+      <path fill="url(#entrB)" d="M8.93 17.19L18 11.35l-1.01-1.18-8.06 5.16v1.86z"/>
+    </symbol>
+
+    <!-- Azure Container Apps (using Container Instances mark) -->
+    <symbol id="iconContainer" viewBox="0 0 18 18">
+      <defs>
+        <linearGradient id="ccA" x1="9" y1="11.95" x2="9" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0078d4"/><stop offset=".16" stop-color="#1380da"/>
+          <stop offset=".53" stop-color="#3c91e5"/><stop offset=".82" stop-color="#559cec"/>
+          <stop offset="1" stop-color="#5ea0ef"/>
+        </linearGradient>
+      </defs>
+      <path d="M17.43 8.21a3.78 3.78 0 00-3.29-3.64A4.77 4.77 0 009.22 0a4.91 4.91 0 00-4.68 3.19 4.52 4.52 0 00-4 4.35A4.6 4.6 0 005.32 12h8.31a3.84 3.84 0 003.8-3.79z" fill="url(#ccA)"/>
+      <path d="M6.36 6.46L9 3.87a.3.3 0 01.43 0L12 6.46a.13.13 0 01-.1.23h-1.62a.15.15 0 00-.14.14v3.24a.11.11 0 01-.11.11H8.29a.11.11 0 01-.11-.11V6.83a.14.14 0 00-.13-.14h-1.6a.13.13 0 01-.09-.23z" fill="#f2f2f2"/>
+      <path d="M14 11.37a.13.13 0 00-.09-.13L9.16 9.65H9V18h.13l4.71-1.88A.13.13 0 0014 16z" fill="#a67af4"/>
+      <path d="M9 9.68l-4.51.83a.14.14 0 00-.12.13v6.23a.15.15 0 00.11.14L9 18a.13.13 0 00.16-.13v-8A.14.14 0 009 9.68z" fill="#552f99"/>
+      <path fill="#b77af4" opacity=".75" d="M6.92 10.92v5.81l1.57.25v-6.33l-1.57.27zM4.98 11.24v5.08l1.37.28v-5.59l-1.37.23z"/>
+    </symbol>
+
+    <!-- Santander flame mark (simplified) -->
+    <symbol id="logoSantander" viewBox="0 0 100 100">
+      <path fill="#EC0000" d="M50 8 C 60 22, 78 30, 78 52 C 78 70, 64 86, 50 92 C 36 86, 22 70, 22 52 C 22 30, 40 22, 50 8 Z M 50 25 C 44 35, 35 42, 35 56 C 35 68, 42 78, 50 82 C 58 78, 65 68, 65 56 C 65 42, 56 35, 50 25 Z"/>
+    </symbol>
+
+    <!-- User / customer icon -->
+    <symbol id="iconUser" viewBox="0 0 48 48">
+      <circle cx="24" cy="16" r="9" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="1.5"/>
+      <path d="M6 44 C 8 30, 16 28, 24 28 C 32 28, 40 30, 42 44" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="1.5"/>
+    </symbol>
   </defs>
 
-  <!-- ============ Canvas background ============ -->
-  <rect width="1440" height="960" fill="url(#canvasBg)"/>
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       CANVAS + HEADER
+       ════════════════════════════════════════════════════════════════════════════ -->
+  <rect width="1600" height="1080" fill="url(#canvasBg)"/>
 
-  <!-- ============ HEADER BAR (dark) ============ -->
-  <g>
-    <rect x="0" y="0" width="1440" height="118" fill="#1F1F1F"/>
-    <rect x="0" y="115" width="1440" height="3" fill="#EC0000"/>
-
-    <!-- Microsoft logo -->
-    <g transform="translate(50, 38)">
-      <rect x="0" y="0" width="22" height="22" fill="#F25022"/>
-      <rect x="26" y="0" width="22" height="22" fill="#7FBA00"/>
-      <rect x="0" y="26" width="22" height="22" fill="#00A4EF"/>
-      <rect x="26" y="26" width="22" height="22" fill="#FFB900"/>
-      <text x="60" y="34" font-size="26" font-weight="600" fill="#FFFFFF">Microsoft</text>
-    </g>
-
-    <!-- separator dot -->
-    <circle cx="285" cy="60" r="3" fill="#666"/>
-
-    <!-- Santander logo -->
-    <g transform="translate(310, 36)">
-      <g>
-        <circle cx="26" cy="26" r="24" fill="url(#santanderIcon)"/>
-        <!-- stylised Santander flame mark -->
-        <path d="M14 30 Q18 16 26 18 Q34 20 38 30 Q34 22 26 23 Q18 24 14 30 Z" fill="#FFFFFF" opacity="0.95"/>
-        <path d="M16 32 Q20 22 26 24 Q32 26 36 32 Q32 27 26 28 Q20 28 16 32 Z" fill="#FFFFFF" opacity="0.55"/>
-      </g>
-      <text x="62" y="34" font-size="26" font-weight="600" fill="#FFFFFF">Santander</text>
-    </g>
-
-    <!-- Title on right -->
-    <text x="1390" y="48" text-anchor="end" font-size="22" font-weight="700" fill="#FFFFFF">Insurance AI Agents</text>
-    <text x="1390" y="75" text-anchor="end" font-size="13" fill="#BBB">Governed multi-agent claims processing · Reference architecture</text>
-    <text x="1390" y="100" text-anchor="end" font-size="11" fill="#888" font-style="italic">Powered by Microsoft Agent Framework + Azure AI Foundry</text>
+  <!-- Header bar -->
+  <rect x="0" y="0" width="1600" height="90" fill="url(#headerBg)"/>
+  <g transform="translate(40, 21)">
+    <use href="#logoMicrosoft" width="48" height="48"/>
+    <text x="60" y="33" font-size="22" font-weight="600" fill="#FFFFFF">Microsoft</text>
   </g>
-
-  <!-- ============ User edge (top) ============ -->
-  <g transform="translate(70, 155)">
-    <!-- User icon -->
-    <g>
-      <circle cx="32" cy="22" r="14" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="2"/>
-      <path d="M8 60 Q8 38 32 38 Q56 38 56 60 L56 68 L8 68 Z" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="2"/>
-    </g>
-    <text x="32" y="92" text-anchor="middle" font-size="13" font-weight="600" fill="#1F1F1F">Cliente / Operario</text>
-    <text x="32" y="108" text-anchor="middle" font-size="11" fill="#666">Banca digital</text>
+  <text x="240" y="55" font-size="28" font-weight="200" fill="#FFFFFF">×</text>
+  <g transform="translate(275, 21)">
+    <use href="#logoSantander" width="48" height="48"/>
+    <text x="60" y="33" font-size="22" font-weight="600" fill="#EC0000">Santander</text>
   </g>
+  <text x="800" y="42" text-anchor="middle" font-size="22" font-weight="600" fill="#FFFFFF">Insurance AI Agents</text>
+  <text x="800" y="68" text-anchor="middle" font-size="13" font-weight="300" fill="#BBB" letter-spacing="2">GOVERNED MULTI-AGENT CLAIMS PROCESSING · REFERENCE ARCHITECTURE</text>
+  <text x="1560" y="55" text-anchor="end" font-size="12" font-weight="400" fill="#888">v1.0</text>
 
-  <!-- arrow user → dashboard -->
-  <line x1="145" y1="195" x2="240" y2="195" stroke="#1F1F1F" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="192" y="187" text-anchor="middle" font-size="10" fill="#444">HTTPS + JWT</text>
-
-  <!-- Dashboard card -->
-  <g transform="translate(250, 152)" filter="url(#cardShadow)">
-    <rect width="220" height="92" rx="10" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="1.5"/>
-    <!-- React-ish icon (atom) -->
-    <g transform="translate(20, 26)" fill="none" stroke="#61DAFB" stroke-width="2.2">
-      <ellipse cx="20" cy="20" rx="20" ry="7.5"/>
-      <ellipse cx="20" cy="20" rx="20" ry="7.5" transform="rotate(60 20 20)"/>
-      <ellipse cx="20" cy="20" rx="20" ry="7.5" transform="rotate(120 20 20)"/>
-      <circle cx="20" cy="20" r="3" fill="#61DAFB" stroke="none"/>
-    </g>
-    <text x="76" y="38" font-size="15" font-weight="700" fill="#1F1F1F">Dashboard React</text>
-    <text x="76" y="56" font-size="11" fill="#555">Vistas por rol · AutoPlay demo</text>
-    <text x="76" y="72" font-size="10" fill="#888" font-style="italic">TypeScript · Tailwind · Vite</text>
-  </g>
-
-  <!-- arrow dashboard → entra -->
-  <line x1="358" y1="244" x2="358" y2="318" stroke="#0078D4" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowBlue)"/>
-  <text x="368" y="285" font-size="10" fill="#0078D4">Bearer token</text>
-
-  <!-- ============ AZURE ZONE ============ -->
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       ZONE BACKGROUNDS (horizontal bands, no overlap)
+       ════════════════════════════════════════════════════════════════════════════ -->
+  <!-- Edge zone: Users + Dashboard -->
   <g filter="url(#zoneShadow)">
-    <rect x="60" y="290" width="1310" height="490" rx="22" fill="url(#azureZone)" stroke="#0078D4" stroke-width="1.6" stroke-dasharray="8 4"/>
+    <rect x="40" y="120" width="380" height="820" rx="16" fill="url(#edgeBand)" stroke="#C2C8D4" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="148" font-size="11" font-weight="700" fill="#5A5A5A" letter-spacing="2.5">EDGE · CLIENT TIER</text>
+
+  <!-- Azure zone (large central band) -->
+  <g filter="url(#zoneShadow)">
+    <rect x="440" y="120" width="1120" height="820" rx="16" fill="url(#azureBand)" stroke="#74B8E8" stroke-width="1.5" stroke-dasharray="6 4"/>
+  </g>
+  <text x="460" y="148" font-size="11" font-weight="700" fill="#0067B8" letter-spacing="2.5">MICROSOFT AZURE · ENTERPRISE TENANT</text>
+  <g transform="translate(1490, 132)">
+    <circle cx="0" cy="0" r="12" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+    <text x="0" y="4" text-anchor="middle" font-size="14" font-weight="700" fill="#0078D4">⬣</text>
   </g>
 
-  <!-- Azure zone label -->
-  <g transform="translate(90, 308)">
-    <!-- Mini Azure cloud icon -->
-    <path d="M0 18 Q0 8 10 8 Q12 0 22 0 Q32 0 34 8 Q44 8 44 18 Q44 28 34 28 L10 28 Q0 28 0 18 Z" fill="url(#azureCloudIcon)"/>
-    <text x="52" y="22" font-size="16" font-weight="700" fill="#0078D4">Azure</text>
-    <text x="100" y="22" font-size="12" fill="#666">· AI Foundry + Agent Framework + APIM Gateway</text>
+  <!-- GitHub Governance band at the very bottom -->
+  <g filter="url(#zoneShadow)">
+    <rect x="40" y="960" width="1520" height="100" rx="16" fill="url(#govBand)" stroke="#EC0000" stroke-width="1.5" stroke-dasharray="6 4"/>
   </g>
+  <text x="60" y="985" font-size="11" font-weight="700" fill="#B30000" letter-spacing="2.5">GITHUB ENTERPRISE · GOVERNANCE LANE  (PROTECTS &amp; AUDITS ALL ABOVE)</text>
 
-  <!-- ============ Entra ID ============ -->
-  <g transform="translate(90, 340)" filter="url(#cardShadow)">
-    <rect width="200" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
-    <!-- Shield icon -->
-    <g transform="translate(18, 22)">
-      <path d="M22 4 L40 12 V28 Q40 42 22 50 Q4 42 4 28 V12 Z" fill="#50E6FF" stroke="#0078D4" stroke-width="2"/>
-      <path d="M14 26 L20 32 L32 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
-    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Entra ID</text>
-    <text x="78" y="55" font-size="10" fill="#555">JWT v2.0 · OIDC</text>
-    <text x="78" y="71" font-size="10" fill="#888">Managed identity</text>
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       EDGE COLUMN — Users + Dashboard
+       ════════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Customer / Operator users -->
+  <g transform="translate(120, 200)">
+    <use href="#iconUser" width="40" height="40"/>
+    <text x="20" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="#1F1F1F">Customer</text>
   </g>
-
-  <!-- ============ FastAPI Backend ============ -->
-  <g transform="translate(320, 340)" filter="url(#cardShadow)">
-    <rect width="240" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
-    <!-- Container icon -->
-    <g transform="translate(18, 18)">
-      <rect x="2" y="6" width="44" height="42" rx="4" fill="#0078D4"/>
-      <rect x="6" y="10" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.9"/>
-      <rect x="26" y="10" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.75"/>
-      <rect x="6" y="28" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.6"/>
-      <rect x="26" y="28" width="18" height="14" rx="2" fill="#FFFFFF" opacity="0.45"/>
-    </g>
-    <text x="78" y="36" font-size="14" font-weight="700" fill="#1F1F1F">Container App · FastAPI</text>
-    <text x="78" y="54" font-size="10" fill="#555">REST /api/claims · WebSocket streaming</text>
-    <text x="78" y="70" font-size="10" fill="#888">Auth · Audit · Orchestration glue</text>
+  <g transform="translate(240, 200)">
+    <use href="#iconUser" width="40" height="40"/>
+    <text x="20" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="#1F1F1F">Operator</text>
   </g>
+  <text x="230" y="178" text-anchor="middle" font-size="10" font-weight="600" fill="#5A5A5A" letter-spacing="1.5">END USERS · BROWSER</text>
 
-  <!-- ============ Key Vault ============ -->
-  <g transform="translate(590, 340)" filter="url(#cardShadow)">
-    <rect width="170" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
-    <!-- Key icon -->
-    <g transform="translate(18, 22)">
-      <circle cx="14" cy="24" r="10" fill="none" stroke="#FFB900" stroke-width="3"/>
-      <line x1="22" y1="24" x2="44" y2="24" stroke="#FFB900" stroke-width="3"/>
-      <line x1="40" y1="24" x2="40" y2="32" stroke="#FFB900" stroke-width="3"/>
-      <line x1="34" y1="24" x2="34" y2="30" stroke="#FFB900" stroke-width="3"/>
-    </g>
-    <text x="78" y="40" font-size="14" font-weight="700" fill="#1F1F1F">Key Vault</text>
-    <text x="78" y="58" font-size="10" fill="#555">APIM subscription</text>
-    <text x="78" y="72" font-size="10" fill="#888">keys · secrets</text>
+  <!-- React Dashboard card -->
+  <g filter="url(#cardShadow)">
+    <rect x="80" y="310" width="300" height="160" rx="10" fill="#FFFFFF" stroke="#D6D9E0" stroke-width="1.5"/>
   </g>
+  <use href="#iconReact" x="100" y="330" width="42" height="42"/>
+  <text x="155" y="345" font-size="14" font-weight="700" fill="#1F1F1F">Dashboard</text>
+  <text x="155" y="362" font-size="11" font-weight="400" fill="#5A5A5A">React 18 · TypeScript · Vite</text>
+  <text x="100" y="395" font-size="11" fill="#444">▸ Cliente · Operario · Riesgo</text>
+  <text x="100" y="413" font-size="11" fill="#444">▸ Compliance · Demo automática</text>
+  <text x="100" y="431" font-size="11" fill="#444">▸ WebSocket streaming en vivo</text>
+  <text x="100" y="455" font-size="10" font-style="italic" fill="#888">dashboard/</text>
 
-  <!-- ============ APIM AI Gateway ============ -->
-  <g transform="translate(820, 340)" filter="url(#cardShadow)">
-    <rect width="290" height="92" rx="10" fill="url(#apimCard)" stroke="#EC0000" stroke-width="2"/>
-    <!-- Gateway icon (hexagon with arrows) -->
-    <g transform="translate(15, 18)">
-      <polygon points="28,2 50,15 50,41 28,54 6,41 6,15" fill="#EC0000" opacity="0.95"/>
-      <path d="M14 28 L42 28" stroke="#FFFFFF" stroke-width="3"/>
-      <path d="M36 22 L42 28 L36 34" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
-    <text x="78" y="32" font-size="15" font-weight="800" fill="#1F1F1F">APIM · AI Gateway</text>
-    <text x="78" y="50" font-size="10.5" fill="#444">Content Safety · Token Limits · Audit logs</text>
-    <text x="78" y="66" font-size="10.5" fill="#444">Managed Identity · 6 políticas activas</text>
-    <text x="78" y="82" font-size="9" fill="#888" font-style="italic">Defined in infra/apim-policy.xml</text>
+  <!-- Step label "1" -->
+  <circle cx="395" cy="390" r="14" fill="#0078D4"/>
+  <text x="395" y="395" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">1</text>
+
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       AZURE COLUMN 1 — Identity + Backend (FastAPI Container App)
+       ════════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Entra ID — Identity top -->
+  <g filter="url(#cardShadow)">
+    <rect x="465" y="175" width="220" height="100" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
   </g>
+  <use href="#iconEntra" x="480" y="195" width="48" height="48"/>
+  <text x="540" y="210" font-size="13" font-weight="700" fill="#1F1F1F">Microsoft Entra ID</text>
+  <text x="540" y="227" font-size="10.5" fill="#5A5A5A">Identity provider (OIDC)</text>
+  <text x="540" y="247" font-size="10" fill="#444">JWT v2.0 · MSAL</text>
+  <text x="540" y="262" font-size="10" fill="#444">Customer.Submit · Operator.Review</text>
 
-  <!-- ============ App Insights ============ -->
-  <g transform="translate(1140, 340)" filter="url(#cardShadow)">
-    <rect width="200" height="92" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
-    <!-- Chart icon -->
-    <g transform="translate(18, 22)">
-      <rect x="4" y="30" width="8" height="18" fill="#7A52C5"/>
-      <rect x="16" y="20" width="8" height="28" fill="#9B6CD9"/>
-      <rect x="28" y="10" width="8" height="38" fill="#BC8FED"/>
-      <rect x="40" y="22" width="8" height="26" fill="#7A52C5"/>
-      <path d="M4 18 L18 12 L32 6 L46 16" fill="none" stroke="#EC0000" stroke-width="2"/>
-    </g>
-    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">App Insights</text>
-    <text x="78" y="55" font-size="10" fill="#555">Token metrics · traces</text>
-    <text x="78" y="71" font-size="10" fill="#888">Per-agent dimensions</text>
+  <!-- FastAPI Container App -->
+  <g filter="url(#cardShadow)">
+    <rect x="465" y="320" width="290" height="150" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
   </g>
+  <use href="#iconContainer" x="485" y="340" width="48" height="48"/>
+  <text x="545" y="356" font-size="14" font-weight="700" fill="#1F1F1F">FastAPI Backend</text>
+  <text x="545" y="373" font-size="10.5" font-weight="600" fill="#0078D4">Azure Container Apps</text>
+  <use href="#iconFastAPI" x="730" y="340" width="22" height="22"/>
+  <text x="485" y="408" font-size="11" fill="#444">▸ /api/claims · WebSocket /ws</text>
+  <text x="485" y="425" font-size="11" fill="#444">▸ JWT validation (Entra)</text>
+  <text x="485" y="442" font-size="11" fill="#444">▸ Managed Identity → Azure</text>
+  <text x="485" y="460" font-size="10" font-style="italic" fill="#888">backend/main.py</text>
 
-  <!-- arrows backend ↔ entra and backend → keyvault -->
-  <line x1="290" y1="386" x2="320" y2="386" stroke="#0078D4" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
-  <line x1="560" y1="386" x2="590" y2="386" stroke="#0078D4" stroke-width="1.5"/>
-  <text x="575" y="380" text-anchor="middle" font-size="9" fill="#0078D4">key</text>
+  <!-- Step label "2" Entra check -->
+  <circle cx="600" cy="297" r="13" fill="#0078D4"/>
+  <text x="600" y="302" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">2</text>
 
-  <!-- backend → APIM -->
-  <line x1="560" y1="380" x2="820" y2="380" stroke="#0078D4" stroke-width="2" marker-end="url(#arrowBlue)"/>
-  <text x="690" y="372" text-anchor="middle" font-size="10" fill="#0078D4">Subscription Key</text>
-
-  <!-- APIM → App Insights -->
-  <line x1="1110" y1="386" x2="1140" y2="386" stroke="#0078D4" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowBlue)"/>
-
-  <!-- ============ MAF Agents ============ -->
-  <!-- arrow APIM → Agents container -->
-  <line x1="965" y1="432" x2="965" y2="470" stroke="#EC0000" stroke-width="2" marker-end="url(#arrowRed)"/>
-
-  <!-- MAF zone -->
-  <g>
-    <rect x="320" y="475" width="790" height="170" rx="14" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="6 4"/>
-    <g transform="translate(340, 492)">
-      <!-- MS Agent hexagon -->
-      <polygon points="14,2 26,9 26,21 14,28 2,21 2,9" fill="url(#agentIcon)"/>
-      <text x="36" y="20" font-size="13" font-weight="700" fill="#5C2D91">Microsoft Agent Framework v1.4</text>
-      <text x="246" y="20" font-size="11" fill="#888">orchestrator · plan · stream · fallback</text>
-    </g>
+  <!-- Key Vault below backend -->
+  <g filter="url(#cardShadow)">
+    <rect x="465" y="500" width="290" height="80" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
   </g>
+  <use href="#iconKeyVault" x="485" y="515" width="44" height="44"/>
+  <text x="540" y="530" font-size="13" font-weight="700" fill="#1F1F1F">Azure Key Vault</text>
+  <text x="540" y="547" font-size="10.5" fill="#5A5A5A">Secret store · accessed via MI</text>
+  <text x="540" y="567" font-size="10" fill="#444">APIM keys · OpenAI keys · JWT signing</text>
 
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       MAF ORCHESTRATION SUB-ZONE  (purple background, middle column)
+       ════════════════════════════════════════════════════════════════════════════ -->
+  <g filter="url(#zoneShadow)">
+    <rect x="785" y="175" width="380" height="510" rx="14" fill="url(#mafBand)" stroke="#7A52C5" stroke-width="1.5"/>
+  </g>
+  <text x="805" y="200" font-size="11" font-weight="700" fill="#5C2D91" letter-spacing="2">MICROSOFT AGENT FRAMEWORK 1.4 · SEQUENTIAL GRAPH</text>
+
+  <!-- Orchestrator card -->
+  <g filter="url(#cardShadow)">
+    <rect x="810" y="220" width="330" height="80" rx="10" fill="#FFFFFF" stroke="#5C2D91" stroke-width="2"/>
+  </g>
+  <g transform="translate(828, 235)">
+    <circle cx="22" cy="22" r="22" fill="#5C2D91"/>
+    <text x="22" y="29" text-anchor="middle" font-size="20" font-weight="700" fill="#FFFFFF">◆</text>
+  </g>
+  <text x="890" y="252" font-size="14" font-weight="700" fill="#1F1F1F">Orchestrator</text>
+  <text x="890" y="270" font-size="10.5" fill="#5A5A5A">Plan · Stream · Fallback · Audit</text>
+  <text x="890" y="288" font-size="10" font-style="italic" fill="#888">agents/orchestrator/agent.py</text>
+
+  <!-- Three agents (vertical chain to keep arrows tidy) -->
   <!-- Intake Agent -->
-  <g transform="translate(345, 522)" filter="url(#cardShadow)">
-    <rect width="240" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="1.5"/>
-    <g transform="translate(18, 22)">
-      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
-      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">IA</text>
-    </g>
-    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Intake Agent</text>
-    <text x="78" y="56" font-size="10.5" fill="#555">Extracción estructurada</text>
-    <text x="78" y="72" font-size="10.5" fill="#555">del parte de siniestro</text>
-    <text x="78" y="92" font-size="9" fill="#888" font-style="italic">agents/claims-intake/</text>
+  <g filter="url(#cardShadow)">
+    <rect x="810" y="340" width="330" height="90" rx="10" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/>
   </g>
+  <g transform="translate(828, 358)">
+    <polygon points="22,3 38,12 38,32 22,40 6,32 6,12" fill="#7A52C5"/>
+    <text x="22" y="27" text-anchor="middle" font-size="13" font-weight="800" fill="#FFFFFF">IA</text>
+  </g>
+  <text x="890" y="372" font-size="13" font-weight="700" fill="#1F1F1F">Intake Agent</text>
+  <text x="890" y="390" font-size="10.5" fill="#5A5A5A">Extrae datos del parte de siniestro</text>
+  <text x="890" y="406" font-size="10" fill="#444">multilingüe · structured-output</text>
+  <text x="890" y="422" font-size="10" font-style="italic" fill="#888">agents/claims-intake/agent.py</text>
+  <circle cx="1162" cy="385" r="12" fill="#5C2D91"/>
+  <text x="1162" y="389" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">3</text>
 
   <!-- Risk Agent -->
-  <g transform="translate(605, 522)" filter="url(#cardShadow)">
-    <rect width="240" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="1.5"/>
-    <g transform="translate(18, 22)">
-      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
-      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">RA</text>
-    </g>
-    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Risk Agent</text>
-    <text x="78" y="56" font-size="10.5" fill="#555">Scoring + detección</text>
-    <text x="78" y="72" font-size="10.5" fill="#555">de fraude</text>
-    <text x="78" y="92" font-size="9" fill="#888" font-style="italic">agents/risk-assessment/</text>
+  <g filter="url(#cardShadow)">
+    <rect x="810" y="455" width="330" height="90" rx="10" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/>
   </g>
+  <g transform="translate(828, 473)">
+    <polygon points="22,3 38,12 38,32 22,40 6,32 6,12" fill="#7A52C5"/>
+    <text x="22" y="27" text-anchor="middle" font-size="13" font-weight="800" fill="#FFFFFF">RA</text>
+  </g>
+  <text x="890" y="487" font-size="13" font-weight="700" fill="#1F1F1F">Risk Agent</text>
+  <text x="890" y="505" font-size="10.5" fill="#5A5A5A">Risk score + detección de fraude</text>
+  <text x="890" y="521" font-size="10" fill="#444">policy lookup · customer history</text>
+  <text x="890" y="537" font-size="10" font-style="italic" fill="#888">agents/risk-assessment/agent.py</text>
+  <circle cx="1162" cy="500" r="12" fill="#5C2D91"/>
+  <text x="1162" y="504" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">4</text>
 
   <!-- Compliance Agent -->
-  <g transform="translate(865, 522)" filter="url(#cardShadow)">
-    <rect width="225" height="105" rx="10" fill="url(#agentCard)" stroke="#7A52C5" stroke-width="2"/>
-    <g transform="translate(18, 22)">
-      <polygon points="22,4 38,12 38,32 22,40 6,32 6,12" fill="url(#agentIcon)"/>
-      <text x="22" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#FFFFFF">CA</text>
-    </g>
-    <text x="78" y="38" font-size="14" font-weight="700" fill="#1F1F1F">Compliance Agent</text>
-    <text x="78" y="56" font-size="10.5" fill="#555">Reglas regulatorias</text>
-    <text x="78" y="72" font-size="10.5" fill="#555">y normativa</text>
-    <text x="78" y="92" font-size="9" fill="#B30000" font-weight="700">WOW moment</text>
+  <g filter="url(#cardShadow)">
+    <rect x="810" y="570" width="330" height="100" rx="10" fill="#FFFFFF" stroke="#B30000" stroke-width="2"/>
   </g>
-
-  <!-- arrows from agents → OpenAI (each goes back through APIM) -->
-  <line x1="465" y1="627" x2="465" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <line x1="725" y1="627" x2="725" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <line x1="977" y1="627" x2="977" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <line x1="465" y1="680" x2="977" y2="680" stroke="#7A52C5" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <line x1="720" y1="680" x2="720" y2="708" stroke="#7A52C5" stroke-width="2" marker-end="url(#arrowBlue)"/>
-  <text x="745" y="675" font-size="10" fill="#7A52C5" font-style="italic">all calls via APIM</text>
-
-  <!-- ============ Azure OpenAI ============ -->
-  <g transform="translate(580, 710)" filter="url(#cardShadow)">
-    <rect width="290" height="58" rx="10" fill="#FFFFFF" stroke="#10A37F" stroke-width="2"/>
-    <g transform="translate(15, 12)">
-      <!-- OpenAI swirl -->
-      <g transform="translate(0, 0)">
-        <circle cx="17" cy="17" r="17" fill="url(#openaiIcon)"/>
-        <path d="M9 17 Q9 9 17 9 Q25 9 25 17 Q25 25 17 25 Q12 25 12 21 M21 19 Q21 13 17 13 Q13 13 13 17" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
-      </g>
-    </g>
-    <text x="60" y="26" font-size="14" font-weight="700" fill="#1F1F1F">Azure OpenAI</text>
-    <text x="60" y="44" font-size="11" fill="#555">GPT-4o · vía APIM Gateway · counter-key por agente</text>
+  <g transform="translate(828, 590)">
+    <polygon points="22,3 38,12 38,32 22,40 6,32 6,12" fill="#7A52C5"/>
+    <text x="22" y="27" text-anchor="middle" font-size="13" font-weight="800" fill="#FFFFFF">CA</text>
   </g>
+  <text x="890" y="604" font-size="13" font-weight="700" fill="#1F1F1F">Compliance Agent</text>
+  <text x="890" y="622" font-size="10.5" fill="#5A5A5A">Reglas regulatorias + prompt-injection guard</text>
+  <text x="890" y="638" font-size="10" fill="#444">deterministic regex guard · LLM verdict</text>
+  <text x="890" y="654" font-size="10" font-style="italic" fill="#888">agents/compliance/agent.py · rules.py</text>
+  <rect x="1080" y="582" width="50" height="14" rx="3" fill="#B30000"/>
+  <text x="1105" y="592" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">WOW</text>
+  <circle cx="1162" cy="615" r="12" fill="#5C2D91"/>
+  <text x="1162" y="619" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">5</text>
 
-  <!-- ============ Data services on the right within Azure zone ============ -->
-  <g transform="translate(1140, 475)">
-    <text x="100" y="6" text-anchor="middle" font-size="11" font-weight="700" fill="#0078D4" letter-spacing="1.5">DATOS</text>
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       AZURE COLUMN 3 — APIM Gateway + Azure OpenAI (right side)
+       ════════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- APIM AI Gateway (centerpiece) -->
+  <g filter="url(#cardShadow)">
+    <rect x="1210" y="320" width="320" height="160" rx="10" fill="#FFFFFF" stroke="#B30000" stroke-width="2.5"/>
   </g>
+  <use href="#iconAPIM" x="1230" y="340" width="50" height="50"/>
+  <text x="1295" y="358" font-size="14" font-weight="700" fill="#1F1F1F">APIM AI Gateway</text>
+  <text x="1295" y="376" font-size="10.5" font-weight="600" fill="#B30000">Single point of policy &amp; audit</text>
+  <text x="1230" y="408" font-size="11" fill="#444">▸ Content Safety · Jailbreak detection</text>
+  <text x="1230" y="425" font-size="11" fill="#444">▸ Token-limit · rate-limit (per agent)</text>
+  <text x="1230" y="442" font-size="11" fill="#444">▸ Audit logs · X-Agent-Id header</text>
+  <text x="1230" y="459" font-size="11" fill="#444">▸ Managed Identity → AOAI</text>
+  <text x="1230" y="473" font-size="10" font-style="italic" fill="#888">USE_APIM_GATEWAY=true</text>
+
+  <circle cx="1230" cy="335" r="14" fill="#B30000"/>
+  <text x="1230" y="340" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">7</text>
+
+  <!-- Azure OpenAI -->
+  <g filter="url(#cardShadow)">
+    <rect x="1210" y="510" width="320" height="100" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
+  </g>
+  <use href="#iconAzureOpenAI" x="1230" y="528" width="48" height="48"/>
+  <text x="1290" y="542" font-size="14" font-weight="700" fill="#1F1F1F">Azure OpenAI</text>
+  <text x="1290" y="560" font-size="10.5" fill="#5A5A5A">GPT-4o · gpt-4o-mini</text>
+  <text x="1230" y="585" font-size="10.5" fill="#444">private endpoint · MI auth</text>
+  <text x="1230" y="600" font-size="10" font-style="italic" fill="#888">DefaultAzureCredential</text>
+
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       DATA + OBSERVABILITY ROW  (below MAF zone)
+       ════════════════════════════════════════════════════════════════════════════ -->
 
   <!-- Cosmos DB -->
-  <g transform="translate(1140, 488)" filter="url(#cardShadow)">
-    <rect width="200" height="80" rx="10" fill="url(#dataCard)" stroke="#3999D4" stroke-width="1.5"/>
-    <g transform="translate(18, 22)">
-      <!-- Globe with rings -->
-      <circle cx="18" cy="20" r="16" fill="url(#cosmosIcon)"/>
-      <ellipse cx="18" cy="20" rx="16" ry="6" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
-      <ellipse cx="18" cy="20" rx="6" ry="16" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
-    </g>
-    <text x="76" y="36" font-size="13" font-weight="700" fill="#1F1F1F">Cosmos DB</text>
-    <text x="76" y="54" font-size="10" fill="#555">SQL API</text>
-    <text x="76" y="68" font-size="10" fill="#888">Audit trail · claims</text>
+  <g filter="url(#cardShadow)">
+    <rect x="465" y="720" width="225" height="115" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
   </g>
+  <use href="#iconCosmos" x="485" y="738" width="44" height="44"/>
+  <text x="538" y="753" font-size="13" font-weight="700" fill="#1F1F1F">Cosmos DB</text>
+  <text x="538" y="770" font-size="10.5" fill="#5A5A5A">NoSQL · multi-region</text>
+  <text x="485" y="800" font-size="11" fill="#444">▸ Audit trail por siniestro</text>
+  <text x="485" y="816" font-size="11" fill="#444">▸ Trazas paso-a-paso (MAF)</text>
+  <circle cx="668" cy="743" r="12" fill="#5A5A5A"/>
+  <text x="668" y="747" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">9</text>
 
   <!-- Blob Storage -->
-  <g transform="translate(1140, 580)" filter="url(#cardShadow)">
-    <rect width="200" height="80" rx="10" fill="url(#dataCard)" stroke="#3999D4" stroke-width="1.5"/>
-    <g transform="translate(18, 22)">
-      <!-- Stack icon -->
-      <ellipse cx="18" cy="9" rx="14" ry="4" fill="#0078D4"/>
-      <rect x="4" y="9" width="28" height="22" fill="#0078D4"/>
-      <ellipse cx="18" cy="31" rx="14" ry="4" fill="#005A9E"/>
-      <ellipse cx="18" cy="18" rx="14" ry="4" fill="#3999D4" opacity="0.6"/>
-    </g>
-    <text x="76" y="36" font-size="13" font-weight="700" fill="#1F1F1F">Blob Storage</text>
-    <text x="76" y="54" font-size="10" fill="#555">Evidencias</text>
-    <text x="76" y="68" font-size="10" fill="#888">fotos · documentos</text>
+  <g filter="url(#cardShadow)">
+    <rect x="710" y="720" width="225" height="115" rx="10" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/>
   </g>
+  <use href="#iconStorage" x="728" y="738" width="44" height="44"/>
+  <text x="780" y="753" font-size="13" font-weight="700" fill="#1F1F1F">Blob Storage</text>
+  <text x="780" y="770" font-size="10.5" fill="#5A5A5A">Document &amp; image evidence</text>
+  <text x="728" y="800" font-size="11" fill="#444">▸ Fotos del siniestro</text>
+  <text x="728" y="816" font-size="11" fill="#444">▸ Partes adjuntos · PDFs</text>
+  <circle cx="912" cy="743" r="12" fill="#5A5A5A"/>
+  <text x="912" y="747" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">9</text>
 
-  <!-- Data services connected to backend -->
-  <path d="M560 410 Q900 410 1140 528" fill="none" stroke="#3999D4" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrowBlue)" opacity="0.7"/>
-  <path d="M560 410 Q900 410 1140 620" fill="none" stroke="#3999D4" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrowBlue)" opacity="0.7"/>
-
-  <!-- ============ GITHUB GOVERNANCE ZONE ============ -->
-  <g filter="url(#zoneShadow)">
-    <rect x="60" y="810" width="1310" height="130" rx="22" fill="url(#govZone)" stroke="#EC0000" stroke-width="1.6" stroke-dasharray="8 4"/>
+  <!-- App Insights (observability, spans across) -->
+  <g filter="url(#cardShadow)">
+    <rect x="955" y="720" width="280" height="115" rx="10" fill="#FFFFFF" stroke="#7A52C5" stroke-width="1.5"/>
   </g>
+  <use href="#iconAppInsights" x="975" y="735" width="48" height="48"/>
+  <text x="1035" y="750" font-size="13" font-weight="700" fill="#1F1F1F">Application Insights</text>
+  <text x="1035" y="767" font-size="10.5" fill="#5A5A5A">Observability across the stack</text>
+  <text x="975" y="800" font-size="11" fill="#444">▸ Traces · agent latency · token cost</text>
+  <text x="975" y="816" font-size="11" fill="#444">▸ Anomalies · alert rules</text>
 
-  <!-- Zone label -->
-  <g transform="translate(85, 830)">
-    <!-- GitHub octocat (simplified) -->
-    <g>
-      <circle cx="16" cy="16" r="14" fill="#1F1F1F"/>
-      <path d="M16 7 Q9 7 9 14 Q9 18 12 20 L12 23 Q10 22 9 23 L9 25 Q10 24 12 25 L12 27 L20 27 L20 25 Q22 24 23 25 L23 23 Q22 22 20 23 L20 20 Q23 18 23 14 Q23 7 16 7 Z" fill="#FFFFFF"/>
-      <circle cx="13" cy="14" r="1.5" fill="#1F1F1F"/>
-      <circle cx="19" cy="14" r="1.5" fill="#1F1F1F"/>
-    </g>
-    <text x="42" y="22" font-size="16" font-weight="700" fill="#EC0000">GitHub Enterprise</text>
-    <text x="232" y="22" font-size="12" fill="#666">· Gobernanza, calidad y auditoría</text>
+  <!-- Right side: APIM telemetry note -->
+  <g filter="url(#cardShadow)">
+    <rect x="1255" y="720" width="275" height="115" rx="10" fill="#FFFFFF" stroke="#74B8E8" stroke-width="1.5"/>
   </g>
+  <text x="1392" y="753" text-anchor="middle" font-size="13" font-weight="700" fill="#1F1F1F">Telemetry hub</text>
+  <text x="1392" y="772" text-anchor="middle" font-size="10.5" fill="#5A5A5A">APIM + agents emit traces</text>
+  <text x="1275" y="800" font-size="11" fill="#444">▸ X-Agent-Id per call</text>
+  <text x="1275" y="816" font-size="11" fill="#444">▸ Token / safety / cost metrics</text>
 
-  <!-- CODEOWNERS card -->
-  <g transform="translate(90, 855)" filter="url(#cardShadow)">
-    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
-    <g transform="translate(18, 18)">
-      <!-- People icon -->
-      <circle cx="11" cy="10" r="6" fill="#EC0000"/>
-      <path d="M0 30 Q0 18 11 18 Q22 18 22 30" fill="#EC0000"/>
-      <circle cx="26" cy="13" r="5" fill="#B30000"/>
-      <path d="M16 32 Q16 22 26 22 Q36 22 36 32" fill="#B30000" opacity="0.85"/>
-    </g>
-    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">CODEOWNERS</text>
-    <text x="68" y="50" font-size="10.5" fill="#555">Review obligatoria por equipo dueño del agente</text>
-    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">.github/CODEOWNERS</text>
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       GITHUB GOVERNANCE LANE (bottom)
+       ════════════════════════════════════════════════════════════════════════════ -->
+
+  <g transform="translate(80, 1000)">
+    <use href="#iconGitHub" width="40" height="40"/>
   </g>
+  <text x="135" y="1020" font-size="14" font-weight="700" fill="#181717">GitHub Enterprise</text>
+  <text x="135" y="1038" font-size="10.5" fill="#5A5A5A">Source of truth · audit</text>
 
-  <!-- Eval Gate card -->
-  <g transform="translate(430, 855)" filter="url(#cardShadow)">
-    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
-    <g transform="translate(18, 18)">
-      <!-- Shield with check + bolt -->
-      <path d="M22 4 L40 12 V28 Q40 42 22 50 Q4 42 4 28 V12 Z" fill="#EC0000"/>
-      <path d="M22 14 L16 26 L22 26 L20 36 L28 22 L22 22 Z" fill="#FFFFFF"/>
-    </g>
-    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">Eval Gate</text>
-    <text x="68" y="50" font-size="10.5" fill="#555">Dataset dorado contra GPT-4o · bloquea merge</text>
-    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">evals/run_evals.py · 4/4 PASS</text>
+  <!-- CODEOWNERS -->
+  <g filter="url(#cardShadow)">
+    <rect x="320" y="985" width="270" height="60" rx="8" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/>
   </g>
-
-  <!-- GitHub Actions card -->
-  <g transform="translate(770, 855)" filter="url(#cardShadow)">
-    <rect width="320" height="78" rx="10" fill="#FFFFFF" stroke="#EC0000" stroke-width="1.5"/>
-    <g transform="translate(18, 18)">
-      <!-- Gear icon -->
-      <g transform="translate(8, 8)">
-        <circle cx="14" cy="14" r="8" fill="none" stroke="#EC0000" stroke-width="3"/>
-        <circle cx="14" cy="14" r="3" fill="#EC0000"/>
-        <g stroke="#EC0000" stroke-width="3" stroke-linecap="round">
-          <line x1="14" y1="2" x2="14" y2="6"/>
-          <line x1="14" y1="22" x2="14" y2="26"/>
-          <line x1="2" y1="14" x2="6" y2="14"/>
-          <line x1="22" y1="14" x2="26" y2="14"/>
-          <line x1="5" y1="5" x2="8" y2="8"/>
-          <line x1="20" y1="20" x2="23" y2="23"/>
-          <line x1="5" y1="23" x2="8" y2="20"/>
-          <line x1="20" y1="8" x2="23" y2="5"/>
-        </g>
-      </g>
-    </g>
-    <text x="68" y="32" font-size="13" font-weight="700" fill="#1F1F1F">GitHub Actions</text>
-    <text x="68" y="50" font-size="10.5" fill="#555">Federated OIDC · sin secretos en CI</text>
-    <text x="68" y="66" font-size="10" fill="#888" font-style="italic">eval-on-pr.yml + deploy-agent.yml</text>
+  <g transform="translate(338, 998)">
+    <circle cx="14" cy="14" r="8" fill="#B30000"/>
+    <circle cx="26" cy="14" r="8" fill="#B30000" opacity="0.85"/>
+    <circle cx="20" cy="22" r="8" fill="#B30000" opacity="0.7"/>
   </g>
+  <text x="390" y="1010" font-size="12" font-weight="700" fill="#1F1F1F">CODEOWNERS</text>
+  <text x="390" y="1026" font-size="10" fill="#5A5A5A">per-domain review</text>
+  <text x="390" y="1040" font-size="9" font-style="italic" fill="#888">.github/CODEOWNERS</text>
 
-  <!-- Compliance overview card (right) -->
-  <g transform="translate(1110, 855)" filter="url(#cardShadow)">
-    <rect width="230" height="78" rx="10" fill="#1F1F1F" stroke="#EC0000" stroke-width="1.5"/>
-    <text x="115" y="22" text-anchor="middle" font-size="10" font-weight="700" fill="#EC0000" letter-spacing="2">REGULATORY</text>
-    <text x="115" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">Banco-grade</text>
-    <text x="115" y="60" text-anchor="middle" font-size="10" fill="#BBB">Mismo control que software</text>
-    <text x="115" y="72" text-anchor="middle" font-size="10" fill="#BBB">bancario crítico</text>
+  <!-- Eval Gate -->
+  <g filter="url(#cardShadow)">
+    <rect x="620" y="985" width="270" height="60" rx="8" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/>
   </g>
+  <g transform="translate(638, 998)">
+    <path d="M 16 2 L 30 7 L 30 18 Q 30 28 16 32 Q 2 28 2 18 L 2 7 Z" fill="#B30000"/>
+    <path d="M 10 16 L 14 20 L 22 12" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="690" y="1010" font-size="12" font-weight="700" fill="#1F1F1F">Eval Gate</text>
+  <text x="690" y="1026" font-size="10" fill="#5A5A5A">golden dataset on every PR</text>
+  <text x="690" y="1040" font-size="9" font-style="italic" fill="#888">evals/ · eval-on-pr.yml</text>
 
-  <!-- Governance arrows pointing up (dotted, "protege & audita") -->
-  <path d="M250 855 Q250 760 320 645" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
-  <path d="M590 855 Q590 745 720 645" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
-  <path d="M930 855 Q930 700 965 432" fill="none" stroke="#EC0000" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>
-  <text x="940" y="760" font-size="10" fill="#B30000" font-style="italic" opacity="0.75">protege &amp; audita</text>
+  <!-- GitHub Actions -->
+  <g filter="url(#cardShadow)">
+    <rect x="920" y="985" width="270" height="60" rx="8" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/>
+  </g>
+  <use href="#iconActions" x="938" y="998" width="32" height="32"/>
+  <text x="985" y="1010" font-size="12" font-weight="700" fill="#1F1F1F">GitHub Actions</text>
+  <text x="985" y="1026" font-size="10" fill="#5A5A5A">federated OIDC → Azure</text>
+  <text x="985" y="1040" font-size="9" font-style="italic" fill="#888">.github/workflows/</text>
 
+  <!-- Banking-grade callout -->
+  <g filter="url(#cardShadow)">
+    <rect x="1220" y="985" width="310" height="60" rx="8" fill="#EC0000" stroke="#B30000" stroke-width="1.5"/>
+  </g>
+  <text x="1240" y="1010" font-size="12" font-weight="800" fill="#FFFFFF">BANCO-GRADE REGULATORY</text>
+  <text x="1240" y="1028" font-size="10" fill="#FFFFFF">Same rigor as critical banking software:</text>
+  <text x="1240" y="1042" font-size="10" font-weight="700" fill="#FFFFFF">review · evals · OIDC · audit · signed PRs</text>
+
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       ARROWS — strictly orthogonal, grouped by lane, no overlaps
+       ════════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- User → Dashboard small arrow -->
+  <path d="M 230 245 L 230 305" stroke="#0078D4" stroke-width="2" fill="none" marker-end="url(#arrBlue)"/>
+
+  <!-- (1) Dashboard → FastAPI (Edge → Backend) -->
+  <path d="M 380 390 L 420 390 L 420 395 L 465 395" stroke="#0078D4" stroke-width="2.2" fill="none" marker-end="url(#arrBlue)"/>
+  <text x="395" y="378" font-size="9.5" font-weight="600" fill="#0078D4">HTTPS + JWT</text>
+
+  <!-- (2) FastAPI ↔ Entra ID (vertical, validate JWT) -->
+  <path d="M 610 320 L 610 275" stroke="#0078D4" stroke-width="2" fill="none" stroke-dasharray="5 3" marker-end="url(#arrBlue)"/>
+  <text x="620" y="300" font-size="9.5" font-weight="600" fill="#0078D4">JWKS</text>
+
+  <!-- FastAPI → Key Vault (secret pull) -->
+  <path d="M 610 470 L 610 500" stroke="#0078D4" stroke-width="2" fill="none" stroke-dasharray="5 3" marker-end="url(#arrBlue)"/>
+  <text x="620" y="490" font-size="9.5" font-weight="600" fill="#0078D4">MI</text>
+
+  <!-- FastAPI → Orchestrator: through gap at x=770, then into orchestrator left edge -->
+  <path d="M 755 395 L 770 395 L 770 260 L 810 260" stroke="#5C2D91" stroke-width="2.2" fill="none" marker-end="url(#arrPurple)"/>
+  <text x="685" y="385" font-size="9.5" font-weight="600" fill="#5C2D91">process_claim()</text>
+
+  <!-- Orchestrator → Intake (vertical chain) -->
+  <path d="M 975 300 L 975 340" stroke="#5C2D91" stroke-width="2.2" fill="none" marker-end="url(#arrPurple)"/>
+  <!-- Intake → Risk -->
+  <path d="M 975 430 L 975 455" stroke="#5C2D91" stroke-width="2.2" fill="none" marker-end="url(#arrPurple)"/>
+  <!-- Risk → Compliance -->
+  <path d="M 975 545 L 975 570" stroke="#5C2D91" stroke-width="2.2" fill="none" marker-end="url(#arrPurple)"/>
+  <text x="985" y="320" font-size="9" fill="#5C2D91">step 1</text>
+  <text x="985" y="450" font-size="9" fill="#5C2D91">step 2</text>
+  <text x="985" y="565" font-size="9" fill="#5C2D91">step 3</text>
+
+  <!-- (3) Each agent → APIM gateway (single rail at x=1175 that converges into APIM left edge) -->
+  <!-- Intake (highest) -->
+  <path d="M 1140 385 L 1175 385 L 1175 400 L 1210 400" stroke="#B30000" stroke-width="2.2" fill="none" marker-end="url(#arrRed)"/>
+  <!-- Risk joins rail going up -->
+  <path d="M 1140 500 L 1175 500 L 1175 400" stroke="#B30000" stroke-width="2" fill="none" opacity="0.7"/>
+  <!-- Compliance joins rail going up -->
+  <path d="M 1140 615 L 1175 615 L 1175 400" stroke="#B30000" stroke-width="2" fill="none" opacity="0.7"/>
+  <text x="1145" y="378" font-size="9.5" font-weight="600" fill="#B30000">inference</text>
+
+  <!-- APIM → Azure OpenAI -->
+  <path d="M 1370 480 L 1370 510" stroke="#0078D4" stroke-width="2.2" fill="none" marker-end="url(#arrBlue)"/>
+  <text x="1380" y="500" font-size="9.5" font-weight="600" fill="#0078D4">MI token</text>
+
+  <!-- Backend → Cosmos (audit) - routed through right gap to avoid Key Vault -->
+  <path d="M 755 445 L 775 445 L 775 703 L 577 703 L 577 720" stroke="#5A5A5A" stroke-width="2" fill="none" marker-end="url(#arrGray)"/>
+  <text x="600" y="694" font-size="9.5" font-weight="600" fill="#5A5A5A">audit write</text>
+
+  <!-- Backend → Blob (evidence upload) - routed through right gap at different x to avoid overlap -->
+  <path d="M 755 460 L 765 460 L 765 712 L 822 712 L 822 720" stroke="#5A5A5A" stroke-width="2" fill="none" marker-end="url(#arrGray)"/>
+  <text x="780" y="706" font-size="9.5" font-weight="600" fill="#5A5A5A">evidence</text>
+
+  <!-- Single telemetry stream → App Insights (dashed purple) -->
+  <path d="M 1300 685 L 1300 705 L 1095 705 L 1095 720" stroke="#7A52C5" stroke-width="1.8" fill="none" stroke-dasharray="5 3" marker-end="url(#arrPurple)"/>
+  <text x="1140" y="699" font-size="9.5" font-weight="600" fill="#7A52C5">telemetry</text>
+
+  <!-- Governance dashed arrows up to protect tiers -->
+  <path d="M 455 985 L 455 940" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.55"/>
+  <path d="M 755 985 L 755 940" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.55"/>
+  <path d="M 1055 985 L 1055 940" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.55"/>
+  <path d="M 1370 985 L 1370 940" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.55"/>
+  <text x="700" y="955" text-anchor="middle" font-size="10" font-weight="600" fill="#B30000" letter-spacing="1">protege &amp; audita →</text>
+
+  <!-- ════════════════════════════════════════════════════════════════════════════
+       LEGEND  (bottom-left of canvas, inside edge column gap)
+       ════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(80, 540)">
+    <rect x="0" y="0" width="300" height="220" rx="8" fill="#FFFFFF" stroke="#D6D9E0" stroke-width="1"/>
+    <text x="14" y="22" font-size="11" font-weight="700" fill="#5A5A5A" letter-spacing="1.5">LEGEND</text>
+
+    <line x1="14" y1="42" x2="44" y2="42" stroke="#0078D4" stroke-width="2.2" marker-end="url(#arrBlue)"/>
+    <text x="52" y="46" font-size="10.5" fill="#1F1F1F">Request / response (HTTPS)</text>
+
+    <line x1="14" y1="64" x2="44" y2="64" stroke="#5C2D91" stroke-width="2.2" marker-end="url(#arrPurple)"/>
+    <text x="52" y="68" font-size="10.5" fill="#1F1F1F">Multi-agent flow (MAF)</text>
+
+    <line x1="14" y1="86" x2="44" y2="86" stroke="#B30000" stroke-width="2" marker-end="url(#arrRed)"/>
+    <text x="52" y="90" font-size="10.5" fill="#1F1F1F">LLM inference via APIM</text>
+
+    <line x1="14" y1="108" x2="44" y2="108" stroke="#5A5A5A" stroke-width="2" marker-end="url(#arrGray)"/>
+    <text x="52" y="112" font-size="10.5" fill="#1F1F1F">Persistence (audit trail)</text>
+
+    <line x1="14" y1="130" x2="44" y2="130" stroke="#7A52C5" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#arrPurple)"/>
+    <text x="52" y="134" font-size="10.5" fill="#1F1F1F">Observability (telemetry)</text>
+
+    <line x1="14" y1="152" x2="44" y2="152" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="52" y="156" font-size="10.5" fill="#1F1F1F">Governance (protects above)</text>
+
+    <text x="14" y="180" font-size="10" font-weight="700" fill="#5A5A5A" letter-spacing="1">FLOW STEPS</text>
+    <circle cx="22" cy="198" r="9" fill="#0078D4"/><text x="22" y="202" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">n</text>
+    <text x="40" y="202" font-size="10" fill="#444">numbered in order from user → decision</text>
+  </g>
 </svg>
