@@ -124,7 +124,7 @@ function formatDuration(durationSeconds?: number) {
 }
 
 function getStatusLabel(status: AgentStatus, durationSeconds?: number) {
-  if (status === 'thinking') return '💭 Pensando...';
+  if (status === 'thinking') return 'Pensando...';
   if (status === 'completed') {
     const durationLabel = formatDuration(durationSeconds);
     return durationLabel ? `✓ Completado en ${durationLabel}` : '✓ Completado';

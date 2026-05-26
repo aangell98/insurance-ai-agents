@@ -236,7 +236,7 @@
   <use href="#iconContainer" x="505" y="368" width="54" height="54"/>
   <text x="575" y="384" font-size="15" font-weight="700" fill="#1F1F1F">FastAPI Backend</text>
   <text x="575" y="403" font-size="11" font-weight="600" fill="#0078D4">Azure Container Apps</text>
-  <use href="#iconFastAPI" x="730" y="340" width="22" height="22"/>
+  <use href="#iconFastAPI" x="757" y="358" width="26" height="26"/>
   <line x1="505" y1="435" x2="775" y2="435" stroke="#E1E4E8" stroke-width="1"/>
   <text x="505" y="458" font-size="12" fill="#444">▸ /api/claims · WebSocket /ws</text>
   <text x="505" y="479" font-size="12" fill="#444">▸ JWT validation (vs Entra)</text>
@@ -286,8 +286,8 @@
   <text x="932" y="730" font-size="11" fill="#444">deterministic regex · LLM verdict</text>
   <text x="932" y="750" font-size="11" fill="#444">supervisor override detection · DAN mode</text>
   <text x="932" y="768" font-size="10" font-style="italic" fill="#888">agents/compliance/agent.py · rules.py</text>
-  <rect x="1065" y="668" width="64" height="18" rx="3" fill="#B30000"/>
-  <text x="1097" y="681" text-anchor="middle" font-size="10" font-weight="800" fill="#FFFFFF">WOW</text>
+  <g filter="url(#cardShadow)"><rect x="1127" y="770" width="72" height="20" rx="4" fill="#B30000"/></g>
+  <text x="1163" y="785" text-anchor="middle" font-size="11" font-weight="800" fill="#FFFFFF" letter-spacing="1.5">WOW</text>
   <circle cx="1182" cy="678" r="13" fill="#5C2D91"/>
   <text x="1182" y="683" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">6</text>
 
