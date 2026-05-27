@@ -468,7 +468,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
         </div>
 
         <div className="overflow-x-auto pb-2">
-          <div className="relative min-w-[980px]">
+          <div className="relative min-w-[980px] overflow-hidden">
             <div className="pointer-events-none absolute left-0 right-0 top-16 hidden h-px bg-gradient-to-r from-transparent via-primary-400/40 to-transparent md:block" />
             <div className="timeline-light pointer-events-none absolute top-16 hidden md:block" />
 

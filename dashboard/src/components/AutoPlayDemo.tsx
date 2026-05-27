@@ -548,6 +548,14 @@ function buildAgentSnapshot(
         reasoning: result.reasoning,
         riskScore: getRiskScore(result),
       };
+      // Backend MAF no emite un stage 'decision' por WebSocket: la decisión
+      // final es la consolidación de los 3 agentes, y su tiempo real es
+      // result.total_duration_ms (medido end-to-end en el orquestador). Si
+      // la duración medida localmente es 0, usamos esa cifra para que el
+      // panel de Decisión muestre "Tiempo IA" en lugar de 0.0s.
+      if (base.durationMs <= 0 && result.total_duration_ms > 0) {
+        base.durationMs = result.total_duration_ms;
+      }
     }
   }
   return base;
