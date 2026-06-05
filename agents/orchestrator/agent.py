@@ -321,7 +321,7 @@ async def _process_claim_legacy(claim_input: dict, progress_callback=None) -> di
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "metadata": {
             "agents_used": ["claims-intake", "risk-assessment", "compliance"],
-            "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
             "pipeline_version": "1.0.0",
         },
     }

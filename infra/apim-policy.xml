@@ -69,7 +69,7 @@
             <dimension name="Agent" value="@(context.Request.Headers.GetValueOrDefault("X-Agent-Id", "unknown"))" />
             <dimension name="ClaimId" value="@(context.Request.Headers.GetValueOrDefault("X-Claim-Id", "unknown"))" />
             <dimension name="Subscription" value="@(context.Subscription.Id)" />
-            <dimension name="Model" value="@(context.Request.Headers.GetValueOrDefault("x-model", "gpt-4o"))" />
+            <dimension name="Model" value="@(context.Request.Headers.GetValueOrDefault("x-model", "gpt-5.4-mini"))" />
         </azure-openai-emit-token-metric>
     </inbound>
 

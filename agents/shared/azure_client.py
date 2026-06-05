@@ -118,7 +118,7 @@ async def get_openai_client() -> AsyncAzureOpenAI:
             _client = AsyncAzureOpenAI(
                 azure_endpoint=apim_url,
                 api_key="apim-managed",  # ignored; subscription key is in header
-                api_version="2024-12-01-preview",
+                api_version="2025-04-01-preview",
                 http_client=apim_http,
             )
             logger.info("OpenAI client routed through APIM gateway (agent=%s)", agent_id)
@@ -133,7 +133,7 @@ async def get_openai_client() -> AsyncAzureOpenAI:
         _client = AsyncAzureOpenAI(
             azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
             azure_ad_token=_cached_token,
-            api_version="2024-12-01-preview",
+            api_version="2025-04-01-preview",
             http_client=_http_client,
         )
 

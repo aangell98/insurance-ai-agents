@@ -14,7 +14,7 @@ permissions:
   pull-requests: write
 
 env:
-  AZURE_OPENAI_DEPLOYMENT: gpt-4o
+  AZURE_OPENAI_DEPLOYMENT: gpt-5.4-mini
 
 jobs:
   eval:
@@ -44,7 +44,7 @@ jobs:
       - name: Run evals
         env:
           AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
-          AZURE_OPENAI_DEPLOYMENT: gpt-4o
+          AZURE_OPENAI_DEPLOYMENT: gpt-5.4-mini
           USE_APIM_GATEWAY: ${{ vars.USE_APIM_GATEWAY || 'false' }}
           APIM_GATEWAY_URL: ${{ vars.APIM_GATEWAY_URL }}
           APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}

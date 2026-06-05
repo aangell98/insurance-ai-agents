@@ -127,7 +127,7 @@ async def _run_all(dataset_path: Path, report_path: Path) -> int:
         "failed": total - passed,
         "pass_rate": round(passed / total, 3) if total else 0,
         "pipeline_version": "1.0.0",
-        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
         "via_apim": os.environ.get("USE_APIM_GATEWAY", "false").lower() == "true",
         "results": rows,
     }

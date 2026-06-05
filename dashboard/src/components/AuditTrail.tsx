@@ -23,7 +23,7 @@ export default function AuditTrail({ result }: Props) {
   const metadata = (result as ClaimResult & {
     metadata?: { model?: string; pipeline_version?: string };
   }).metadata;
-  const model = typeof metadata?.model === 'string' ? metadata.model : 'gpt-4o';
+  const model = typeof metadata?.model === 'string' ? metadata.model : 'gpt-5.4-mini';
   const pipelineVersion = typeof metadata?.pipeline_version === 'string' ? metadata.pipeline_version : '1.0.0';
 
   return (

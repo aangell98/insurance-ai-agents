@@ -230,7 +230,7 @@ async def run(claim_input: dict, intake_result: dict) -> dict:
     # Allow up to 3 rounds of tool calls
     for _ in range(3):
         response = await client.chat.completions.create(
-            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
@@ -255,7 +255,7 @@ async def run(claim_input: dict, intake_result: dict) -> dict:
     # Get final response if last was tool calls
     if msg.tool_calls:
         response = await client.chat.completions.create(
-            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
             messages=messages,
             temperature=0.1,
         )

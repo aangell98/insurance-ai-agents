@@ -5,7 +5,7 @@ Creates 3 specialized agents in Azure AI Foundry:
 - Risk & Fraud Assessment Agent  
 - Compliance Agent
 
-These agents run on Azure AI Agent Service with GPT-4o.
+These agents run on Azure AI Agent Service with GPT-5.4-mini.
 """
 
 import os, sys, json
@@ -17,7 +17,7 @@ from azure.ai.agents.models import (
 )
 
 ENDPOINT = "https://ins-ai-demo-ais-jii435hjlwyyc.cognitiveservices.azure.com/"
-MODEL = "gpt-4o"
+MODEL = "gpt-5.4-mini"
 
 # ── Agent definitions ──
 

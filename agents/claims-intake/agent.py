@@ -148,7 +148,7 @@ async def run(claim_input: dict) -> dict:
         f"Por favor, verifica la póliza y extrae los datos del siniestro."
     )
 
-    # Build user message — with image if provided (GPT-4o vision)
+    # Build user message — with image if provided (GPT-5 vision)
     if claim_input.get("image_b64"):
         user_content = [
             {"type": "text", "text": user_text + "\n\nAdemás, se ha adjuntado una imagen como supuesta evidencia del siniestro. Analiza objetivamente si la imagen es COHERENTE con el incidente descrito (vehículo, daños, lugar). Si la imagen NO tiene relación con el siniestro (paisaje, ola, animal, objeto aleatorio, meme, etc.) debes marcarlo explícitamente como inconsistente: pon image_matches_description=false y describe el problema en image_concerns. NO asumas que cualquier imagen aportada es evidencia válida."},
@@ -163,7 +163,7 @@ async def run(claim_input: dict) -> dict:
     ]
 
     response = await client.chat.completions.create(
-        model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
         messages=messages,
         tools=TOOLS,
         tool_choice="auto",
@@ -184,7 +184,7 @@ async def run(claim_input: dict) -> dict:
             })
 
         response = await client.chat.completions.create(
-            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
             messages=messages,
             temperature=0.1,
         )

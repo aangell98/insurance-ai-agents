@@ -594,7 +594,7 @@ async def governance_status(_: Principal = Depends(require_operator)):
     return {
         "pipeline_version": "1.0.0",
         "git_commit": git_sha,
-        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
         "deployed_at": datetime.now(timezone.utc).isoformat(),
         "apim": {
             "enabled": apim_enabled,

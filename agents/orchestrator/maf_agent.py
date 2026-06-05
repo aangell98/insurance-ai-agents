@@ -50,7 +50,7 @@ intake_module = importlib.import_module("agents.claims-intake.agent")
 risk_module = importlib.import_module("agents.risk-assessment.agent")
 compliance_module = importlib.import_module("agents.compliance.agent")
 
-_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2025-04-01-preview")
 _MAF_STAGE_IDS = ("intake", "risk_assessment", "compliance")
 _OBSERVABILITY_CONFIGURED = False
 _CACHED_AZURE_TOKEN: str | None = None
@@ -190,7 +190,7 @@ def _get_azure_token(credential: DefaultAzureCredential) -> str:
 def _build_metadata() -> dict[str, Any]:
     return {
         "agents_used": ["claims-intake", "risk-assessment", "compliance"],
-        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
         "pipeline_version": "1.0.0",
     }
 
@@ -500,7 +500,7 @@ def _configure_observability_once() -> None:
 
 def _build_chat_client() -> OpenAIChatCompletionClient:
     _ensure_azure_cli_on_path()
-    model = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+    model = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini")
 
     if _use_apim():
         apim_url = os.environ.get("APIM_GATEWAY_URL", "").rstrip("/")

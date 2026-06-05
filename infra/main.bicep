@@ -13,11 +13,17 @@ param baseName string = 'ins-ai-demo'
 @description('Azure region for resources')
 param location string = resourceGroup().location
 
-@description('Azure OpenAI model deployment name')
-param openAiModelName string = 'gpt-4o'
+@description('Primary chat model deployment name (used by all reasoning agents)')
+param chatModelName string = 'gpt-5.4-mini'
 
-@description('Azure OpenAI model version')
-param openAiModelVersion string = '2024-11-20'
+@description('Primary chat model version')
+param chatModelVersion string = '2026-03-17'
+
+@description('Realtime voice model deployment name (gpt-realtime-mini for cost-optimized voice)')
+param voiceModelName string = 'gpt-realtime-mini'
+
+@description('Realtime voice model version')
+param voiceModelVersion string = '2025-12-15'
 
 @description('APIM publisher name')
 param apimPublisherName string = 'Insurance AI Demo'
@@ -55,7 +61,9 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    // Cost optimization: 30d -> 14d retention (saves ~50% on retention charges).
+    // Bump to 30+ when promoted to production with regulatory retention needs.
+    retentionInDays: 14
   }
 }
 
@@ -66,6 +74,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
+    // Cost optimization: ingest only 10% of telemetry (saves ~90% on ingestion
+    // for high-volume scenarios). Bump back to 100 when investigating issues.
+    SamplingPercentage: 10
   }
 }
 
@@ -86,38 +97,51 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+// ============================================================================
+// Azure OpenAI deployments
+// ============================================================================
+// We deploy two models on the same OpenAI account:
+//   1) chat model (gpt-5.4-mini) — used by Intake / Risk / Compliance agents
+//   2) realtime voice model (gpt-realtime-mini) — used by the voice channel
+// GlobalStandard SKU is pure PayGo: capacity sets the TPM cap but billing is
+// per-token used. No reserved capacity charge.
+
+resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: openAiModelName
+  name: chatModelName
   sku: {
     name: 'GlobalStandard'
-    capacity: 30
+    capacity: 10
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: openAiModelName
-      version: openAiModelVersion
+      name: chatModelName
+      version: chatModelVersion
     }
   }
 }
 
-resource embeddingsDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource voiceDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: 'text-embedding-ada-002'
+  name: voiceModelName
   sku: {
-    name: 'Standard'
-    capacity: 30
+    name: 'GlobalStandard'
+    capacity: 1
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'text-embedding-ada-002'
-      version: '2'
+      name: voiceModelName
+      version: voiceModelVersion
     }
   }
-  dependsOn: [gpt4oDeployment]
+  dependsOn: [chatDeployment]
 }
+
+// NOTE: text-embedding-ada-002 deployment was removed (no code path used it).
+// If RAG over policy documents is added later, deploy text-embedding-3-small
+// (cheaper and higher quality than ada-002) on demand.
 
 // ============================================================================
 // Azure AI Services (Foundry-compatible)
@@ -176,7 +200,12 @@ resource apim 'Microsoft.ApiManagement/service@2023-09-01-preview' = {
   name: apimName
   location: location
   sku: {
-    name: 'StandardV2'
+    // Cost optimization: BasicV2 (~150eur/mo) instead of StandardV2 (~600eur/mo).
+    // BasicV2 fully supports the AI Gateway policy suite (llm-content-safety,
+    // azure-openai-token-limit, azure-openai-emit-token-metric, managed-identity
+    // auth) which is what this demo showcases. Promote to StandardV2 for
+    // production traffic (regional HA, more throughput, custom domains).
+    name: 'BasicV2'
     capacity: 1
   }
   identity: {
@@ -455,6 +484,10 @@ resource cosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sq
 
 output openAiEndpoint string = openAi.properties.endpoint
 output openAiName string = openAi.name
+output chatDeploymentName string = chatDeployment.name
+output voiceDeploymentName string = voiceDeployment.name
+output aiServicesEndpoint string = aiServices.properties.endpoint
+output aiServicesName string = aiServices.name
 output apimGatewayUrl string = apim.properties.gatewayUrl
 output apimName string = apim.name
 output acrLoginServer string = acr.properties.loginServer
@@ -464,7 +497,6 @@ output containerAppEnvId string = containerAppEnv.id
 output staticWebAppName string = staticWebApp.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
-output aiServicesEndpoint string = aiServices.properties.endpoint
 output cosmosEndpoint string = cosmos.properties.documentEndpoint
 output cosmosDatabaseName string = cosmosDb.name
 output cosmosContainerName string = cosmosClaimsContainer.name
