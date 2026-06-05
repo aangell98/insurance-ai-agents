@@ -20,6 +20,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agents.orchestrator.agent import process_claim
 from agents.shared.mock_data import DEMO_SCENARIOS, POLICIES, CUSTOMER_HISTORY
+from agents.content_understanding import (
+    ensure_analyzer as ensure_cu_analyzer,
+    extract_from_bytes as cu_extract_from_bytes,
+    extract_from_text as cu_extract_from_text,
+)
 from claims_repository import get_repo
 from auth import (
     AUTH_ENABLED,
@@ -250,6 +255,71 @@ async def register_customer(request: CustomerRequest, _: Principal = Depends(req
     from agents.shared.mock_data import CUSTOMER_HISTORY as MOCK_CUSTOMERS
     MOCK_CUSTOMERS[customer_id] = customer
     return customer
+
+
+@app.post("/api/claims/extract-from-document")
+async def extract_from_document(
+    file: UploadFile = File(...),
+    principal: Principal = Depends(require_customer_or_operator),
+):
+    """Run Azure AI Content Understanding on an uploaded document.
+
+    Accepts a PDF (the European unified parte de siniestro), an image of the
+    damage or the bare text the customer typed. Returns the schema-driven
+    extraction defined in agents/content_understanding/agent.py so the
+    frontend can pre-fill the claim form before the customer submits.
+
+    This is a *helper* endpoint: the heavy multi-agent evaluation still
+    happens via POST /api/claims/evaluate. CU here is a fast, cheap,
+    deterministic first pass that improves accuracy and UX.
+    """
+    if not await ensure_cu_analyzer():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Content Understanding no esta configurado. Define "
+                "AZURE_AI_SERVICES_ENDPOINT y reintenta."
+            ),
+        )
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    mime = file.content_type or "application/octet-stream"
+    try:
+        fields = await cu_extract_from_bytes(content, mime_type=mime)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Content Understanding extract failed")
+        raise HTTPException(status_code=502, detail=f"Content Understanding failed: {e}") from e
+    return {
+        "filename": file.filename,
+        "mime_type": mime,
+        "size_bytes": len(content),
+        "fields": fields,
+        "principal": principal.name if principal else None,
+    }
+
+
+@app.post("/api/claims/extract-from-text")
+async def extract_from_text(
+    payload: dict,
+    principal: Principal = Depends(require_customer_or_operator),
+):
+    """Same as /extract-from-document but for plain text input.
+
+    The customer (or a Speech-to-Text intermediate transcript) sends text,
+    Content Understanding extracts the structured parte siniestro fields.
+    """
+    text = (payload or {}).get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Field 'text' required")
+    if not await ensure_cu_analyzer():
+        raise HTTPException(status_code=503, detail="Content Understanding not configured")
+    try:
+        fields = await cu_extract_from_text(text)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("CU text extract failed")
+        raise HTTPException(status_code=502, detail=f"CU failed: {e}") from e
+    return {"fields": fields, "principal": principal.name if principal else None}
 
 
 @app.post("/api/claims/evaluate", response_model=ClaimResponse)
