@@ -25,6 +25,7 @@ export type VoiceEvent =
   | { type: 'tool.result'; name: string; result: unknown }
   | { type: 'hold_music_start' }
   | { type: 'hold_music_stop' }
+  | { type: 'hangup' }
   | { type: 'speech_started' }
   | { type: 'speech_stopped' }
   | { type: 'error'; message: string }
@@ -45,7 +46,28 @@ export class VoiceAudioClient {
   private playQueueTimeSec = 0;
   private listeners: Listener[] = [];
   private holdMusic: HoldMusicSynth | null = null;
+  private ringTone: RingTone | null = null;
   private playMuted = false;
+  // Mic gating — we don't send anything during the agent's first greeting
+  // so the model can actually produce it (the realtime API will not respond
+  // if there is an active input_audio_buffer being filled when
+  // response.create fires). Enabled after the first transcript.assistant.done
+  // arrives, or as a safety net after 8 s.
+  private micUnlocked = false;
+  private micUnlockTimer: number | null = null;
+  // Echo guard: while the assistant's audio is queued for playback we
+  // refuse to send any mic data upstream (so Leo's voice doesn't get
+  // captured as a fake user turn). We use the ACTUAL playback queue end
+  // (playQueueTimeSec) as the source of truth rather than the time the
+  // last delta arrived, because the delta arrives well before the audio
+  // is heard. After playback ends we open the mic IMMEDIATELY — no extra
+  // tail. The user often answers in the natural <100ms gap after Leo
+  // stops talking, and any extra tail clips their first syllable
+  // ("Quiero" → "iero" → Whisper drops it). The browser's WebRTC-grade
+  // echoCancellation handles residual speaker bleed; if any echo still
+  // makes it through, the server VAD threshold (0.55) and the Whisper
+  // hallucination filter on the backend catch it.
+  private static readonly ECHO_TAIL_S = 0;
 
   constructor(private readonly sessionId: string, private readonly wsBaseUrl: string) {}
 
@@ -62,10 +84,17 @@ export class VoiceAudioClient {
 
   async start() {
     this.emit({ type: 'connecting' });
-    // 1) Mic
+    // 1) Mic — disable autoGainControl (it amplifies far/background voice)
+    //    and keep echoCancellation + noiseSuppression which actually help.
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 48_000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: {
+          sampleRate: 48_000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+        },
         video: false,
       });
     } catch (e) {
@@ -80,7 +109,10 @@ export class VoiceAudioClient {
     const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
     this.audioCtxIn = new Ctx({ sampleRate: 48_000 });
     this.srcNode = this.audioCtxIn!.createMediaStreamSource(this.mediaStream);
-    const bufferSize = Math.max(2048, Math.round((48_000 * CHUNK_MS) / 1000 / 256) * 256);
+    // ScriptProcessor requires a power-of-two buffer size between 256 and
+    // 16384. 4096 samples @ 48 kHz = ~85 ms per chunk, which keeps latency
+    // low while not flooding the WS with tiny messages.
+    const bufferSize = 4096;
     this.processor = this.audioCtxIn!.createScriptProcessor(bufferSize, 1, 1);
     this.srcNode.connect(this.processor);
     // Need to connect to destination otherwise some browsers don't run the processor
@@ -89,7 +121,22 @@ export class VoiceAudioClient {
     // 4) Open WS
     const url = `${this.wsBaseUrl}/ws/voice/${this.sessionId}`;
     this.ws = new WebSocket(url);
-    this.ws.onopen = () => this.emit({ type: 'connected' });
+    this.ws.onopen = () => {
+      this.emit({ type: 'connected' });
+      // Play a Spanish ring tone immediately so the user knows the call is
+      // active while gpt-realtime spins up and generates the first
+      // greeting audio (typically 1-3 s of upstream latency).
+      this.ringTone = new RingTone(this.audioCtxOut!);
+      this.ringTone.start();
+      // Safety net: if the agent's first transcript.assistant.done never
+      // arrives (network glitch, model didn't respond), unlock the mic
+      // after 8 s so the user can talk anyway.
+      this.micUnlockTimer = window.setTimeout(() => {
+        this.micUnlocked = true;
+        this.micUnlockTimer = null;
+        this.stopRingTone();
+      }, 8000);
+    };
     this.ws.onclose = () => this.emit({ type: 'closed' });
     this.ws.onerror = () => this.emit({ type: 'error', message: 'Conexión perdida con el asistente' });
     this.ws.onmessage = (msg) => this.handleServerMessage(msg);
@@ -97,6 +144,7 @@ export class VoiceAudioClient {
 
   async stop() {
     this.playMuted = true;
+    this.stopRingTone();
     this.processor?.disconnect();
     this.srcNode?.disconnect();
     this.audioCtxIn?.close().catch(() => undefined);
@@ -129,14 +177,54 @@ export class VoiceAudioClient {
     this.ws?.send(JSON.stringify({ type: 'interrupt' }));
   }
 
+  /** Seconds of assistant audio still queued for playback (0 if drained). */
+  remainingPlaybackSec(): number {
+    if (!this.audioCtxOut) return 0;
+    return Math.max(0, this.playQueueTimeSec - this.audioCtxOut.currentTime);
+  }
+
   // ---------------------------------------------------------------- audio in
   private handleMicChunk(ev: AudioProcessingEvent) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    const inputBuf = ev.inputBuffer.getChannelData(0); // Float32 mono @ 48 kHz
-    const downsampled = downsampleBuffer(inputBuf, 48_000, TARGET_SR);
+    if (!this.micUnlocked) return;
+    const inputBuf = ev.inputBuffer.getChannelData(0);
+    // Precise echo gate with PARTIAL BUFFER TRIM:
+    //   - Buffer represents audio captured from (tNow - bufferDuration) to
+    //     tNow in the AudioContext clock.
+    //   - The assistant's playback ends at playQueueTimeSec.
+    //   - We drop everything captured BEFORE playQueueTimeSec + ECHO_TAIL_S
+    //     (that's potential echo) and keep everything captured AFTER.
+    //   - If the gate ends partway through this buffer, slice the buffer
+    //     and send only the un-gated tail. This is what lets the user
+    //     start talking the instant Leo stops without losing the first
+    //     syllable: no full-buffer drop, no missing audio.
+    if (this.audioCtxOut) {
+      const tNow = this.audioCtxOut.currentTime;
+      const sampleRate = ev.inputBuffer.sampleRate || 48_000;
+      const bufferDurationS = inputBuf.length / sampleRate;
+      const bufferStart = tNow - bufferDurationS;
+      const gateEnd = this.playQueueTimeSec + VoiceAudioClient.ECHO_TAIL_S;
+      if (gateEnd >= tNow) {
+        return; // whole buffer is during/right after Leo's audio → drop
+      }
+      if (gateEnd > bufferStart) {
+        // Partial overlap. Slice off the front part that was during gate.
+        const cutSamples = Math.max(
+          0,
+          Math.min(inputBuf.length, Math.ceil((gateEnd - bufferStart) * sampleRate))
+        );
+        const trimmed = inputBuf.subarray(cutSamples);
+        if (trimmed.length > 0) this.sendMicChunk(trimmed);
+        return;
+      }
+    }
+    this.sendMicChunk(inputBuf);
+  }
+
+  private sendMicChunk(buf: Float32Array) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const downsampled = downsampleBuffer(buf, 48_000, TARGET_SR);
     const pcm16 = floatTo16BitPCM(downsampled);
-    // Always allocate a real ArrayBuffer (SharedArrayBuffer subviews don't
-    // satisfy arrayBufferToBase64's signature in strict TS).
     const copy = new ArrayBuffer(pcm16.byteLength);
     new Uint8Array(copy).set(new Uint8Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength));
     const b64 = arrayBufferToBase64(copy);
@@ -153,6 +241,8 @@ export class VoiceAudioClient {
     }
     switch (event.type) {
       case 'audio.delta':
+        // First assistant audio: stop the ring tone, the call is "answered".
+        this.stopRingTone();
         this.enqueueAudio(String(event.audio || ''));
         break;
       case 'transcript.user':
@@ -163,17 +253,31 @@ export class VoiceAudioClient {
         break;
       case 'transcript.assistant.done':
         this.emit({ type: 'transcript.assistant.done', text: String(event.text || '') });
+        // First time the agent finished a phrase: unlock the mic for the user.
+        if (!this.micUnlocked) {
+          this.micUnlocked = true;
+          if (this.micUnlockTimer !== null) {
+            window.clearTimeout(this.micUnlockTimer);
+            this.micUnlockTimer = null;
+          }
+        }
         break;
       case 'tool.result':
         this.emit({ type: 'tool.result', name: String(event.name || ''), result: event.result });
         break;
       case 'hold_music_start':
-        this.startHoldMusic();
+        // Wait until the agent has finished speaking its "voy a procesar..."
+        // intro phrase before kicking in the music. Otherwise the music
+        // starts on top of Lola's voice and sounds jarring.
+        this.startHoldMusicWhenSilent();
         this.emit({ type: 'hold_music_start' });
         break;
       case 'hold_music_stop':
         this.stopHoldMusic();
         this.emit({ type: 'hold_music_stop' });
+        break;
+      case 'hangup':
+        this.emit({ type: 'hangup' });
         break;
       case 'input_audio_buffer.speech_started':
         this.emit({ type: 'speech_started' });
@@ -211,6 +315,28 @@ export class VoiceAudioClient {
     if (this.holdMusic || !this.audioCtxOut) return;
     this.holdMusic = new HoldMusicSynth(this.audioCtxOut);
     this.holdMusic.start();
+  }
+
+  /** Defer hold-music start until any queued assistant audio has finished. */
+  private startHoldMusicWhenSilent() {
+    if (!this.audioCtxOut) return;
+    // Schedule music to start AFTER the currently queued audio ends. This
+    // covers the typical "voy a procesar su caso..." sentence the agent
+    // says immediately before calling submit_claim — without this guard
+    // the music starts on top of Lola's voice and sounds jarring.
+    const now = this.audioCtxOut.currentTime;
+    const delaySec = Math.max(0, this.playQueueTimeSec - now + 0.2);
+    if (delaySec < 0.05) {
+      this.startHoldMusic();
+      return;
+    }
+    window.setTimeout(() => this.startHoldMusic(), delaySec * 1000);
+  }
+
+  private stopRingTone() {
+    if (!this.ringTone) return;
+    this.ringTone.stop();
+    this.ringTone = null;
   }
 
   private stopHoldMusic() {
@@ -271,75 +397,183 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
 // Hold music synthesizer — gentle ambient chord progression
 // ---------------------------------------------------------------------------
 // We don't want to ship an MP3 file just for a hold-music cue, so synthesize
-// a quiet, slow chord progression with the Web Audio API. It loops every
-// ~12 seconds while the multi-agent pipeline is running.
+// a quiet, slow chord progression with the Web Audio API. Each chord plays
+// for ~4 seconds and crossfades smoothly into the next so there are no
+// click/pop artifacts when oscillators stop.
 class HoldMusicSynth {
-  private gain: GainNode;
-  private oscillators: OscillatorNode[] = [];
+  private masterGain: GainNode;
+  private activeChord: { oscillators: OscillatorNode[]; gain: GainNode } | null = null;
   private intervalHandle: number | null = null;
   private chordIdx = 0;
-  private chords: number[][] = [
-    [220, 277.18, 329.63], // A minor
-    [196, 246.94, 293.66], // G major
-    [174.61, 220, 261.63], // F major
-    [261.63, 329.63, 392.0], // C major
+  private readonly chords: number[][] = [
+    [220, 261.63, 329.63], // A minor (A, C, E)
+    [196, 246.94, 293.66], // G major (G, B, D)
+    [174.61, 220, 261.63], // F major (F, A, C)
+    [196, 246.94, 329.63], // G sus
   ];
+  private readonly fadeInS = 0.4;
+  private readonly chordDurationS = 4.0;
+
+  constructor(private ctx: AudioContext) {
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = 0;
+    // Soft low-pass to take the harshness off pure sine fundamentals.
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1800;
+    lp.Q.value = 0.7;
+    this.masterGain.connect(lp);
+    lp.connect(ctx.destination);
+  }
+
+  start() {
+    const t = this.ctx.currentTime;
+    this.masterGain.gain.cancelScheduledValues(t);
+    this.masterGain.gain.setValueAtTime(0, t);
+    this.masterGain.gain.linearRampToValueAtTime(0.07, t + this.fadeInS);
+    this.playNextChord();
+    this.intervalHandle = window.setInterval(
+      () => this.playNextChord(),
+      this.chordDurationS * 1000,
+    );
+  }
+
+  stop() {
+    if (this.intervalHandle !== null) {
+      clearInterval(this.intervalHandle);
+      this.intervalHandle = null;
+    }
+    const t = this.ctx.currentTime;
+    this.masterGain.gain.cancelScheduledValues(t);
+    // Take the current value and ramp it down — avoids the snap that
+    // happens with setValueAtTime when the previous schedule was active.
+    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, t);
+    this.masterGain.gain.linearRampToValueAtTime(0, t + this.fadeInS);
+    // Stop oscillators slightly after the ramp completes
+    const stopAt = t + this.fadeInS + 0.05;
+    this.activeChord?.oscillators.forEach((o) => {
+      try {
+        o.stop(stopAt);
+      } catch {
+        /* */
+      }
+    });
+    this.activeChord = null;
+  }
+
+  /** Play the next chord with a soft crossfade against the previous one. */
+  private playNextChord() {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const fade = 0.6; // crossfade time
+
+    // Fade out and stop the previous chord
+    const old = this.activeChord;
+    if (old) {
+      old.gain.gain.cancelScheduledValues(t);
+      old.gain.gain.setValueAtTime(old.gain.gain.value, t);
+      old.gain.gain.linearRampToValueAtTime(0, t + fade);
+      old.oscillators.forEach((o) => {
+        try {
+          o.stop(t + fade + 0.1);
+        } catch {
+          /* */
+        }
+      });
+    }
+
+    // Build the new chord with its own gain node so we can envelope it
+    const chord = this.chords[this.chordIdx % this.chords.length];
+    this.chordIdx++;
+    const chordGain = ctx.createGain();
+    chordGain.gain.setValueAtTime(0, t);
+    chordGain.gain.linearRampToValueAtTime(1, t + fade);
+    chordGain.connect(this.masterGain);
+    const oscillators: OscillatorNode[] = [];
+    chord.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      // Triangle waves are softer and less prone to phase clicks than pure
+      // sine when amplitude is non-zero at stop time.
+      osc.type = i === 0 ? 'triangle' : 'sine';
+      osc.frequency.value = freq;
+      // Slight detune adds subtle warmth without sounding off-key.
+      osc.detune.value = i === 1 ? -3 : i === 2 ? 4 : 0;
+      const oscGain = ctx.createGain();
+      oscGain.gain.value = i === 0 ? 0.5 : 0.35;
+      osc.connect(oscGain);
+      oscGain.connect(chordGain);
+      osc.start(t);
+      oscillators.push(osc);
+    });
+    this.activeChord = { oscillators, gain: chordGain };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Spanish ring tone — plays while we wait for the realtime model to send
+// the first audio chunk. Pattern is the classic Telefónica cadence:
+// 1.5 s tone on (at 425 Hz, the European reference tone) + 3 s silence,
+// looping until stop() is called.
+// ---------------------------------------------------------------------------
+class RingTone {
+  private gain: GainNode;
+  private osc: OscillatorNode | null = null;
+  private intervalHandle: number | null = null;
+  private cycleOnMs = 1500;
+  private cycleOffMs = 3000;
 
   constructor(private ctx: AudioContext) {
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
-    this.gain.connect(ctx.destination);
+    // Mild low-pass so the 425 Hz tone has a phone-like timbre rather
+    // than a sharp test tone.
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1500;
+    this.gain.connect(lp);
+    lp.connect(ctx.destination);
   }
 
   start() {
-    this.gain.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.gain.gain.setValueAtTime(0, this.ctx.currentTime);
-    this.gain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 0.4);
-    this.playChord();
-    // Switch chord every 3 seconds
-    this.intervalHandle = window.setInterval(() => this.playChord(), 3000);
+    this.osc = this.ctx.createOscillator();
+    this.osc.type = 'sine';
+    this.osc.frequency.value = 425;
+    this.osc.connect(this.gain);
+    this.osc.start();
+    this.toneOn();
+    // Schedule the on/off cycle
+    this.intervalHandle = window.setInterval(
+      () => this.toneOn(),
+      this.cycleOnMs + this.cycleOffMs,
+    );
   }
 
   stop() {
-    if (this.intervalHandle) {
+    if (this.intervalHandle !== null) {
       clearInterval(this.intervalHandle);
       this.intervalHandle = null;
     }
     const t = this.ctx.currentTime;
     this.gain.gain.cancelScheduledValues(t);
     this.gain.gain.setValueAtTime(this.gain.gain.value, t);
-    this.gain.gain.linearRampToValueAtTime(0, t + 0.4);
-    setTimeout(() => {
-      this.oscillators.forEach((o) => {
-        try {
-          o.stop();
-        } catch {
-          /* ignore */
-        }
-      });
-      this.oscillators = [];
-    }, 500);
-  }
-
-  private playChord() {
-    // Stop previous chord oscillators
-    this.oscillators.forEach((o) => {
+    this.gain.gain.linearRampToValueAtTime(0, t + 0.2);
+    if (this.osc) {
       try {
-        o.stop();
+        this.osc.stop(t + 0.3);
       } catch {
         /* */
       }
-    });
-    this.oscillators = [];
-    const chord = this.chords[this.chordIdx % this.chords.length];
-    this.chordIdx++;
-    for (const freq of chord) {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      osc.connect(this.gain);
-      osc.start();
-      this.oscillators.push(osc);
+      this.osc = null;
     }
+  }
+
+  private toneOn() {
+    const t = this.ctx.currentTime;
+    this.gain.gain.cancelScheduledValues(t);
+    this.gain.gain.setValueAtTime(0, t);
+    this.gain.gain.linearRampToValueAtTime(0.18, t + 0.05);
+    // Hold then ramp off
+    this.gain.gain.setValueAtTime(0.18, t + this.cycleOnMs / 1000 - 0.05);
+    this.gain.gain.linearRampToValueAtTime(0, t + this.cycleOnMs / 1000);
   }
 }

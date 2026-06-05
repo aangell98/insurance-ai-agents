@@ -547,6 +547,13 @@ def _build_chat_client() -> OpenAIChatCompletionClient:
 
 def _build_workflow() -> Any:
     client = _build_chat_client()
+    # gpt-5.4-mini es un modelo razonador: por defecto (medium) consume
+    # muchos reasoning tokens ocultos antes de responder, lo que añade
+    # 4-10 s por agente. Con "minimal" el modelo casi no razona y
+    # responde con decisiones por defecto (todo a human_review).
+    # "low" es el equilibrio justo para esta demo: rápido pero con
+    # suficiente razonamiento para distinguir approve / reject / review.
+    reasoning_effort = os.environ.get("OPENAI_REASONING_EFFORT", "low")
 
     intake_agent = client.as_agent(
         id="intake",
@@ -555,8 +562,8 @@ def _build_workflow() -> Any:
         instructions=intake_module.SYSTEM_PROMPT,
         tools=[intake_module.verify_policy, intake_module.extract_claim_data],
         default_options={
-            "temperature": 0.1,
             "response_format": IntakeResultModel,
+            "reasoning_effort": reasoning_effort,
         },
     )
     risk_agent = client.as_agent(
@@ -570,8 +577,8 @@ def _build_workflow() -> Any:
             risk_module.calculate_risk_score,
         ],
         default_options={
-            "temperature": 0.1,
             "response_format": RiskResultModel,
+            "reasoning_effort": reasoning_effort,
         },
     )
     compliance_agent = client.as_agent(
@@ -584,8 +591,8 @@ def _build_workflow() -> Any:
             compliance_module._validate_thresholds,
         ],
         default_options={
-            "temperature": 0.1,
             "response_format": ComplianceResultModel,
+            "reasoning_effort": reasoning_effort,
         },
     )
 

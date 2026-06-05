@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -50,6 +51,11 @@ policies_store: dict[str, dict] = dict(POLICIES)  # mutable copy
 customers_store: dict[str, dict] = dict(CUSTOMER_HISTORY)  # mutable copy
 image_store: dict[str, str] = {}  # claim_id -> base64 image
 security_incidents: list[dict] = []  # registry of detected manipulation/injection attempts
+
+# Active voice sessions keyed by session_id. Used so the operator dashboard
+# can attach as an observer to a live customer call and so the auto-demo
+# can open both windows against the same session.
+voice_sessions: dict[str, "VoiceBridge"] = {}
 
 
 @asynccontextmanager
@@ -784,12 +790,22 @@ def _voice_lookup_customer(dni: str) -> dict | None:
 
 
 async def _voice_submit_claim(args: dict) -> dict:
-    """Run the full multi-agent pipeline and return a spoken-friendly result."""
+    """Run the full multi-agent pipeline and return a spoken-friendly result.
+
+    Realistic UX: the customer is NOT a loss adjuster, so we don't ask them
+    for a euro figure. Leo collects the subjective severity ("leve /
+    moderado / grave / siniestro total") and we map (incident_type x
+    severity) to a representative reserve amount using a table calibrated
+    against Spanish auto-insurance averages. The downstream risk +
+    compliance agents then evaluate that estimate the same way they would
+    a number coming from the web form.
+    """
     customer_id = args.get("customer_id") or ""
     policy_id = args.get("policy_id") or ""
     incident_type = args.get("incident_type") or "other"
     description = args.get("description") or ""
-    amount = float(args.get("estimated_amount") or 0)
+    severity = (args.get("damage_severity") or "moderate").lower()
+    amount = _estimate_amount_eur(incident_type, severity)
     claim_id = f"CLM-VOICE-{uuid.uuid4().hex[:6].upper()}"
     claim_input = {
         "claim_id": claim_id,
@@ -818,6 +834,7 @@ async def _voice_submit_claim(args: dict) -> dict:
     result["policy_id"] = policy_id
     result["estimated_amount"] = amount
     result["incident_type"] = incident_type
+    result["damage_severity"] = severity
     result["_input"] = {"policy_id": policy_id, "customer_id": customer_id}
     result["_source"] = "voice"
     claims_store[claim_id] = result
@@ -829,6 +846,28 @@ async def _voice_submit_claim(args: dict) -> dict:
         "total_duration_ms": result.get("total_duration_ms"),
         "spoken_response": format_spoken_decision(result),
     }
+
+
+# Reserve amounts in EUR by (incident_type, severity). Calibrated against
+# typical Spanish auto-insurance internal reserves so the demo's risk /
+# compliance thresholds fire on each decision branch:
+#   minor  -> small, almost always approve
+#   moderate -> medium, mostly approve but risk-dependent
+#   severe -> large, likely human_review
+#   total_loss -> very large, almost always human_review or reject
+_AMOUNT_TABLE: dict[str, dict[str, float]] = {
+    "collision": {"minor": 600,   "moderate": 2500,  "severe": 8000,  "total_loss": 22000},
+    "theft":     {"minor": 1500,  "moderate": 6000,  "severe": 15000, "total_loss": 28000},
+    "fire":      {"minor": 1200,  "moderate": 5500,  "severe": 14000, "total_loss": 26000},
+    "vandalism": {"minor": 400,   "moderate": 1500,  "severe": 4000,  "total_loss": 9000},
+    "weather":   {"minor": 350,   "moderate": 1200,  "severe": 4500,  "total_loss": 10000},
+    "other":     {"minor": 500,   "moderate": 2000,  "severe": 6000,  "total_loss": 15000},
+}
+
+
+def _estimate_amount_eur(incident_type: str, severity: str) -> float:
+    table = _AMOUNT_TABLE.get(incident_type) or _AMOUNT_TABLE["other"]
+    return float(table.get(severity, table["moderate"]))
 
 
 @app.websocket("/ws/voice/{session_id}")
@@ -854,6 +893,7 @@ async def voice_websocket(websocket: WebSocket, session_id: str):
         submit_claim_impl=_voice_submit_claim,
     )
     bridge = VoiceBridge(session_id, tools, send_to_client)
+    voice_sessions[session_id] = bridge
     try:
         await bridge.run()
         # Bridge upstream is up. Now read forever from the browser.
@@ -868,11 +908,137 @@ async def voice_websocket(websocket: WebSocket, session_id: str):
         await send_to_client({"type": "error", "message": str(e)})
     finally:
         logger.info("[voice/%s] closing bridge", session_id)
+        # Notify operator observers BEFORE we tear down the bridge so
+        # they can render "Llamada finalizada" while the WS is still up.
+        try:
+            await bridge.send_to_client({"type": "session.ended"})
+        except Exception:  # noqa: BLE001
+            pass
         await bridge.close()
+        # Only pop if the session id still points to *this* bridge — under
+        # React StrictMode the same session id could have been re-registered
+        # by a re-mounted modal effect, and we don't want to clobber it.
+        if voice_sessions.get(session_id) is bridge:
+            voice_sessions.pop(session_id, None)
         try:
             await websocket.close()
         except Exception:  # noqa: BLE001
             pass
+
+
+@app.websocket("/ws/voice/{session_id}/observe")
+async def voice_observer_websocket(websocket: WebSocket, session_id: str):
+    """Attach an observer (e.g. the operator window) to a live voice call.
+
+    The observer receives every event that the bridge would normally send
+    to the customer (transcripts, tool results, pipeline updates, decision
+    notifications). Audio.delta events are filtered out by the bridge so
+    the operator UI doesn't get flooded. On attach, the bridge replays its
+    event buffer so the observer can render the call state immediately
+    even if it connected mid-call.
+    """
+    await websocket.accept()
+    logger.info("[voice/%s/observe] observer connected", session_id)
+
+    # Signal raised once a session.ended event reaches this observer so
+    # the receive loop can break cleanly instead of waiting forever for
+    # a message from the operator window (it never sends any).
+    session_ended = asyncio.Event()
+
+    async def send_to_observer(payload: dict) -> None:
+        try:
+            await websocket.send_json(payload)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("[voice/%s/observe] send failed: %s", session_id, e)
+            session_ended.set()
+            raise
+        if isinstance(payload, dict) and payload.get("type") == "session.ended":
+            session_ended.set()
+
+    bridge = voice_sessions.get(session_id)
+    if bridge is None:
+        # No active call yet — keep the connection open and poll a few
+        # times so the operator window can be opened *before* the customer
+        # window without race conditions. The customer side has to ask for
+        # mic permission before its WS opens, which can take a while.
+        # Give up after ~45 s and surface a friendly error.
+        for _ in range(180):
+            await asyncio.sleep(0.25)
+            bridge = voice_sessions.get(session_id)
+            if bridge is not None:
+                break
+
+    if bridge is None:
+        await websocket.send_json({
+            "type": "observer.error",
+            "message": "No active voice session with that id",
+        })
+        try:
+            await websocket.close()
+        except Exception:  # noqa: BLE001
+            pass
+        return
+
+    # Atomic replay + observer registration so events published while we
+    # are copying the buffer still reach this observer via the live path.
+    snapshot = await bridge.attach_observer_with_replay(send_to_observer)
+    for event in snapshot:
+        try:
+            await websocket.send_json(event)
+        except Exception:  # noqa: BLE001
+            bridge.remove_observer(send_to_observer)
+            return
+
+    try:
+        # Wait for EITHER an upstream session.ended notification OR a
+        # client disconnect. We don't expect observer-originated messages
+        # today but draining receive_text keeps the WS alive and lets us
+        # detect the close cleanly.
+        receive_task = asyncio.create_task(websocket.receive_text())
+        ended_task = asyncio.create_task(session_ended.wait())
+        done, pending = await asyncio.wait(
+            {receive_task, ended_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in pending:
+            task.cancel()
+        # If the receive task surfaces a disconnect that's fine; we still
+        # want to cleanup below. Swallow other errors.
+        for task in done:
+            try:
+                task.result()
+            except WebSocketDisconnect:
+                pass
+            except Exception:  # noqa: BLE001
+                pass
+    finally:
+        bridge.remove_observer(send_to_observer)
+        logger.info("[voice/%s/observe] observer disconnected", session_id)
+        try:
+            await websocket.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+@app.get("/api/voice/sessions")
+async def list_voice_sessions():
+    """List active voice sessions so the operator dashboard can pick one
+    to observe. Each entry includes the session id, when the call started
+    and (if the customer was already looked up) the customer identity.
+    """
+    now = time.time()
+    items = []
+    for session_id, bridge in voice_sessions.items():
+        customer = bridge.state.get("customer") if hasattr(bridge, "state") else None
+        items.append({
+            "session_id": session_id,
+            "started_at": bridge.started_at,
+            "duration_seconds": round(now - bridge.started_at, 1),
+            "customer_name": (customer or {}).get("name") if isinstance(customer, dict) else None,
+            "policy_id": (customer or {}).get("policy_id") if isinstance(customer, dict) else None,
+        })
+    items.sort(key=lambda x: x["started_at"], reverse=True)
+    return {"sessions": items}
 
 
 if __name__ == "__main__":

@@ -51,7 +51,10 @@ def _get_token_via_default_credential() -> str | None:
     except ImportError:
         return None
     try:
-        cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
+        cred = DefaultAzureCredential(
+            exclude_interactive_browser_credential=True,
+            process_timeout=60,
+        )
         token = cred.get_token("https://cognitiveservices.azure.com/.default")
         logger.info("Got Azure token via DefaultAzureCredential")
         return token.token

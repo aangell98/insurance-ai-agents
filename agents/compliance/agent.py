@@ -131,7 +131,7 @@ async def run(claim_input: dict, intake_result: dict, risk_result: dict) -> dict
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
-            temperature=0.1,
+            reasoning_effort=os.environ.get("OPENAI_REASONING_EFFORT", "low"),
         )
 
         msg = response.choices[0].message
@@ -153,7 +153,7 @@ async def run(claim_input: dict, intake_result: dict, risk_result: dict) -> dict
         response = await client.chat.completions.create(
             model=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4-mini"),
             messages=messages,
-            temperature=0.1,
+            reasoning_effort=os.environ.get("OPENAI_REASONING_EFFORT", "low"),
         )
 
     content = response.choices[0].message.content

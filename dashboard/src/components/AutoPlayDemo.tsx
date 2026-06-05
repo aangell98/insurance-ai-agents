@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import {
   AlertTriangle,
   Bell,
+  ExternalLink,
+  Headphones,
   Loader2,
+  Mic,
   Pause,
   Play,
+  Phone,
   SkipForward,
   X,
 } from 'lucide-react';
@@ -23,6 +27,7 @@ import type { ComplianceRule, RuleStatus } from './autoplay/ComplianceChecklistP
 import SlideNavigator from './autoplay/SlideNavigator';
 import type { SlideDescriptor, SlideStatus } from './autoplay/SlideNavigator';
 import DecisionSlidePanel from './autoplay/DecisionSlidePanel';
+import VoiceCallModal from './VoiceCallModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const DEMO_ORDER = ['low_risk', 'high_amount', 'human_review', 'fraudulent', 'prompt_injection'] as const;
@@ -37,7 +42,7 @@ const STAGE_TO_AGENT: Record<Stage, AgentName> = {
 type ScenarioKey = (typeof DEMO_ORDER)[number];
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
 type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
-type DemoStatus = 'idle' | 'loading' | 'running' | 'finished' | 'error';
+type DemoStatus = 'idle' | 'loading' | 'running' | 'voice' | 'finished' | 'error';
 type NoticeKind = 'error' | 'info';
 type ApiError = Error & { status?: number };
 
@@ -601,6 +606,14 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   // Fase visual mostrada en la slide de Decisión mientras se consolida la salida
   // de los 3 agentes anteriores antes de mostrar el veredicto final.
   const [consolidationPhase, setConsolidationPhase] = useState<null | 0 | 1 | 2>(null);
+  // Estado del paso final "Llamada de voz con Leo". 'awaiting' = mostrando la
+  // intro y esperando a que el usuario lance la llamada; 'live' = la llamada
+  // está en curso y el modal de voz está abierto; 'closing' = la llamada
+  // terminó y vamos al cierre. La ventana del operador se abre con window.open
+  // y se referencia aquí para enfocarla / cerrarla si hace falta.
+  const [voicePhase, setVoicePhase] = useState<'awaiting' | 'live' | 'closing'>('awaiting');
+  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
+  const operatorWindowRef = useRef<Window | null>(null);
   const stageStartsRef = useRef<Record<Stage, number>>({
     intake: 0,
     risk_assessment: 0,
@@ -674,8 +687,53 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     skipRequestedRef.current = false;
     setPaused(false);
     cleanupActiveCase(true);
+    if (operatorWindowRef.current && !operatorWindowRef.current.closed) {
+      try { operatorWindowRef.current.close(); } catch { /* noop */ }
+    }
+    operatorWindowRef.current = null;
     onCloseRef.current();
   }, [cleanupActiveCase]);
+
+  const startVoiceCall = useCallback(() => {
+    const sid = `voice-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+    // Abrimos la ventana del operador ANTES del modal del cliente para que
+    // el observer pueda enganchar a la sesión incluso si la creación del
+    // bridge se adelanta. El backend buffera los eventos y reintenta el
+    // attach unos segundos si la sesión aún no existe.
+    let openedWindow: Window | null = null;
+    try {
+      const url = `${window.location.origin}/?view=voice-operator&session=${encodeURIComponent(sid)}`;
+      openedWindow = window.open(url, `operator-${sid}`, 'width=1280,height=820');
+    } catch (err) {
+      pushNotice(`No se pudo abrir la ventana del operador: ${getErrorMessage(err)}`, 'error');
+      return;
+    }
+    if (!openedWindow) {
+      // Popup blocked → no avanzamos a 'live': mantenemos al usuario en la
+      // intro para que pueda permitir pop-ups y reintentar. Si arrancamos
+      // la llamada igualmente perdería la vista paralela que es el punto.
+      pushNotice(
+        'El navegador bloqueó la ventana del operador. Permita pop-ups en este sitio y vuelva a pulsar.',
+        'error',
+      );
+      return;
+    }
+    operatorWindowRef.current = openedWindow;
+    setVoiceSessionId(sid);
+    setVoicePhase('live');
+  }, [pushNotice]);
+
+  const handleVoiceModalClose = useCallback(() => {
+    setVoicePhase('closing');
+    setStatus('finished');
+    // No cerramos automáticamente la ventana del operador: deja que el
+    // usuario la revise. Se cerrará al cerrar el modal de la demo.
+  }, []);
+
+  const skipVoiceStep = useCallback(() => {
+    setVoicePhase('closing');
+    setStatus('finished');
+  }, []);
 
   const expireSession = useCallback(() => {
     if (closeRequestedRef.current) return;
@@ -768,6 +826,8 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     setNotices([]);
     setElapsedSeconds(0);
     setFinishedCount(0);
+    setVoicePhase('awaiting');
+    setVoiceSessionId(null);
     dispatchSlide({ type: 'CASE_STARTED' });
     snapshotsRef.current = {};
     prevStageStatusesRef.current = { ...EMPTY_STAGE_STATUSES };
@@ -972,7 +1032,10 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       setCurrentScenarioKey(null);
       setCurrentClaimId('');
       setStageStatuses({ ...EMPTY_STAGE_STATUSES });
-      setStatus('finished');
+      // Pasamos a la fase de voz: el usuario decide si lanza la llamada
+      // con Leo (y la ventana del operador) o si salta directamente al
+      // cierre. La transición a 'finished' la dispara ese flujo.
+      setStatus('voice');
     };
 
     void runDemo();
@@ -1277,6 +1340,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     if (status === 'loading') return 'Preparando escenarios, agentes y telemetría en tiempo real…';
     if (fatalError) return fatalError;
     if (status === 'finished') return `Demo completada · ${finishedCount} de ${totalScenarios} casos ejecutados`;
+    if (status === 'voice') return `Paso final · llamada de voz con Leo (vista cliente + vista operador)`;
     if (currentScenarioKey) {
       const base = `Procesando caso ${Math.min(currentIndex + 1, totalScenarios)} de ${totalScenarios} · Quedan ~${remainingSeconds} segundos`;
       if (slideState.userPinnedSlide) return `${base} · Demo en pausa mientras revisas slides`;
@@ -1376,6 +1440,77 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                   >
                     Volver al dashboard
                   </button>
+                </div>
+              </div>
+            )}
+
+            {status === 'voice' && (
+              <div className="flex min-h-[70vh] items-center justify-center">
+                <div className="w-full max-w-4xl rounded-[32px] border border-gray-200 bg-gradient-to-br from-white via-primary-50/40 to-primary-100/30 p-10 text-center shadow-xl shadow-gray-200/60 xl:p-14">
+                  <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-primary-700">
+                    <Mic className="h-3.5 w-3.5" />
+                    Paso final · Llamada de voz
+                  </div>
+                  <h3 className="mt-5 text-3xl font-semibold tracking-tight text-gray-900 xl:text-4xl">
+                    Hable con Leo, el asistente de voz Santander
+                  </h3>
+                  <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-700">
+                    Para cerrar la demo, va a vivir el mismo pipeline desde el otro lado del teléfono.
+                    Al pulsar el botón se abrirán dos ventanas:
+                  </p>
+
+                  <div className="mt-8 grid gap-4 text-left md:grid-cols-2">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 place-items-center rounded-full bg-primary-100 text-primary-700">
+                          <Phone className="h-5 w-5" />
+                        </span>
+                        <h4 className="text-sm font-semibold text-gray-900">Vista cliente</h4>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-gray-600">
+                        El modal de llamada con Leo. Hable normal: identifíquese con su DNI,
+                        describa el siniestro y reciba la decisión final por voz.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                          <Headphones className="h-5 w-5" />
+                        </span>
+                        <h4 className="text-sm font-semibold text-gray-900">Vista operador</h4>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-gray-600">
+                        Ventana independiente con la transcripción en vivo, los datos del
+                        cliente identificado y el pipeline multiagente ejecutándose en directo.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-xs leading-6 text-amber-800">
+                    <strong>Tip:</strong> coloque ambas ventanas en paralelo (cliente a la izquierda,
+                    operador a la derecha) para ver cómo cada turno se refleja simultáneamente en las dos.
+                    Si su navegador bloquea pop-ups, permítalos en este sitio antes de pulsar.
+                  </div>
+
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={startVoiceCall}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-600/30 transition hover:bg-primary-700"
+                    >
+                      <Phone className="h-4 w-4" />
+                      Iniciar llamada con Leo + vista operador
+                      <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={skipVoiceStep}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Saltar al cierre
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1617,6 +1752,17 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             onDone={() => setFinaleVisible(false)}
           />
         )}
+
+        {/* Modal de voz: solo durante la fase final. Se renderiza encima
+            del modal de la demo (z-[150] > z-[140]) y comparte session_id
+            con la ventana del operador para que ambas vean la misma
+            conversación. */}
+        <VoiceCallModal
+          open={voicePhase === 'live' && !!voiceSessionId}
+          onClose={handleVoiceModalClose}
+          sessionId={voiceSessionId ?? undefined}
+          zClassName="z-[150]"
+        />
 
         {/* Toast stack: notificaciones flotantes abajo a la derecha */}
         {notices.length > 0 && (
