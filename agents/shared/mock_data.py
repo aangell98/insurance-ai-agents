@@ -40,6 +40,7 @@ POLICIES = {
 CUSTOMER_HISTORY = {
     "CUST-1001": {
         "customer_id": "CUST-1001",
+        "dni": "12345678A",
         "name": "María García López",
         "years_as_customer": 5,
         "previous_claims": 1,
@@ -51,6 +52,7 @@ CUSTOMER_HISTORY = {
     },
     "CUST-1002": {
         "customer_id": "CUST-1002",
+        "dni": "87654321B",
         "name": "Carlos Ruiz Martínez",
         "years_as_customer": 1,
         "previous_claims": 3,
@@ -64,6 +66,7 @@ CUSTOMER_HISTORY = {
     },
     "CUST-1003": {
         "customer_id": "CUST-1003",
+        "dni": "11223344C",
         "name": "Ana Fernández Díaz",
         "years_as_customer": 3,
         "previous_claims": 0,

@@ -14,6 +14,7 @@ import HeroView from './components/HeroView';
 import { GovernanceView } from './components/GovernanceView';
 import AutoPlayDemo from './components/AutoPlayDemo';
 import Toast from './components/Toast';
+import VoiceCallButton from './components/VoiceCallButton';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
 import { evaluateClaim, connectWebSocket, getSecurityIncidents } from './api';
@@ -446,6 +447,7 @@ export default function App() {
       </div>
 
       <AutoPlayDemo open={autoplayOpen} onClose={() => setAutoplayOpen(false)} />
+      <VoiceCallButton />
     </div>
   );
 }

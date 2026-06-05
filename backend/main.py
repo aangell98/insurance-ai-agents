@@ -25,6 +25,11 @@ from agents.content_understanding import (
     extract_from_bytes as cu_extract_from_bytes,
     extract_from_text as cu_extract_from_text,
 )
+from agents.voice import (
+    VoiceBridge,
+    build_tools as build_voice_tools,
+    format_spoken_decision,
+)
 from claims_repository import get_repo
 from auth import (
     AUTH_ENABLED,
@@ -752,6 +757,122 @@ async def claim_websocket(websocket: WebSocket, claim_id: str):
                 await websocket.send_json({"type": "pong"})
     except WebSocketDisconnect:
         manager.disconnect(claim_id)
+
+
+# ============================================================================
+# Voice IVR — WebSocket bridge to Azure OpenAI gpt-realtime-mini
+# ============================================================================
+
+def _voice_lookup_customer(dni: str) -> dict | None:
+    """Resolve a Spanish DNI against the customer + policy stores."""
+    dni_norm = (dni or "").upper().replace("-", "").replace(" ", "")
+    for cust in customers_store.values():
+        if (cust.get("dni") or "").upper() == dni_norm:
+            # Find the policy belonging to this customer
+            policy = next(
+                (p for p in policies_store.values() if p.get("customer_id") == cust.get("customer_id")),
+                None,
+            )
+            return {
+                "customer_id": cust.get("customer_id"),
+                "name": cust.get("name"),
+                "policy_id": policy.get("policy_id") if policy else None,
+                "vehicle": policy.get("vehicle") if policy else None,
+                "coverage_type": policy.get("coverage_type") if policy else None,
+            }
+    return None
+
+
+async def _voice_submit_claim(args: dict) -> dict:
+    """Run the full multi-agent pipeline and return a spoken-friendly result."""
+    customer_id = args.get("customer_id") or ""
+    policy_id = args.get("policy_id") or ""
+    incident_type = args.get("incident_type") or "other"
+    description = args.get("description") or ""
+    amount = float(args.get("estimated_amount") or 0)
+    claim_id = f"CLM-VOICE-{uuid.uuid4().hex[:6].upper()}"
+    claim_input = {
+        "claim_id": claim_id,
+        "policy_id": policy_id,
+        "customer_id": customer_id,
+        "incident_type": incident_type,
+        "description": description,
+        "estimated_amount": amount,
+    }
+    try:
+        result = await process_claim(claim_input)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("voice submit_claim pipeline failed")
+        return {
+            "ok": False,
+            "claim_id": claim_id,
+            "decision": "human_review",
+            "spoken_response": (
+                "Lo siento, ha ocurrido un problema técnico procesando su parte. "
+                "Un agente humano le contactará pronto para gestionarlo manualmente."
+            ),
+            "error": str(e),
+        }
+    # Stash so the operator can later see this voice-initiated claim
+    result["customer_id"] = customer_id
+    result["policy_id"] = policy_id
+    result["estimated_amount"] = amount
+    result["incident_type"] = incident_type
+    result["_input"] = {"policy_id": policy_id, "customer_id": customer_id}
+    result["_source"] = "voice"
+    claims_store[claim_id] = result
+    return {
+        "ok": True,
+        "claim_id": claim_id,
+        "decision": result.get("decision"),
+        "reasoning": result.get("reasoning", "")[:300],
+        "total_duration_ms": result.get("total_duration_ms"),
+        "spoken_response": format_spoken_decision(result),
+    }
+
+
+@app.websocket("/ws/voice/{session_id}")
+async def voice_websocket(websocket: WebSocket, session_id: str):
+    """Bridge a browser voice session to Azure OpenAI gpt-realtime-mini.
+
+    The browser sends JSON events ({type:'audio.append', audio:'<base64-pcm16>'},
+    {type:'audio.commit'}, {type:'text', text:'...'}). The backend bridges
+    them to AOAI realtime, executes function calls (lookup_customer,
+    submit_claim) server-side and streams back audio + transcript events.
+    """
+    await websocket.accept()
+    logger.info("[voice/%s] client connected", session_id)
+
+    async def send_to_client(payload: dict) -> None:
+        try:
+            await websocket.send_json(payload)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("[voice/%s] send_to_client failed: %s", session_id, e)
+
+    tools = build_voice_tools(
+        lookup_customer_impl=_voice_lookup_customer,
+        submit_claim_impl=_voice_submit_claim,
+    )
+    bridge = VoiceBridge(session_id, tools, send_to_client)
+    try:
+        await bridge.run()
+        # Bridge upstream is up. Now read forever from the browser.
+        while True:
+            try:
+                raw = await websocket.receive_text()
+            except WebSocketDisconnect:
+                break
+            await bridge.handle_client_event(raw)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("[voice/%s] bridge crashed", session_id)
+        await send_to_client({"type": "error", "message": str(e)})
+    finally:
+        logger.info("[voice/%s] closing bridge", session_id)
+        await bridge.close()
+        try:
+            await websocket.close()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 if __name__ == "__main__":
