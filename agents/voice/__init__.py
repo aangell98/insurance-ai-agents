@@ -470,21 +470,33 @@ class VoiceBridge:
                         "VOICE_TRANSCRIPTION_MODEL", "gpt-realtime-whisper"
                     ),
                     "language": "es",
-                    "prompt": (
-                        "Conversación telefónica en español de España entre Leo "
-                        "(asistente virtual de seguros Santander) y un cliente "
-                        "que abre un parte de siniestro de coche. Vocabulario "
-                        "habitual: DNI con ocho dígitos seguidos de una letra "
-                        "(ej. 12345678A), matrículas con cuatro dígitos y tres "
-                        "letras (ej. 1234ABC), nombres como Ana, Carlos, María, "
-                        "Fernández, García, Ruiz, Martínez, Díaz. Términos "
-                        "frecuentes: parachoques, amortiguador, retrovisor, "
-                        "carrocería, puerta, capó, faro, parabrisas, alcance "
-                        "trasero, colisión frontal, golpe lateral, atropello, "
-                        "incendio, robo, vandalismo, granizo, daños propios, "
-                        "tercero implicado, denuncia, atestado, póliza, "
-                        "siniestro, peritaje, franquicia, todo riesgo, terceros, "
-                        "leves, moderados, graves."
+                    # `prompt` only exists on the legacy whisper-1 model.
+                    # gpt-realtime-whisper and gpt-4o-mini-transcribe reject
+                    # it with "The 'prompt' parameter is not supported for
+                    # this model.". We include the domain vocabulary prompt
+                    # only when explicitly opted in (e.g. when the deployed
+                    # transcription model is whisper-1).
+                    **(
+                        {
+                            "prompt": (
+                                "Conversación telefónica en español de España entre Leo "
+                                "(asistente virtual de seguros Santander) y un cliente "
+                                "que abre un parte de siniestro de coche. Vocabulario "
+                                "habitual: DNI con ocho dígitos seguidos de una letra "
+                                "(ej. 12345678A), matrículas con cuatro dígitos y tres "
+                                "letras (ej. 1234ABC), nombres como Ana, Carlos, María, "
+                                "Fernández, García, Ruiz, Martínez, Díaz. Términos "
+                                "frecuentes: parachoques, amortiguador, retrovisor, "
+                                "carrocería, puerta, capó, faro, parabrisas, alcance "
+                                "trasero, colisión frontal, golpe lateral, atropello, "
+                                "incendio, robo, vandalismo, granizo, daños propios, "
+                                "tercero implicado, denuncia, atestado, póliza, "
+                                "siniestro, peritaje, franquicia, todo riesgo, terceros, "
+                                "leves, moderados, graves."
+                            ),
+                        }
+                        if os.environ.get("VOICE_TRANSCRIPTION_PROMPT_ENABLED", "false").lower() == "true"
+                        else {}
                     ),
                 },
                 "turn_detection": {
