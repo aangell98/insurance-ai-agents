@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { ClaimSummary, SecurityIncident, StatsResponse } from '../api';
 import { getClaims, getSecurityIncidents, getStats } from '../api';
+import { BRAND } from '../brand';
 
 interface HeroViewProps {
   onCTAClick: () => void;
@@ -76,7 +77,7 @@ const FLOW_STEPS: Array<{ icon: LucideIcon; title: string; description: string }
 const PLATFORM_STACK: PlatformBadge[] = [
   {
     icon: ShieldCheck,
-    name: 'Santander',
+    name: BRAND.partnerBannerName,
     description: 'caso de uso de seguros con foco en gobierno, marca y experiencia cliente',
     featured: true,
   },
@@ -319,14 +320,14 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
 
           <div className="space-y-4">
             <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-3 shadow-md">
-              <img src="/santander-logo.avif" alt="Santander" className="h-10 w-auto" />
+              <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-10 w-auto" />
             </div>
             <h2 className="text-4xl font-semibold tracking-tight md:text-6xl">
-              <span className="text-gray-900">Insurance AI</span>{' '}
-              <span className="text-primary-600">Claims Intelligence</span>
+              <span className="text-gray-900">{BRAND.productName}</span>{' '}
+              <span className="text-primary-600">{BRAND.productNameAccent}</span>
             </h2>
             <p className="mx-auto max-w-3xl text-lg leading-relaxed text-gray-600 md:text-xl">
-              Caso de uso: Santander Insurance — Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.
+              Caso de uso: {BRAND.name} — {BRAND.caseStudyDescription}
             </p>
           </div>
 

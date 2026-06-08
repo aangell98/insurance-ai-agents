@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" width="240" height="64" role="img" aria-label="Acme Insurance">
+  <title>Acme Insurance</title>
+  <!--
+    Whitelabel placeholder logo for the Insurance AI demo.
+    To rebrand, replace this entire file with your own SVG (keep the
+    `brand-logo.svg` filename) or update `dashboard/src/brand.ts`'s
+    `logoUrl` field to point to a different asset.
+  -->
+
+  <!-- Hexagonal brand mark -->
+  <g transform="translate(8, 8)">
+    <!-- Outer hex (deep blue) -->
+    <polygon
+      points="24,2 44,14 44,38 24,50 4,38 4,14"
+      fill="#1E40AF"
+    />
+    <!-- Inner hex (brand blue) -->
+    <polygon
+      points="24,11 36,18 36,34 24,41 12,34 12,18"
+      fill="#2563EB"
+    />
+    <!-- Mark letter -->
+    <text
+      x="24" y="33"
+      text-anchor="middle"
+      font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+      font-size="20" font-weight="700"
+      fill="#FFFFFF"
+    >A</text>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(72, 0)">
+    <text
+      x="0" y="32"
+      font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+      font-size="22" font-weight="700"
+      fill="#0F172A"
+    >Acme</text>
+    <text
+      x="0" y="50"
+      font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+      font-size="10" font-weight="600"
+      fill="#475569"
+      letter-spacing="3"
+    >INSURANCE</text>
+  </g>
+</svg>

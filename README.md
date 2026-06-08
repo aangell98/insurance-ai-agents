@@ -1,18 +1,20 @@
 <div align="center">
 
-<img src="images/brand-banner.svg" alt="Microsoft × Santander" width="540" />
+<img src="images/brand-banner.svg" alt="Microsoft × Acme Insurance" width="540" />
 
 # Insurance AI Agents
-### Governed Multi-Agent Claims Processing — Demo Santander
+### Governed Multi-Agent Claims Processing — Whitelabel Demo
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-EC0000?style=flat-square)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
 [![Azure](https://img.shields.io/badge/Azure-AI%20Foundry-0078D4?style=flat-square&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/ai-foundry/)
 [![GitHub](https://img.shields.io/badge/GitHub-Enterprise-181717?style=flat-square&logo=github)](https://github.com/enterprise)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![MAF](https://img.shields.io/badge/Microsoft%20Agent%20Framework-1.4.0-5C2D91?style=flat-square&logo=microsoft&logoColor=white)](https://learn.microsoft.com/azure/ai-foundry/agents/)
 
-> **Cómo una entidad financiera puede crear, gobernar y operar agentes de IA sobre procesos críticos** — gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software bancario.
+> **Cómo una organización puede crear, gobernar y operar agentes de IA sobre procesos críticos** — gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software empresarial.
+>
+> 🎨 **Whitelabel preset** — Esta demo está empaquetada como plantilla reskinneable. La marca "Acme Insurance" es un placeholder; reemplázala con la tuya en pocos minutos. Ver **[BRANDING.md](BRANDING.md)**.
 
 </div>
 
@@ -29,7 +31,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 | 📜 **Gobernanza** | CODEOWNERS por dominio + Eval Gate automatizado en cada PR contra dataset dorado |
 | 🔐 **Identidad** | Entra ID (OIDC) para usuarios y federated identity para CI/CD |
 | 📊 **Persistencia auditada** | Cosmos DB con audit trail completo de cada decisión |
-| 🎨 **UX bancaria** | Dashboard React con rebranding Santander, demo automática slide-based y vistas por rol |
+| 🎨 **UX configurable** | Dashboard React whitelabel (paleta + logo + nombre via `brand.ts`), demo automática slide-based y vistas por rol |
 
 ---
 
@@ -46,7 +48,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 ### Flujo de un siniestro
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#EC0000','primaryTextColor':'#fff','lineColor':'#1F1F1F','actorBkg':'#EC0000','actorTextColor':'#fff','actorBorder':'#B00000','signalColor':'#1F1F1F','signalTextColor':'#1F1F1F','sequenceNumberColor':'#fff','noteBkgColor':'#FFE5E5','noteTextColor':'#1F1F1F','noteBorderColor':'#EC0000','fontFamily':'Inter, system-ui, sans-serif'} }}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2563EB','primaryTextColor':'#fff','lineColor':'#0F172A','actorBkg':'#2563EB','actorTextColor':'#fff','actorBorder':'#1E40AF','signalColor':'#0F172A','signalTextColor':'#0F172A','sequenceNumberColor':'#fff','noteBkgColor':'#DBEAFE','noteTextColor':'#0F172A','noteBorderColor':'#2563EB','fontFamily':'Inter, system-ui, sans-serif'} }}%%
 sequenceDiagram
     autonumber
     participant C as 🏦 Cliente
@@ -146,7 +148,7 @@ insurance-ai-agents/
 │   │   ├── OperatorView.tsx          # Cola de revisión humana
 │   │   ├── PolicyView.tsx            # Catálogo de pólizas
 │   │   └── SecurityView.tsx          # Eventos APIM + Content Safety
-│   └── public/favicon.png            # Branding Santander
+│   └── public/                       # brand-logo.svg, favicon.svg (whitelabel)
 ├── infra/
 │   ├── main.bicep            # APIM + AOAI + Cosmos + Managed Identity
 │   └── apim-policy.xml       # Políticas del AI Gateway

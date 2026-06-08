@@ -1,8 +1,8 @@
 """Generate the architecture SVG diagrams in both Spanish and English.
 
 Both share the same layout, gradients, icons and arrow routing. Only the text
-strings change. The Santander logo (SAN.png) is embedded as base64 so the SVG
-renders standalone on GitHub (no relative-image issues).
+strings change. The brand mark is an inline SVG hexagon so the diagram is
+self-contained (no external image dependencies).
 
 Run from repo root:  python tools\\gen_arch_svg.py
 Outputs:             images/architecture.svg     (Spanish, default for the demo)
@@ -10,13 +10,15 @@ Outputs:             images/architecture.svg     (Spanish, default for the demo)
 """
 from __future__ import annotations
 
-import base64
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SAN_PNG = ROOT / "images" / "SAN.png"
 
-san_b64 = base64.b64encode(SAN_PNG.read_bytes()).decode("ascii")
+# Brand tokens — edit these to rebrand the architecture diagram.
+BRAND_NAME = "Acme Insurance"
+BRAND_MARK_LETTER = "A"
+BRAND_PRIMARY = "#2563EB"   # main brand color (blue-600), replaces former {BRAND_PRIMARY}
+BRAND_PRIMARY_DARK = "#1E40AF"   # dark brand color (blue-800), replaces former {BRAND_PRIMARY_DARK}
 
 # ----------------------------------------------------------------------------
 # Translatable strings.  Product names ("Microsoft Entra ID", "Azure Container
@@ -244,8 +246,8 @@ def build_svg(s: dict[str, str]) -> str:
       <stop offset="1" stop-color="#E6D8F4"/>
     </linearGradient>
     <linearGradient id="govBand" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF2F2"/>
-      <stop offset="1" stop-color="#FFE0E0"/>
+      <stop offset="0" stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
     </linearGradient>
 
     <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
@@ -258,7 +260,7 @@ def build_svg(s: dict[str, str]) -> str:
     <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/></marker>
     <marker id="arrPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5C2D91"/></marker>
     <marker id="arrGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A5A5A"/></marker>
-    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B30000"/></marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{BRAND_PRIMARY_DARK}"/></marker>
 
     <symbol id="logoMS" viewBox="0 0 23 23">
       <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
@@ -267,8 +269,10 @@ def build_svg(s: dict[str, str]) -> str:
       <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
     </symbol>
 
-    <symbol id="logoSAN" viewBox="0 0 100 100">
-      <image href="data:image/png;base64,{san_b64}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>
+    <symbol id="logoBrand" viewBox="0 0 100 100">
+      <polygon points="50,6 89,28 89,72 50,94 11,72 11,28" fill="{BRAND_PRIMARY_DARK}"/>
+      <polygon points="50,18 78,34 78,66 50,82 22,66 22,34" fill="{BRAND_PRIMARY}"/>
+      <text x="50" y="64" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="38" font-weight="700" fill="#FFFFFF">{BRAND_MARK_LETTER}</text>
     </symbol>
 
     <symbol id="iconReact" viewBox="0 0 24 24">
@@ -385,8 +389,8 @@ def build_svg(s: dict[str, str]) -> str:
   <use href="#logoMS" x="48" y="30" width="44" height="44"/>
   <text x="104" y="60" font-size="22" font-weight="600" fill="#1F1F1F">Microsoft</text>
   <text x="232" y="64" font-size="30" font-weight="200" fill="#9AA0A6">×</text>
-  <use href="#logoSAN" x="264" y="24" width="56" height="56"/>
-  <text x="332" y="60" font-size="22" font-weight="600" fill="#EC0000">Santander</text>
+  <use href="#logoBrand" x="264" y="24" width="56" height="56"/>
+  <text x="332" y="60" font-size="22" font-weight="600" fill="{BRAND_PRIMARY_DARK}">{BRAND_NAME}</text>
 
   <text x="860" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1F1F1F">Insurance AI Agents</text>
   <text x="860" y="76" text-anchor="middle" font-size="12" font-weight="400" letter-spacing="3" fill="#5A5A5A">{s['subtitle']}</text>
@@ -400,8 +404,8 @@ def build_svg(s: dict[str, str]) -> str:
   <g filter="url(#zoneShadow)"><rect x="460" y="130" width="1220" height="830" rx="18" fill="url(#azureBand)" stroke="#74B8E8" stroke-width="1.5" stroke-dasharray="7 5"/></g>
   <text x="480" y="160" font-size="11" font-weight="700" fill="#0067B8" letter-spacing="3">{s['zone_azure']}</text>
 
-  <g filter="url(#zoneShadow)"><rect x="40" y="985" width="1640" height="160" rx="18" fill="url(#govBand)" stroke="#EC0000" stroke-width="1.5" stroke-dasharray="7 5"/></g>
-  <text x="60" y="1015" font-size="11" font-weight="700" fill="#B30000" letter-spacing="3">{s['zone_governance']}</text>
+  <g filter="url(#zoneShadow)"><rect x="40" y="985" width="1640" height="160" rx="18" fill="url(#govBand)" stroke="{BRAND_PRIMARY}" stroke-width="1.5" stroke-dasharray="7 5"/></g>
+  <text x="60" y="1015" font-size="11" font-weight="700" fill="{BRAND_PRIMARY_DARK}" letter-spacing="3">{s['zone_governance']}</text>
 
   <g filter="url(#cardShadow)"><rect x="70" y="180" width="340" height="160" rx="12" fill="#FFFFFF" stroke="#D6D9E0" stroke-width="1.5"/></g>
   <text x="240" y="206" text-anchor="middle" font-size="12" font-weight="700" fill="#5A5A5A" letter-spacing="2">{s['users_header']}</text>
@@ -432,7 +436,7 @@ def build_svg(s: dict[str, str]) -> str:
   <line x1="90" y1="734" x2="130" y2="734" stroke="#5C2D91" stroke-width="2.2" marker-end="url(#arrPurple)"/>
   <text x="140" y="738" font-size="11.5" fill="#1F1F1F">{s['legend_maf']}</text>
 
-  <line x1="90" y1="758" x2="130" y2="758" stroke="#B30000" stroke-width="2.2" marker-end="url(#arrRed)"/>
+  <line x1="90" y1="758" x2="130" y2="758" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2.2" marker-end="url(#arrRed)"/>
   <text x="140" y="762" font-size="11.5" fill="#1F1F1F">{s['legend_inference']}</text>
 
   <line x1="90" y1="782" x2="130" y2="782" stroke="#5A5A5A" stroke-width="2.2" marker-end="url(#arrGray)"/>
@@ -441,7 +445,7 @@ def build_svg(s: dict[str, str]) -> str:
   <line x1="90" y1="806" x2="130" y2="806" stroke="#5C2D91" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrPurple)"/>
   <text x="140" y="810" font-size="11.5" fill="#1F1F1F">{s['legend_observability']}</text>
 
-  <line x1="90" y1="830" x2="130" y2="830" stroke="#B30000" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="90" y1="830" x2="130" y2="830" stroke="{BRAND_PRIMARY_DARK}" stroke-width="1.5" stroke-dasharray="4 3"/>
   <text x="140" y="834" font-size="11.5" fill="#1F1F1F">{s['legend_governance']}</text>
 
   <text x="90" y="868" font-size="11" font-weight="700" fill="#5A5A5A" letter-spacing="2">{s['legend_steps_title']}</text>
@@ -503,29 +507,29 @@ def build_svg(s: dict[str, str]) -> str:
   <circle cx="1182" cy="533" r="13" fill="#5C2D91"/>
   <text x="1182" y="538" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">5</text>
 
-  <g filter="url(#cardShadow)"><rect x="845" y="655" width="360" height="140" rx="12" fill="#FFFFFF" stroke="#B30000" stroke-width="2.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="845" y="655" width="360" height="140" rx="12" fill="#FFFFFF" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2.5"/></g>
   <g transform="translate(862, 678)"><polygon points="28,4 50,15 50,42 28,53 6,42 6,15" fill="#7A52C5"/><text x="28" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#FFFFFF">CA</text></g>
   <text x="932" y="688" font-size="15" font-weight="700" fill="#1F1F1F">{s['agent_compliance_title']}</text>
   <text x="932" y="709" font-size="11.5" fill="#5A5A5A">{s['agent_compliance_desc_1']}</text>
   <text x="932" y="730" font-size="11" fill="#444">{s['agent_compliance_desc_2']}</text>
   <text x="932" y="750" font-size="11" fill="#444">{s['agent_compliance_desc_3']}</text>
   <text x="932" y="768" font-size="10" font-style="italic" fill="#888">agents/compliance/agent.py · rules.py</text>
-  <rect x="1065" y="668" width="64" height="18" rx="3" fill="#B30000"/>
+  <rect x="1065" y="668" width="64" height="18" rx="3" fill="{BRAND_PRIMARY_DARK}"/>
   <text x="1097" y="681" text-anchor="middle" font-size="10" font-weight="800" fill="#FFFFFF">WOW</text>
   <circle cx="1182" cy="678" r="13" fill="#5C2D91"/>
   <text x="1182" y="683" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">6</text>
 
-  <g filter="url(#cardShadow)"><rect x="1280" y="345" width="320" height="200" rx="12" fill="#FFFFFF" stroke="#B30000" stroke-width="2.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="1280" y="345" width="320" height="200" rx="12" fill="#FFFFFF" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2.5"/></g>
   <use href="#iconAPIM" x="1300" y="368" width="58" height="58"/>
   <text x="1372" y="384" font-size="15" font-weight="700" fill="#1F1F1F">APIM AI Gateway</text>
-  <text x="1372" y="403" font-size="11" font-weight="600" fill="#B30000">{s['apim_subtitle']}</text>
+  <text x="1372" y="403" font-size="11" font-weight="600" fill="{BRAND_PRIMARY_DARK}">{s['apim_subtitle']}</text>
   <line x1="1300" y1="435" x2="1580" y2="435" stroke="#E1E4E8" stroke-width="1"/>
   <text x="1300" y="458" font-size="12" fill="#444">{s['apim_bullet_1']}</text>
   <text x="1300" y="479" font-size="12" fill="#444">{s['apim_bullet_2']}</text>
   <text x="1300" y="500" font-size="12" fill="#444">{s['apim_bullet_3']}</text>
   <text x="1300" y="521" font-size="12" fill="#444">{s['apim_bullet_4']}</text>
   <text x="1300" y="539" font-size="10" font-style="italic" fill="#888">USE_APIM_GATEWAY=true</text>
-  <circle cx="1300" cy="362" r="13" fill="#B30000"/>
+  <circle cx="1300" cy="362" r="13" fill="{BRAND_PRIMARY_DARK}"/>
   <text x="1300" y="367" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">7</text>
 
   <g filter="url(#cardShadow)"><rect x="1280" y="585" width="320" height="120" rx="12" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/></g>
@@ -567,20 +571,20 @@ def build_svg(s: dict[str, str]) -> str:
   <text x="144" y="1093" font-size="11" fill="#5A5A5A">{s['github_subtitle']}</text>
   <text x="144" y="1111" font-size="10" font-style="italic" fill="#888">aangell98/insurance-ai-agents</text>
 
-  <g filter="url(#cardShadow)"><rect x="360" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="360" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="{BRAND_PRIMARY_DARK}" stroke-width="1.5"/></g>
   <g transform="translate(380, 1054)">
-    <circle cx="14" cy="14" r="9" fill="#B30000"/>
-    <circle cx="30" cy="14" r="9" fill="#B30000" opacity="0.85"/>
-    <circle cx="22" cy="26" r="9" fill="#B30000" opacity="0.7"/>
+    <circle cx="14" cy="14" r="9" fill="{BRAND_PRIMARY_DARK}"/>
+    <circle cx="30" cy="14" r="9" fill="{BRAND_PRIMARY_DARK}" opacity="0.85"/>
+    <circle cx="22" cy="26" r="9" fill="{BRAND_PRIMARY_DARK}" opacity="0.7"/>
   </g>
   <text x="434" y="1065" font-size="13" font-weight="700" fill="#1F1F1F">CODEOWNERS</text>
   <text x="434" y="1083" font-size="11" fill="#5A5A5A">{s['codeowners_subtitle']}</text>
   <text x="380" y="1108" font-size="10.5" fill="#444">{s['codeowners_desc']}</text>
   <text x="380" y="1123" font-size="9.5" font-style="italic" fill="#888">.github/CODEOWNERS</text>
 
-  <g filter="url(#cardShadow)"><rect x="680" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="680" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="{BRAND_PRIMARY_DARK}" stroke-width="1.5"/></g>
   <g transform="translate(700, 1054)">
-    <path d="M 18 2 L 34 8 L 34 22 Q 34 32 18 38 Q 2 32 2 22 L 2 8 Z" fill="#B30000"/>
+    <path d="M 18 2 L 34 8 L 34 22 Q 34 32 18 38 Q 2 32 2 22 L 2 8 Z" fill="{BRAND_PRIMARY_DARK}"/>
     <path d="M 11 19 L 16 24 L 25 14" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <text x="754" y="1065" font-size="13" font-weight="700" fill="#1F1F1F">Eval Gate</text>
@@ -588,14 +592,14 @@ def build_svg(s: dict[str, str]) -> str:
   <text x="700" y="1108" font-size="10.5" fill="#444">{s['evalgate_desc']}</text>
   <text x="700" y="1123" font-size="9.5" font-style="italic" fill="#888">evals/ · eval-on-pr.yml</text>
 
-  <g filter="url(#cardShadow)"><rect x="1000" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="#B30000" stroke-width="1.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="1000" y="1040" width="290" height="90" rx="10" fill="#FFFFFF" stroke="{BRAND_PRIMARY_DARK}" stroke-width="1.5"/></g>
   <use href="#iconActions" x="1020" y="1054" width="40" height="40"/>
   <text x="1074" y="1065" font-size="13" font-weight="700" fill="#1F1F1F">GitHub Actions</text>
   <text x="1074" y="1083" font-size="11" fill="#5A5A5A">{s['actions_subtitle']}</text>
   <text x="1020" y="1108" font-size="10.5" fill="#444">{s['actions_desc']}</text>
   <text x="1020" y="1123" font-size="9.5" font-style="italic" fill="#888">.github/workflows/</text>
 
-  <g filter="url(#cardShadow)"><rect x="1320" y="1040" width="340" height="90" rx="10" fill="#EC0000" stroke="#B30000" stroke-width="1.5"/></g>
+  <g filter="url(#cardShadow)"><rect x="1320" y="1040" width="340" height="90" rx="10" fill="{BRAND_PRIMARY}" stroke="{BRAND_PRIMARY_DARK}" stroke-width="1.5"/></g>
   <text x="1340" y="1067" font-size="13" font-weight="800" fill="#FFFFFF" letter-spacing="1">{s['banco_title']}</text>
   <text x="1340" y="1087" font-size="10.5" fill="#FFFFFF">{s['banco_desc_1']}</text>
   <text x="1340" y="1104" font-size="10.5" font-weight="700" fill="#FFFFFF">{s['banco_desc_2']}</text>
@@ -627,10 +631,10 @@ def build_svg(s: dict[str, str]) -> str:
   <path d="M 1025 630 L 1025 655" stroke="#5C2D91" stroke-width="2.4" fill="none" marker-end="url(#arrPurple)"/>
   <text x="1035" y="645" font-size="9.5" fill="#5C2D91">{s['arr_step_3']}</text>
 
-  <path d="M 1205 425 L 1248 425 L 1248 445 L 1280 445" stroke="#B30000" stroke-width="2.4" fill="none" marker-end="url(#arrRed)"/>
-  <text x="1212" y="418" font-size="10" font-weight="600" fill="#B30000">{s['arr_inference']}</text>
-  <path d="M 1205 570 L 1248 570 L 1248 445" stroke="#B30000" stroke-width="2" fill="none" opacity="0.75"/>
-  <path d="M 1205 725 L 1248 725 L 1248 445" stroke="#B30000" stroke-width="2" fill="none" opacity="0.75"/>
+  <path d="M 1205 425 L 1248 425 L 1248 445 L 1280 445" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2.4" fill="none" marker-end="url(#arrRed)"/>
+  <text x="1212" y="418" font-size="10" font-weight="600" fill="{BRAND_PRIMARY_DARK}">{s['arr_inference']}</text>
+  <path d="M 1205 570 L 1248 570 L 1248 445" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2" fill="none" opacity="0.75"/>
+  <path d="M 1205 725 L 1248 725 L 1248 445" stroke="{BRAND_PRIMARY_DARK}" stroke-width="2" fill="none" opacity="0.75"/>
 
   <path d="M 1440 545 L 1440 585" stroke="#0078D4" stroke-width="2.4" fill="none" marker-end="url(#arrBlue)"/>
   <text x="1450" y="570" font-size="10" font-weight="600" fill="#0078D4">MI token</text>

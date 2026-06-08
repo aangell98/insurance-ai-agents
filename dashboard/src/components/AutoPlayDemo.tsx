@@ -28,6 +28,7 @@ import SlideNavigator from './autoplay/SlideNavigator';
 import type { SlideDescriptor, SlideStatus } from './autoplay/SlideNavigator';
 import DecisionSlidePanel from './autoplay/DecisionSlidePanel';
 import VoiceCallModal from './VoiceCallModal';
+import { BRAND } from '../brand';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const DEMO_ORDER = ['low_risk', 'high_amount', 'human_review', 'fraudulent', 'prompt_injection'] as const;
@@ -1340,7 +1341,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     if (status === 'loading') return 'Preparando escenarios, agentes y telemetría en tiempo real…';
     if (fatalError) return fatalError;
     if (status === 'finished') return `Demo completada · ${finishedCount} de ${totalScenarios} casos ejecutados`;
-    if (status === 'voice') return `Paso final · llamada de voz con Leo (vista cliente + vista operador)`;
+    if (status === 'voice') return `Paso final · llamada de voz con ${BRAND.voiceAssistantName} (vista cliente + vista operador)`;
     if (currentScenarioKey) {
       const base = `Procesando caso ${Math.min(currentIndex + 1, totalScenarios)} de ${totalScenarios} · Quedan ~${remainingSeconds} segundos`;
       if (slideState.userPinnedSlide) return `${base} · Demo en pausa mientras revisas slides`;
@@ -1375,7 +1376,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
             <div className="flex items-start gap-3">
               <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-200">
-                <img src="/santander-logo.avif" alt="Santander" className="h-6 w-auto" />
+                <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-6 w-auto" />
               </div>
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática — 5 casos reales</h2>
@@ -1452,7 +1453,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                     Paso final · Llamada de voz
                   </div>
                   <h3 className="mt-5 text-3xl font-semibold tracking-tight text-gray-900 xl:text-4xl">
-                    Hable con Leo, el asistente de voz Santander
+                    Hable con {BRAND.voiceAssistantName}, el asistente de voz {BRAND.shortName}
                   </h3>
                   <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-700">
                     Para cerrar la demo, va a vivir el mismo pipeline desde el otro lado del teléfono.
@@ -1468,7 +1469,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                         <h4 className="text-sm font-semibold text-gray-900">Vista cliente</h4>
                       </div>
                       <p className="mt-3 text-sm leading-6 text-gray-600">
-                        El modal de llamada con Leo. Hable normal: identifíquese con su DNI,
+                        El modal de llamada con {BRAND.voiceAssistantName}. Hable normal: identifíquese con su DNI,
                         describa el siniestro y reciba la decisión final por voz.
                       </p>
                     </div>
@@ -1499,7 +1500,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                       className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-600/30 transition hover:bg-primary-700"
                     >
                       <Phone className="h-4 w-4" />
-                      Iniciar llamada con Leo + vista operador
+                      Iniciar llamada con {BRAND.voiceAssistantName} + vista operador
                       <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                     </button>
                     <button

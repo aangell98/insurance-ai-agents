@@ -14,6 +14,7 @@ import {
   XCircle,
   AlertTriangle,
 } from 'lucide-react';
+import { BRAND } from '../brand';
 
 /**
  * Operator dashboard for a live voice call. Connects to the backend as an
@@ -265,13 +266,13 @@ export default function VoiceOperatorView({ sessionId }: { sessionId: string }) 
             ts: Date.now(),
           }]);
         } else if (name === 'end_call') {
-          setLines((p) => [...p, { who: 'system', text: 'Leo finalizando la llamada…', ts: Date.now() }]);
+          setLines((p) => [...p, { who: 'system', text: `${BRAND.voiceAssistantName} finalizando la llamada…`, ts: Date.now() }]);
         }
         return;
       }
       if (t === 'hold_music_start') {
         setPipelineRunning(true);
-        setLines((p) => [...p, { who: 'system', text: 'Leo ha lanzado el pipeline multiagente', ts: Date.now() }]);
+        setLines((p) => [...p, { who: 'system', text: `${BRAND.voiceAssistantName} ha lanzado el pipeline multiagente`, ts: Date.now() }]);
         return;
       }
       if (t === 'hold_music_stop') {
@@ -482,7 +483,7 @@ function Bubble({ line }: { line: Line }) {
         <p className={`mb-0.5 text-[10px] font-semibold uppercase tracking-wide ${
           isUser ? 'text-white/70' : 'text-primary-600'
         }`}>
-          {isUser ? 'Cliente' : 'Leo'} · {time}
+          {isUser ? 'Cliente' : BRAND.voiceAssistantName} · {time}
         </p>
         {line.text}
       </div>

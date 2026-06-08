@@ -15,6 +15,7 @@ import { GovernanceView } from './components/GovernanceView';
 import AutoPlayDemo from './components/AutoPlayDemo';
 import Toast from './components/Toast';
 import VoiceCallButton from './components/VoiceCallButton';
+import { BRAND } from './brand';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
 import { evaluateClaim, connectWebSocket, getSecurityIncidents } from './api';
@@ -242,14 +243,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
-              src="/santander-logo.avif"
-              alt="Santander"
+              src={BRAND.logoUrl}
+              alt={BRAND.logoAlt}
               className="h-10 w-auto"
             />
             <div className="hidden md:block h-10 w-px bg-gray-200" />
             <div className="hidden md:block">
               <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
-                Insurance AI <span className="text-primary-600">Claims Intelligence</span>
+                {BRAND.productName} <span className="text-primary-600">{BRAND.productNameAccent}</span>
               </h1>
               <p className="text-xs text-gray-500">Multi-Agent Decision Platform — Governed &amp; Auditable</p>
             </div>
@@ -347,7 +348,7 @@ export default function App() {
         {/* Login gate cuando AUTH_ENABLED y no autenticado */}
         {auth.enabled && !auth.authenticated && (
           <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-gray-200 bg-white shadow-md text-center">
-            <img src="/santander-logo.avif" alt="Santander" className="h-12 w-auto mx-auto mb-4" />
+            <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-12 w-auto mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Acceso restringido</h2>
             <p className="text-sm text-gray-600 mb-6">Inicia sesión con tu cuenta corporativa para acceder a la plataforma.</p>
             <button

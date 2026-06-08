@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Loader2, CheckCircle2, AlertTriangle, Music, ScanEye } from 'lucide-react';
 import { VoiceAudioClient, type VoiceEvent } from '../voice/audioClient';
+import { BRAND } from '../brand';
 
 type Line = { who: 'user' | 'assistant' | 'system'; text: string; ts: number };
 
@@ -218,7 +219,7 @@ export default function VoiceCallModal({
               <Phone className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Asistente de voz · Leo</p>
+              <p className="text-sm font-semibold">Asistente de voz · {BRAND.voiceAssistantName}</p>
               <p className="text-xs opacity-80">
                 {status === 'connecting' && 'Conectando...'}
                 {status === 'live' && 'En llamada'}
@@ -324,7 +325,7 @@ function Bubble({ line }: { line: Line }) {
             : 'bg-white text-gray-800 ring-1 ring-gray-200'
         }`}
       >
-        {!isUser && <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600">Leo</p>}
+        {!isUser && <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600">{BRAND.voiceAssistantName}</p>}
         {line.text}
       </div>
     </div>

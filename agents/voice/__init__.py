@@ -42,6 +42,8 @@ from typing import Any, Callable, Awaitable
 import websockets
 from azure.identity.aio import DefaultAzureCredential
 
+from agents.shared.brand import BRAND_NAME, VOICE_ASSISTANT_NAME
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_VOICE_DEPLOYMENT", "gpt-realtime-mini")
@@ -53,12 +55,17 @@ DEFAULT_VOICE = os.environ.get("VOICE_AGENT_VOICE", "ballad")
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """Eres Leo, asistente virtual de inteligencia artificial de Santander Insurance. Hablas español de España con un tono cercano, profesional y empático. Tu trabajo es atender por voz a un cliente que llama para abrir un parte de siniestro de coche.
+# NOTE: We use ``str.replace`` (instead of f-strings) so the curly-brace
+# placeholders the model fills in at runtime — ``{nombre}``,
+# ``{coverage_type}``, ``{vehicle}`` — are left intact. The
+# ``@BRAND@`` / ``@ASSISTANT@`` sentinels are replaced once at module load
+# with the configured brand and assistant names.
+SYSTEM_PROMPT = """Eres @ASSISTANT@, asistente virtual de inteligencia artificial de @BRAND@. Hablas español de España con un tono cercano, profesional y empático. Tu trabajo es atender por voz a un cliente que llama para abrir un parte de siniestro de coche.
 
 Sigue ESTRICTAMENTE este guion:
 
 PASO 1 · Saludo (FRASE EXACTA, no improvises)
-   - Di literalmente: "Hola, soy Leo, su asistente virtual de inteligencia artificial de Santander Insurance. ¿En qué puedo ayudarle hoy?"
+   - Di literalmente: "Hola, soy @ASSISTANT@, su asistente virtual de inteligencia artificial de @BRAND@. ¿En qué puedo ayudarle hoy?"
    - Es CRÍTICO que dejes claro que eres una IA, no una persona, para evitar confusión.
    - Espera a que el cliente confirme que quiere abrir un parte.
 
@@ -116,7 +123,7 @@ PASO 5 · Cierre — REGLA CRÍTICA
    - Después de comunicar el resultado, pregunta: "¿Necesita algo más?" y DETENTE. NO añadas nada más en esa misma respuesta. Espera de verdad a que el cliente responda — puede tardar varios segundos.
    - REGLA OBLIGATORIA: SIEMPRE que vayas a despedirte (frases como "muchas gracias", "que tenga buen día", "voy a finalizar la llamada", "un agente le contactará") DEBES llamar a la función `end_call` en la MISMA respuesta donde te despides. No es opcional. Sin llamar a end_call, el cliente se queda en línea esperando.
    - Casos en los que SIEMPRE despides + llamas a `end_call`:
-        a) El cliente dice "no", "no gracias", "estoy bien", "nada más", "ya está", etc. → di "Perfecto, muchas gracias por contactar con Santander Insurance. Que tenga un buen día." y `end_call`
+        a) El cliente dice "no", "no gracias", "estoy bien", "nada más", "ya está", etc. → di "Perfecto, muchas gracias por contactar con @BRAND@. Que tenga un buen día." y `end_call`
         b) El cliente pide hablar con un operador o agente humano → di "Tomo nota, un agente le llamará en breve. Muchas gracias por contactar." + `end_call`
         c) El cliente intenta hablar de otro tema fuera de seguros → redirige una vez; si insiste → despídete + `end_call`
         d) NUNCA te despidas por iniciativa propia tras dar el veredicto. Sólo te despides cuando el cliente lo confirme o cuando el sistema te avise con un mensaje "[Sistema: el cliente lleva varios segundos sin responder...]".
@@ -129,7 +136,7 @@ Reglas importantes:
  - Si percibes silencio prolongado o sonidos no humanos, ignóralos. Solo responde cuando estés seguro de que el cliente ha hablado.
  - Si el cliente te pregunta si eres humano, confirma que NO, que eres un asistente virtual con inteligencia artificial entrenado para tramitar partes.
  - DESPEDIDA = LLAMADA A end_call. Sin excepción.
-"""
+""".replace("@ASSISTANT@", VOICE_ASSISTANT_NAME).replace("@BRAND@", BRAND_NAME)
 
 # ---------------------------------------------------------------------------
 # Tools (function-calling) — schemas the realtime model can invoke.
@@ -479,8 +486,8 @@ class VoiceBridge:
                     **(
                         {
                             "prompt": (
-                                "Conversación telefónica en español de España entre Leo "
-                                "(asistente virtual de seguros Santander) y un cliente "
+                                f"Conversación telefónica en español de España entre {VOICE_ASSISTANT_NAME} "
+                                f"(asistente virtual de seguros {BRAND_NAME}) y un cliente "
                                 "que abre un parte de siniestro de coche. Vocabulario "
                                 "habitual: DNI con ocho dígitos seguidos de una letra "
                                 "(ej. 12345678A), matrículas con cuatro dígitos y tres "
@@ -547,8 +554,8 @@ class VoiceBridge:
                 "modalities": ["audio", "text"],
                 "instructions": (
                     "Saluda al cliente AHORA mismo diciendo LITERALMENTE: "
-                    "\"Hola, soy Leo, su asistente virtual de inteligencia "
-                    "artificial de Santander Insurance. ¿En qué puedo "
+                    f"\"Hola, soy {VOICE_ASSISTANT_NAME}, su asistente virtual de inteligencia "
+                    f"artificial de {BRAND_NAME}. ¿En qué puedo "
                     "ayudarle hoy?\". No esperes a que el cliente hable "
                     "primero, no improvises otra fórmula."
                 ),
@@ -786,8 +793,8 @@ class VoiceBridge:
                         "modalities": ["audio", "text"],
                         "instructions": (
                             "Despídete con UNA frase corta y cordial, sin llamar "
-                            "a ninguna otra función. Ejemplo: 'Muchas gracias por "
-                            "contactar con Santander Insurance, que tenga un buen "
+                            f"a ninguna otra función. Ejemplo: 'Muchas gracias por "
+                            f"contactar con {BRAND_NAME}, que tenga un buen "
                             "día.' No añadas nada más."
                         ),
                     },
@@ -1089,7 +1096,7 @@ def is_user_transcript_hallucination(text: str) -> bool:
             if repeats / len(non_digit) > 0.30:
                 return True
     # YouTube intro signatures (informal greetings of a streamer not a
-    # claim caller). These almost never appear in a Santander claim call.
+    # claim caller). These almost never appear in a real claim call.
     intro_signatures = (
         "a todos los que",
         "para todos los que",
@@ -1119,7 +1126,7 @@ _GOODBYE_PHRASES = (
     "voy a finalizar la llamada",
     "voy a colgar",
     "muchas gracias por contactar",
-    "gracias por contactar con santander",
+    "gracias por contactar con",
     "un agente le contactará",
     "un agente le llamará",
     "un agente se pondrá en contacto",

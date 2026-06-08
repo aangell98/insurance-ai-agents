@@ -43,6 +43,8 @@ from typing import Any
 import httpx
 from azure.identity.aio import DefaultAzureCredential
 
+from agents.shared.brand import BRAND_NAME
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -57,7 +59,7 @@ PARTE_SINIESTRO_SCHEMA: dict[str, Any] = {
     "name": "ParteSiniestroEs",
     "description": (
         "Datos estructurados extraidos de un parte de siniestro de auto "
-        "presentado por un cliente de Santander Insurance. Soporta PDFs "
+        f"presentado por un cliente de {BRAND_NAME}. Soporta PDFs "
         "(formato europeo unificado), fotos del daño y notas de audio."
     ),
     "fields": {
