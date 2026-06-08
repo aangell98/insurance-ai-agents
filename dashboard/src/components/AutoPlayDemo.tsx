@@ -630,11 +630,36 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   const pendingToastStagesRef = useRef<Set<Stage>>(new Set());
   const toastTimerRef = useRef<number | null>(null);
   const snapshotsRef = useRef<Partial<Record<Stage, AgentSnapshot>>>({});
+  // Timestamp (ms epoch) en el que cada slide entró en estado completed/failed.
+  // Usado por el efecto AUTO_FOLLOW_LIVE para garantizar un dwell mínimo
+  // POSTERIOR al cierre del agente (permite que la animación de revelado y
+  // el resumen verde se vean antes de cambiar de slide). Se resetea por caso.
+  const slideCompletedAtRef = useRef<Partial<Record<Stage, number>>>({});
+  // Espejo síncrono de stageDurations para que el auto-follow no dependa del
+  // batching de React: si el WS pierde un 'processing' y sólo entrega
+  // 'completed', el valor del state puede llegar a 0 momentáneamente. El ref
+  // se actualiza desde el efecto de snapshot-capture, que tiene contexto
+  // sobre cuándo el stage realmente cerró.
+  const stageDurationsRef = useRef<Record<Stage, number>>({
+    intake: 0,
+    risk_assessment: 0,
+    compliance: 0,
+    decision: 0,
+  });
   const currentScenarioAmountRef = useRef<number>(0);
   const finalizedResultRef = useRef<ClaimResult | null>(null);
   // Dwell mínimo (ms) durante el cual la slide live no se auto-cambia: evita
   // saltos imperceptibles cuando un agente termina extremadamente rápido.
   const MIN_DWELL_MS = 1800;
+  // Dwell mínimo (ms) que la slide debe permanecer DESPUÉS de que el agente
+  // visualizado termine, para que la animación de revelado de campos JSON y
+  // el resumen verde tengan tiempo de mostrarse y leerse antes de avanzar al
+  // siguiente agente. Sólo aplica si la etapa duró >1.5s (es decir, un agente
+  // LLM real); para el camino del short-circuit determinista donde todos los
+  // stages "completan" en ~0ms se mantiene el MIN_DWELL_MS clásico para que
+  // la cascada de 4 slides se sienta rápida y dramática.
+  const MIN_POST_COMPLETION_DWELL_MS = 5000;
+  const COMPLETION_DWELL_THRESHOLD_MS = 1500;
 
   const clearNoticeTimers = useCallback(() => {
     noticeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -830,6 +855,8 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     setVoiceSessionId(null);
     dispatchSlide({ type: 'CASE_STARTED' });
     snapshotsRef.current = {};
+    slideCompletedAtRef.current = {};
+    stageDurationsRef.current = { intake: 0, risk_assessment: 0, compliance: 0, decision: 0 };
     prevStageStatusesRef.current = { ...EMPTY_STAGE_STATUSES };
 
     const runDemo = async () => {
@@ -894,6 +921,8 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         // siguiente caso comience completamente "en directo" desde intake.
         dispatchSlide({ type: 'CASE_STARTED' });
         snapshotsRef.current = {};
+        slideCompletedAtRef.current = {};
+        stageDurationsRef.current = { intake: 0, risk_assessment: 0, compliance: 0, decision: 0 };
         prevStageStatusesRef.current = { ...EMPTY_STAGE_STATUSES };
         pendingToastStagesRef.current.clear();
         if (toastTimerRef.current !== null) {
@@ -1107,23 +1136,6 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   useEffect(() => { userPinnedRef.current = slideState.userPinnedSlide; }, [slideState.userPinnedSlide]);
   useEffect(() => { snapshotsRef.current = slideState.snapshots; }, [slideState.snapshots]);
 
-  // --- Auto-follow del agente en vivo ---------------------------------------
-  // Si el usuario no ha clavado una slide, viewingSlide debe seguir al agente
-  // que está procesando en backend. Respetamos un dwell mínimo para no saltar
-  // entre slides imperceptiblemente cuando un agente termina muy rápido.
-  useEffect(() => {
-    if (status !== 'running') return;
-    if (slideState.userPinnedSlide) return;
-    if (slideState.viewingSlide === backendActiveStage) return;
-    const elapsed = Date.now() - lastAutoChangeRef.current;
-    const wait = Math.max(0, MIN_DWELL_MS - elapsed);
-    const timer = window.setTimeout(() => {
-      dispatchSlide({ type: 'AUTO_FOLLOW_LIVE', liveSlide: backendActiveStage });
-      lastAutoChangeRef.current = Date.now();
-    }, wait);
-    return () => window.clearTimeout(timer);
-  }, [backendActiveStage, slideState.userPinnedSlide, slideState.viewingSlide, status]);
-
   // --- Snapshot capture (provisional) ---------------------------------------
   // Cuando un stage transita de processing/pending → completed/failed, congelar
   // su estado actual como snapshot. Si el usuario no está mirando esa slide,
@@ -1133,6 +1145,10 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   // 'completed' — su snapshot se construye en SNAPSHOT_FINAL cuando llega
   // currentResult (evita mostrar "completado" sin veredicto durante los ms
   // entre el WS event y la resolución HTTP). Sí capturamos 'failed' aquí.
+  //
+  // ORDEN: este efecto se declara ANTES del auto-follow porque actualiza
+  // `slideCompletedAtRef` que el auto-follow consulta en el mismo render
+  // (los useEffect corren en orden de declaración).
   useEffect(() => {
     if (status !== 'running') return;
     const prev = prevStageStatusesRef.current;
@@ -1145,6 +1161,15 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
       const transitioned = (prevStatus === 'processing' || prevStatus === 'pending')
         && (currStatus === 'completed' || currStatus === 'failed');
       if (!transitioned) return;
+      // Anota el instante de cierre de esta etapa para que el auto-follow
+      // pueda respetar el dwell post-completion (K) y dar tiempo a las
+      // animaciones de revelado + lectura del resumen antes de cambiar
+      // automáticamente a la siguiente slide.
+      slideCompletedAtRef.current[stage] = Date.now();
+      // Mirror síncrono de la duración: si el WS pierde 'processing' y sólo
+      // entrega 'completed', stageDurations en state puede quedar a 0 hasta
+      // el siguiente render. El ref nos da el valor real disponible aquí.
+      stageDurationsRef.current[stage] = stageDurations[stage] ?? 0;
       const snapshot = buildAgentSnapshot(
         stage,
         currStatus,
@@ -1182,6 +1207,57 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
     }
     prevStageStatusesRef.current = { ...stageStatuses };
   }, [stageStatuses, stageTokens, stageDurations, currentResult, status, pushNotice]);
+
+  // --- Auto-follow del agente en vivo ---------------------------------------
+  // Si el usuario no ha clavado una slide, viewingSlide debe seguir al pipeline.
+  // Reglas:
+  //   1) Avance SECUENCIAL: nunca saltamos slides intermedias aunque el backend
+  //      haya acelerado dos etapas durante el dwell. Si estamos viendo intake
+  //      y el backend ya está en compliance (porque risk completó durante los
+  //      5s de dwell de intake), el siguiente target es risk_assessment, no
+  //      compliance. Así se garantiza que cada agente tiene su slide en pantalla.
+  //   2) MIN_DWELL_MS: dwell mínimo desde la última transición automática.
+  //   3) MIN_POST_COMPLETION_DWELL_MS: si la slide actual cerró tras una
+  //      ejecución LLM real (>= 1.5s) se garantiza tiempo de lectura del
+  //      resumen. Para el short-circuit determinista (todos los stages en 0ms)
+  //      se ignora este dwell extra: la cascada se ve rápida y dramática.
+  useEffect(() => {
+    if (status !== 'running') return;
+    if (slideState.userPinnedSlide) return;
+    if (slideState.viewingSlide === backendActiveStage) return;
+
+    const stagesOrder: Stage[] = ['intake', 'risk_assessment', 'compliance', 'decision'];
+    const currentIdx = stagesOrder.indexOf(slideState.viewingSlide);
+    const liveIdx = stagesOrder.indexOf(backendActiveStage);
+    // Avanzamos UNA sola posición hacia el live, no saltamos en bloque.
+    const nextIdx = currentIdx >= 0 && liveIdx > currentIdx
+      ? Math.min(currentIdx + 1, liveIdx)
+      : liveIdx;
+    if (nextIdx < 0 || nextIdx === currentIdx) return;
+    const nextStage = stagesOrder[nextIdx];
+
+    const now = Date.now();
+    const baseWait = Math.max(0, MIN_DWELL_MS - (now - lastAutoChangeRef.current));
+
+    const currentSlide = slideState.viewingSlide;
+    const completedAt = slideCompletedAtRef.current[currentSlide];
+    // Usamos el ref síncrono primero (más fiable ante batching/WS perdido)
+    // y caemos al state como fallback.
+    const currentDuration = stageDurationsRef.current[currentSlide]
+      || stageDurations[currentSlide]
+      || 0;
+    let completionWait = 0;
+    if (completedAt && currentDuration >= COMPLETION_DWELL_THRESHOLD_MS) {
+      completionWait = Math.max(0, MIN_POST_COMPLETION_DWELL_MS - (now - completedAt));
+    }
+
+    const wait = Math.max(baseWait, completionWait);
+    const timer = window.setTimeout(() => {
+      dispatchSlide({ type: 'AUTO_FOLLOW_LIVE', liveSlide: nextStage });
+      lastAutoChangeRef.current = Date.now();
+    }, wait);
+    return () => window.clearTimeout(timer);
+  }, [backendActiveStage, slideState.userPinnedSlide, slideState.viewingSlide, status, stageStatuses, stageDurations]);
 
   // --- Snapshot finalization (cuando llega el resultado completo) -----------
   // Reconcilia todos los snapshots con los datos finales y, en concreto,
