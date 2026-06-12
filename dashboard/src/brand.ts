@@ -39,6 +39,11 @@ export interface BrandConfig {
    * `tailwind.config.js`.
    */
   primaryHex: string;
+  /**
+   * Whether the logo image already includes the brand name as a wordmark.
+   * When false, the UI renders BRAND.name as a text wordmark next to the logo.
+   */
+  logoHasWordmark: boolean;
 }
 
 export const BRAND: BrandConfig = {
@@ -54,4 +59,5 @@ export const BRAND: BrandConfig = {
     'Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.',
   partnerBannerName: 'Helix Insurance',
   primaryHex: '#2563EB',
+  logoHasWordmark: false,
 };

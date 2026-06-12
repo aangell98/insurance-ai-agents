@@ -1379,7 +1379,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
                 <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-6 w-auto" />
               </div>
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática — 5 casos reales</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática · 5 casos reales</h2>
                 <p className="mt-1 text-sm text-gray-600">{subtitle}</p>
               </div>
             </div>
