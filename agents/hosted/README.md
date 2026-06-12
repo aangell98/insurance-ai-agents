@@ -141,27 +141,34 @@ falls back to the in-process orchestrator on any error. The backend's managed id
 > Voice / content-understanding agents *are* brand-coupled. If/when they move to Foundry,
 > deploy one per brand with a distinct `BRAND_NAME`, or pass the brand per request.
 
-### Tracing (App Insights) — working via the backend
+### Tracing (App Insights) — agent + backend, end to end
 
-Traces are exported to `ins-ai-demo-ai-jii435hjlwyyc` from the **backend** Container Apps
-(long-running → reliable export). `backend/main.py` calls `configure_azure_monitor` and
-instruments FastAPI + httpx when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, with a
-per-brand role via `OTEL_SERVICE_NAME` (`insurance-backend-santander` / `insurance-backend-helix`).
-View in the Application Insights portal (Application Map / Transaction search / Logs) or via KQL
-against the Log Analytics workspace `ins-ai-demo-law-jii435hjlwyyc`:
+The live, fully-traced deployment runs in a **properly-backed Foundry project provisioned with
+azd** (`azd-ai-starter-basic` + `ENABLE_HOSTED_AGENTS`), which includes a Key Vault so the
+project↔App Insights *connection* succeeds (the original lite `ins-ai-demo-ais` project could
+not create that connection — ApiKey secret storage 500s without a Key Vault).
+
+- **Live project:** `ai-project-ins-ai-foundry` on account `ai-account-kzrzuypevlok4`
+  (RG `rg-ins-ai-foundry`), App Insights `appi-kzrzuypevlok4` (workspace `logs-kzrzuypevlok4`).
+- **Agent-internal traces** flow via that connection. The full multi-agent flow is visible:
+  `workflow.run`, `invoke_agent intake/risk_assessment/compliance`, `executor.process …`,
+  `execute_tool _check_regulations/_validate_thresholds`, `chat gpt-5.4-mini`.
+- **Backend traces** (FastAPI + httpx, role `insurance-backend-santander` / `insurance-backend-helix`)
+  correlate the claim request with the agent call.
+
+View in the Application Insights portal (Application Map / Transaction search / Logs) or KQL on
+`logs-kzrzuypevlok4`:
 
 ```kusto
 AppDependencies | where TimeGenerated > ago(1h)
-| summarize count(), avg(DurationMs) by AppRoleName, Target
+| where AppRoleName == 'insurance-claims-orchestrator'
+| summarize count() by Name | order by count_ desc
 ```
 
-`deploy.ps1` also injects the connection string into the hosted agent, **but** the ephemeral
-hosted-agent sandbox does not reliably surface those spans, and the Foundry **portal** Tracing
-tab needs a project↔App Insights *connection* (ApiKey) that currently 500s on this lite
-AIServices-account project (no backing Key Vault). Use the portal's **Connect Application
-Insights** action or a hub-based project to light up the portal tab + the agent's internal
-intake/risk/compliance spans. Meanwhile the real-time per-stage flow is fully visible via the
-`stream: true` SSE response (and the dashboard).
+> The original lite project (`ins-ai-demo-ais/insurance-agents`) still hosts a working agent but
+> cannot surface agent-internal traces (no Key Vault → no App Insights connection). The azd-provisioned
+> project is the canonical/traced one; both backends point at it via `FOUNDRY_AGENT_ENDPOINT`.
+> Re-provision with `azd provision` from `files/foundry-azd` (or the Standard Agent Setup Bicep).
 
 ### Evaluation — passing
 

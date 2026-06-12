@@ -12,11 +12,11 @@
   ./deploy.ps1 -ProjectEndpoint "https://<acct>.services.ai.azure.com/api/projects/<proj>" -AgentName insurance-claims-orchestrator
 #>
 param(
-  [string]$ProjectEndpoint = "https://ins-ai-demo-ais-jii435hjlwyyc.services.ai.azure.com/api/projects/insurance-agents",
+  [string]$ProjectEndpoint = "https://ai-account-kzrzuypevlok4.services.ai.azure.com/api/projects/ai-project-ins-ai-foundry",
   [string]$AgentName = "insurance-claims-orchestrator",
   [string]$ApiVersion = "2025-11-15-preview",
-  [string]$AppInsightsName = "ins-ai-demo-ai-jii435hjlwyyc",
-  [string]$AppInsightsResourceGroup = "rg-insurance-ai-demo",
+  [string]$AppInsightsName = "appi-kzrzuypevlok4",
+  [string]$AppInsightsResourceGroup = "rg-ins-ai-foundry",
   [switch]$NoTracing
 )
 $ErrorActionPreference = "Stop"
