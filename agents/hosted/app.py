@@ -66,6 +66,37 @@ logger = logging.getLogger("insurance.hosted")
 
 app = InvocationAgentServerHost()
 
+# The hosted runtime sets up the global OpenTelemetry provider (so the agent's own
+# configure_azure_monitor is a no-op). To make the per-agent spans (intake/risk/
+# compliance) also land in Application Insights — without the project↔App Insights
+# connection, which is unavailable on lite accounts — attach an Azure Monitor exporter
+# to the existing provider on first invocation.
+_appinsights_attached = False
+
+
+def _attach_appinsights_exporter() -> None:
+    global _appinsights_attached
+    if _appinsights_attached:
+        return
+    _appinsights_attached = True
+    conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
+    if not conn:
+        return
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
+
+        provider = trace.get_tracer_provider()
+        if hasattr(provider, "add_span_processor"):
+            provider.add_span_processor(BatchSpanProcessor(AzureMonitorTraceExporter(connection_string=conn)))
+            logger.info("Attached Azure Monitor trace exporter to the agent tracer provider")
+        else:
+            logger.warning("Tracer provider %s has no add_span_processor; cannot attach App Insights exporter", type(provider).__name__)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not attach App Insights exporter: %s", exc)
+
+
 _CLAIM_FIELDS = (
     "policy_id",
     "customer_id",
@@ -102,6 +133,7 @@ def _extract_claim(data: dict) -> dict:
 @app.invoke_handler
 async def handle(request: Request) -> Response:
     """POST /invocations — evaluate a claim through the multi-agent pipeline."""
+    _attach_appinsights_exporter()
     try:
         data = await request.json()
     except Exception:  # noqa: BLE001
