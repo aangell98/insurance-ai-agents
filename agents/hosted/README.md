@@ -141,21 +141,27 @@ falls back to the in-process orchestrator on any error. The backend's managed id
 > Voice / content-understanding agents *are* brand-coupled. If/when they move to Foundry,
 > deploy one per brand with a distinct `BRAND_NAME`, or pass the brand per request.
 
-### Tracing (App Insights) — wired
+### Tracing (App Insights) — working via the backend
 
-`deploy.ps1` injects `APPLICATIONINSIGHTS_CONNECTION_STRING` (fetched at deploy time, never
-committed) into the agent, so the MAF orchestrator (`configure_azure_monitor`) and the agent
-server export OTel traces to `ins-ai-demo-ai-jii435hjlwyyc`. Query them with KQL, e.g.:
+Traces are exported to `ins-ai-demo-ai-jii435hjlwyyc` from the **backend** Container Apps
+(long-running → reliable export). `backend/main.py` calls `configure_azure_monitor` and
+instruments FastAPI + httpx when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, with a
+per-brand role via `OTEL_SERVICE_NAME` (`insurance-backend-santander` / `insurance-backend-helix`).
+View in the Application Insights portal (Application Map / Transaction search / Logs) or via KQL
+against the Log Analytics workspace `ins-ai-demo-law-jii435hjlwyyc`:
 
-```bash
-az monitor app-insights query --app 643851c2-26ef-4856-bc16-789a8fb21fb2 \
-  --analytics-query "union requests,dependencies,traces | where timestamp > ago(1h) | take 50"
+```kusto
+AppDependencies | where TimeGenerated > ago(1h)
+| summarize count(), avg(DurationMs) by AppRoleName, Target
 ```
 
-> ⚠️ The Foundry **portal** Tracing tab needs a project↔App Insights *connection* (ApiKey).
-> On this lite AIServices-account project that ARM call currently 500s (no backing Key Vault).
-> Use the portal's **Connect Application Insights** action, or a hub-based project, to light up
-> the portal tab. The raw traces are already in App Insights / Log Analytics regardless.
+`deploy.ps1` also injects the connection string into the hosted agent, **but** the ephemeral
+hosted-agent sandbox does not reliably surface those spans, and the Foundry **portal** Tracing
+tab needs a project↔App Insights *connection* (ApiKey) that currently 500s on this lite
+AIServices-account project (no backing Key Vault). Use the portal's **Connect Application
+Insights** action or a hub-based project to light up the portal tab + the agent's internal
+intake/risk/compliance spans. Meanwhile the real-time per-stage flow is fully visible via the
+`stream: true` SSE response (and the dashboard).
 
 ### Evaluation — passing
 
