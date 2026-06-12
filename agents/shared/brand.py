@@ -18,5 +18,5 @@ from __future__ import annotations
 
 import os
 
-BRAND_NAME: str = os.environ.get("BRAND_NAME", "Acme Insurance")
+BRAND_NAME: str = os.environ.get("BRAND_NAME", "Santander Insurance")
 VOICE_ASSISTANT_NAME: str = os.environ.get("VOICE_ASSISTANT_NAME", "Leo")

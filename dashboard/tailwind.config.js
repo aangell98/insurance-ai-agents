@@ -4,25 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta whitelabel: azul corporativo neutro como primario.
+        // Paleta Santander: rojo corporativo como primario.
         // Editar estos valores para cambiar el color principal de marca.
         primary: {
-          50:  '#EFF6FF',
-          100: '#DBEAFE',
-          200: '#BFDBFE',
-          300: '#93C5FD',
-          400: '#60A5FA',
-          500: '#2563EB', // Brand main (blue-600)
-          600: '#1D4ED8',
-          700: '#1E40AF',
-          800: '#1E3A8A',
-          900: '#172554',
+          50:  '#FFF1F1',
+          100: '#FFE0E0',
+          200: '#FFB8B8',
+          300: '#FF8585',
+          400: '#FF4D4D',
+          500: '#EC0000', // Santander Red oficial
+          600: '#CC0000',
+          700: '#A50000',
+          800: '#7A0000',
+          900: '#4D0000',
         },
         // Alias semánticos para acceso rápido
         brand: {
-          blue:       '#2563EB',
-          'blue-700': '#1E40AF',
-          'blue-50':  '#EFF6FF',
+          blue:       '#EC0000',
+          'blue-700': '#A50000',
+          'blue-50':  '#FFF1F1',
           dark:      '#0F172A',
           gray:      '#475569',
           'gray-light': '#F1F5F9',

@@ -42,16 +42,16 @@ export interface BrandConfig {
 }
 
 export const BRAND: BrandConfig = {
-  name: 'Helix Insurance',
-  shortName: 'Helix',
+  name: 'Santander Insurance',
+  shortName: 'Santander',
   productName: 'Insurance AI',
   productNameAccent: 'Claims Intelligence',
   voiceAssistantName: 'Leo',
-  logoUrl: '/brand-logo.svg',
-  logoAlt: 'Helix Insurance',
+  logoUrl: '/santander-logo.avif',
+  logoAlt: 'Santander',
   tagline: 'Plataforma comercial para tramitación inteligente de siniestros',
   caseStudyDescription:
     'Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.',
-  partnerBannerName: 'Helix Insurance',
-  primaryHex: '#2563EB',
+  partnerBannerName: 'Santander',
+  primaryHex: '#EC0000',
 };
