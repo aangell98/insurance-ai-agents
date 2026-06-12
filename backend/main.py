@@ -107,6 +107,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Trace incoming claims (FastAPI) and the outbound call to the Foundry agent (httpx)
+# so each claim is a full distributed trace in App Insights: request -> Foundry agent.
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip():
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app)
+        HTTPXClientInstrumentor().instrument()
+        logger.info("OpenTelemetry instrumentation enabled (FastAPI + httpx)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OTel FastAPI/httpx instrumentation failed: %s", exc)
+
 
 # ── Models ──
 
