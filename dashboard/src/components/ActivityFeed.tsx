@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Bot, Brain, CheckCircle2, Clock, AlertTriangle, Search, ShieldAlert, Scale, Gavel } from 'lucide-react';
+import { Bot, Brain, CheckCircle2, Loader2, AlertTriangle, Search, ShieldAlert, Scale, Gavel } from 'lucide-react';
 
 export interface ActivityEvent {
   stage: string;
@@ -43,7 +43,6 @@ function formatTime(ts: string) {
   }
 }
 
-/** Extract the real AI reasoning from agent results */
 function extractInsight(stage: string, data: Record<string, unknown>): { summary: string; details: string[] } | null {
   if (!data || Object.keys(data).length === 0) return null;
 
@@ -69,8 +68,8 @@ function extractInsight(stage: string, data: Record<string, unknown>): { summary
     }
     const factors = data.risk_factors as Array<Record<string, unknown>> | undefined;
     if (factors?.length) {
-      const negatives = factors.filter(f => f.impact === 'negative').map(f => f.factor as string);
-      const positives = factors.filter(f => f.impact === 'positive').map(f => f.factor as string);
+      const negatives = factors.filter((f) => f.impact === 'negative').map((f) => f.factor as string);
+      const positives = factors.filter((f) => f.impact === 'positive').map((f) => f.factor as string);
       if (positives.length) details.push(`Factores positivos: ${positives.join(', ')}`);
       if (negatives.length) details.push(`Factores de riesgo: ${negatives.join(', ')}`);
     }
@@ -116,64 +115,62 @@ export default function ActivityFeed({ events }: Props) {
   if (events.length === 0) return null;
 
   return (
-    <div className="bg-surface-900 rounded-xl border border-gray-800 p-5 animate-slide-in">
-      <div className="flex items-center gap-2 mb-4">
-        <Brain className="w-4 h-4 text-primary-400" />
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Razonamiento de los Agentes</h3>
+    <div className="animate-slide-in rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
+        <Brain className="h-4 w-4 text-primary-600" />
+        <h3 className="text-sm font-medium uppercase tracking-wider text-gray-700">Razonamiento de los Agentes</h3>
       </div>
-      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+      <div className="max-h-[500px] space-y-3 overflow-y-auto pr-1">
         {events.map((ev, i) => {
           const config = stageConfig[ev.stage] || { label: ev.stage, icon: Bot, thinkingMsg: 'Procesando...' };
-          const Icon = config.icon;
+          const StageIcon = config.icon;
           const isProcessing = ev.status === 'processing';
           const isCompleted = ev.status === 'completed';
+          const StatusIcon = isProcessing ? Loader2 : isCompleted ? CheckCircle2 : AlertTriangle;
+          const statusIconClass = isProcessing
+            ? 'text-primary-600 animate-spin'
+            : isCompleted
+              ? 'text-emerald-600'
+              : 'text-red-600';
           const insight = isCompleted && ev.data ? extractInsight(ev.stage, ev.data) : null;
 
           return (
-            <div key={i} className={`rounded-lg transition-all duration-500 ${isProcessing ? 'bg-primary-900/20 border border-primary-800/50' : isCompleted ? 'bg-surface-800/60 border border-gray-700/50' : 'bg-red-900/20 border border-red-800/50'}`}>
-              {/* Header */}
-              <div className="flex items-center gap-2 px-4 py-2.5">
-                <div className={`p-1 rounded ${isProcessing ? 'bg-primary-800/40' : isCompleted ? 'bg-green-800/30' : 'bg-red-800/30'}`}>
-                  <Icon className={`w-3.5 h-3.5 ${isProcessing ? 'text-primary-400' : isCompleted ? 'text-green-400' : 'text-red-400'}`} />
+            <div key={i} className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <StatusIcon className={`h-4 w-4 ${statusIconClass}`} />
+                <div className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-gray-50">
+                  <StageIcon className="h-3.5 w-3.5 text-gray-400" />
                 </div>
-                <span className={`text-xs font-semibold ${isProcessing ? 'text-primary-300' : isCompleted ? 'text-green-300' : 'text-red-300'}`}>
-                  {config.label}
-                </span>
-                <span className="text-[10px] text-gray-600 ml-auto">{formatTime(ev.timestamp)}</span>
-                {isProcessing && <Clock className="w-3 h-3 text-primary-400 animate-pulse" />}
-                {isCompleted && <CheckCircle2 className="w-3 h-3 text-green-400" />}
+                <span className="text-sm font-semibold text-gray-800">{config.label}</span>
+                <span className="ml-auto text-xs text-gray-500">{formatTime(ev.timestamp)}</span>
               </div>
 
-              {/* Body — thinking or results */}
-              <div className="px-4 pb-3">
-                {isProcessing && (
-                  <p className="text-xs text-gray-400 italic animate-pulse">{config.thinkingMsg}</p>
-                )}
+              <div className="pt-3">
+                {isProcessing && <p className="text-sm italic text-gray-600">{config.thinkingMsg}</p>}
 
                 {isCompleted && insight && (
                   <div className="space-y-2">
-                    {/* Key findings as tags */}
                     {insight.details.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
-                        {insight.details.map((d, j) => (
-                          <span key={j} className="inline-flex items-center px-2 py-0.5 text-[11px] rounded-md bg-surface-900/80 text-gray-300 border border-gray-700/50">
-                            {d}
+                        {insight.details.map((detail, j) => (
+                          <span
+                            key={j}
+                            className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-700"
+                          >
+                            {detail}
                           </span>
                         ))}
                       </div>
                     )}
-                    {/* AI reasoning text */}
                     {insight.summary && (
-                      <p className="text-xs text-gray-400 leading-relaxed border-l-2 border-gray-700 pl-3 mt-1">
+                      <p className="mt-1 border-l-2 border-primary-200 pl-3 text-sm leading-relaxed text-gray-600">
                         {insight.summary}
                       </p>
                     )}
                   </div>
                 )}
 
-                {!isProcessing && !isCompleted && (
-                  <p className="text-xs text-red-400">Error en el procesamiento del agente</p>
-                )}
+                {!isProcessing && !isCompleted && <p className="text-sm text-red-700">Error en el procesamiento del agente</p>}
               </div>
             </div>
           );

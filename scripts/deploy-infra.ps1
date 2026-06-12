@@ -46,7 +46,7 @@ Write-Host "   ACR:              $acrLoginServer"
 # Create .env
 $envContent = @"
 AZURE_OPENAI_ENDPOINT=$openAiEndpoint
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_DEPLOYMENT=gpt-5.4-mini
 APIM_GATEWAY_URL=$apimUrl
 ACR_NAME=$acrName
 FRONTEND_URL=http://localhost:5173

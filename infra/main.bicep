@@ -13,17 +13,26 @@ param baseName string = 'ins-ai-demo'
 @description('Azure region for resources')
 param location string = resourceGroup().location
 
-@description('Azure OpenAI model deployment name')
-param openAiModelName string = 'gpt-4o'
+@description('Primary chat model deployment name (used by all reasoning agents)')
+param chatModelName string = 'gpt-5.4-mini'
 
-@description('Azure OpenAI model version')
-param openAiModelVersion string = '2024-11-20'
+@description('Primary chat model version')
+param chatModelVersion string = '2026-03-17'
+
+@description('Realtime voice model deployment name (gpt-realtime-mini for cost-optimized voice)')
+param voiceModelName string = 'gpt-realtime-mini'
+
+@description('Realtime voice model version')
+param voiceModelVersion string = '2025-12-15'
 
 @description('APIM publisher name')
 param apimPublisherName string = 'Insurance AI Demo'
 
 @description('APIM publisher email')
 param apimPublisherEmail string = 'admin@insurance-ai-demo.com'
+
+@description('Object ID of the principal (user or service principal) that should get Cosmos DB data-plane access. Leave empty to skip the role assignment.')
+param cosmosDataPlanePrincipalId string = ''
 
 // ============================================================================
 // Variables
@@ -39,6 +48,7 @@ var staticWebAppName = '${baseName}-swa-${uniqueSuffix}'
 var appInsightsName = '${baseName}-ai-${uniqueSuffix}'
 var logAnalyticsName = '${baseName}-law-${uniqueSuffix}'
 var aiServicesName = '${baseName}-ais-${uniqueSuffix}'
+var cosmosName = '${baseName}-cosmos-${uniqueSuffix}'
 
 // ============================================================================
 // Monitoring: Log Analytics + Application Insights
@@ -51,7 +61,9 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    // Cost optimization: 30d -> 14d retention (saves ~50% on retention charges).
+    // Bump to 30+ when promoted to production with regulatory retention needs.
+    retentionInDays: 14
   }
 }
 
@@ -62,6 +74,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
+    // Cost optimization: ingest only 10% of telemetry (saves ~90% on ingestion
+    // for high-volume scenarios). Bump back to 100 when investigating issues.
+    SamplingPercentage: 10
   }
 }
 
@@ -82,38 +97,51 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+// ============================================================================
+// Azure OpenAI deployments
+// ============================================================================
+// We deploy two models on the same OpenAI account:
+//   1) chat model (gpt-5.4-mini) — used by Intake / Risk / Compliance agents
+//   2) realtime voice model (gpt-realtime-mini) — used by the voice channel
+// GlobalStandard SKU is pure PayGo: capacity sets the TPM cap but billing is
+// per-token used. No reserved capacity charge.
+
+resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: openAiModelName
+  name: chatModelName
   sku: {
     name: 'GlobalStandard'
-    capacity: 30
+    capacity: 10
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: openAiModelName
-      version: openAiModelVersion
+      name: chatModelName
+      version: chatModelVersion
     }
   }
 }
 
-resource embeddingsDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource voiceDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: 'text-embedding-ada-002'
+  name: voiceModelName
   sku: {
-    name: 'Standard'
-    capacity: 30
+    name: 'GlobalStandard'
+    capacity: 1
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'text-embedding-ada-002'
-      version: '2'
+      name: voiceModelName
+      version: voiceModelVersion
     }
   }
-  dependsOn: [gpt4oDeployment]
+  dependsOn: [chatDeployment]
 }
+
+// NOTE: text-embedding-ada-002 deployment was removed (no code path used it).
+// If RAG over policy documents is added later, deploy text-embedding-3-small
+// (cheaper and higher quality than ada-002) on demand.
 
 // ============================================================================
 // Azure AI Services (Foundry-compatible)
@@ -172,7 +200,12 @@ resource apim 'Microsoft.ApiManagement/service@2023-09-01-preview' = {
   name: apimName
   location: location
   sku: {
-    name: 'StandardV2'
+    // Cost optimization: BasicV2 (~150eur/mo) instead of StandardV2 (~600eur/mo).
+    // BasicV2 fully supports the AI Gateway policy suite (llm-content-safety,
+    // azure-openai-token-limit, azure-openai-emit-token-metric, managed-identity
+    // auth) which is what this demo showcases. Promote to StandardV2 for
+    // production traffic (regional HA, more throughput, custom domains).
+    name: 'BasicV2'
     capacity: 1
   }
   identity: {
@@ -215,6 +248,93 @@ resource apimContentSafetyBackend 'Microsoft.ApiManagement/service/backends@2023
       validateCertificateChain: true
       validateCertificateName: true
     }
+  }
+}
+
+// ============================================================================
+// APIM API: Azure OpenAI passthrough — agents call /openai/* on the gateway
+// ============================================================================
+
+resource apimOpenAiApi 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
+  parent: apim
+  name: 'azure-openai'
+  properties: {
+    displayName: 'Azure OpenAI (governed)'
+    description: 'AI Gateway in front of Azure OpenAI: managed-identity auth, content safety, token rate-limit, audit log, token metrics.'
+    path: 'openai-gov'
+    protocols: ['https']
+    serviceUrl: '${openAi.properties.endpoint}openai'
+    subscriptionRequired: true
+    apiType: 'http'
+  }
+}
+
+// Single passthrough operation matching every Azure OpenAI route (deployments/{id}/chat/completions, etc.)
+resource apimOpenAiOperation 'Microsoft.ApiManagement/service/apis/operations@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'openai-passthrough'
+  properties: {
+    displayName: 'Azure OpenAI passthrough'
+    method: 'POST'
+    urlTemplate: '/*'
+  }
+}
+
+// Apply the AI Gateway policy XML (loaded from infra/apim-policy.xml)
+resource apimOpenAiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {
+  parent: apimOpenAiApi
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('apim-policy.xml')
+  }
+}
+
+// One subscription per agent → token-limit & metrics are sliced per agent
+resource apimAgentProduct 'Microsoft.ApiManagement/service/products@2023-09-01-preview' = {
+  parent: apim
+  name: 'insurance-agents'
+  properties: {
+    displayName: 'Insurance AI Agents'
+    description: 'Product that groups subscriptions for the multi-agent pipeline (intake, risk, compliance, orchestrator).'
+    state: 'published'
+    subscriptionRequired: true
+    approvalRequired: false
+  }
+}
+
+resource apimAgentProductApi 'Microsoft.ApiManagement/service/products/apis@2023-09-01-preview' = {
+  parent: apimAgentProduct
+  name: apimOpenAiApi.name
+}
+
+resource apimSubscriptionIntake 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-claims-intake'
+  properties: {
+    displayName: 'Claims Intake Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionRisk 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-risk-assessment'
+  properties: {
+    displayName: 'Risk & Fraud Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
+  }
+}
+
+resource apimSubscriptionCompliance 'Microsoft.ApiManagement/service/subscriptions@2023-09-01-preview' = {
+  parent: apim
+  name: 'sub-compliance'
+  properties: {
+    displayName: 'Compliance Agent'
+    scope: '/products/${apimAgentProduct.id}'
+    state: 'active'
   }
 }
 
@@ -281,11 +401,93 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 }
 
 // ============================================================================
+// Cosmos DB (NoSQL) - persistencia de siniestros procesados
+// ============================================================================
+// Container particionado por /customer_id (alta cardinalidad, query pattern
+// dominante: "siniestros del cliente X"). Modo serverless para minimizar coste
+// en demo. AAD-only: deshabilitamos las claves locales y usamos data-plane RBAC.
+
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: cosmosName
+  location: location
+  kind: 'GlobalDocumentDB'
+  properties: {
+    databaseAccountOfferType: 'Standard'
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+      }
+    ]
+    capabilities: [
+      { name: 'EnableServerless' }
+    ]
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
+  parent: cosmos
+  name: 'insurance-claims'
+  properties: {
+    resource: {
+      id: 'insurance-claims'
+    }
+  }
+}
+
+resource cosmosClaimsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDb
+  name: 'claims'
+  properties: {
+    resource: {
+      id: 'claims'
+      partitionKey: {
+        paths: ['/customer_id']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          { path: '/*' }
+        ]
+        excludedPaths: [
+          { path: '/_etag/?' }
+        ]
+      }
+      defaultTtl: -1
+    }
+  }
+}
+
+// Built-in Cosmos DB Data Contributor (data-plane RBAC, NOT ARM RBAC)
+var cosmosDataContributorRoleId = '${cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+
+resource cosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(cosmosDataPlanePrincipalId)) {
+  parent: cosmos
+  name: guid(cosmos.id, cosmosDataPlanePrincipalId, 'data-contributor')
+  properties: {
+    roleDefinitionId: cosmosDataContributorRoleId
+    principalId: cosmosDataPlanePrincipalId
+    scope: cosmos.id
+  }
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
 output openAiEndpoint string = openAi.properties.endpoint
 output openAiName string = openAi.name
+output chatDeploymentName string = chatDeployment.name
+output voiceDeploymentName string = voiceDeployment.name
+output aiServicesEndpoint string = aiServices.properties.endpoint
+output aiServicesName string = aiServices.name
 output apimGatewayUrl string = apim.properties.gatewayUrl
 output apimName string = apim.name
 output acrLoginServer string = acr.properties.loginServer
@@ -295,4 +497,6 @@ output containerAppEnvId string = containerAppEnv.id
 output staticWebAppName string = staticWebApp.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
-output aiServicesEndpoint string = aiServices.properties.endpoint
+output cosmosEndpoint string = cosmos.properties.documentEndpoint
+output cosmosDatabaseName string = cosmosDb.name
+output cosmosContainerName string = cosmosClaimsContainer.name

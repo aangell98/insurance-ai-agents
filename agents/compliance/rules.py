@@ -96,7 +96,7 @@ def evaluate_compliance(
     if fraud_value >= RULES["fraud_auto_reject_threshold"]:
         decision = "reject"
         reasons.append(
-            f"Fraud probability ({fraud_probability}) exceeds rejection threshold "
+            f"Probabilidad de fraude ({fraud_probability}) supera el umbral de rechazo "
             f"({RULES['fraud_auto_reject_threshold']})"
         )
 
@@ -106,8 +106,8 @@ def evaluate_compliance(
             if decision != "reject":
                 decision = "human_review"
             reasons.append(
-                f"Claim amount ({claim_amount}€) exceeds mandatory human review "
-                f"threshold ({RULES['human_review_threshold']}€)"
+                f"El monto del siniestro ({claim_amount}€) supera el umbral de revisión humana "
+                f"obligatoria ({RULES['human_review_threshold']}€)"
             )
 
     # Check auto-approve limits
@@ -115,7 +115,7 @@ def evaluate_compliance(
         if decision == "approve":
             decision = "human_review"
         reasons.append(
-            f"Claim amount ({claim_amount}€) exceeds auto-approve limit "
+            f"El monto del siniestro ({claim_amount}€) supera el límite de aprobación automática "
             f"({RULES['auto_approve_max_amount']}€)"
         )
 
@@ -124,12 +124,12 @@ def evaluate_compliance(
         if decision == "approve":
             decision = "human_review"
         reasons.append(
-            f"Risk score ({risk_score}) exceeds auto-approve maximum "
+            f"El score de riesgo ({risk_score}) supera el máximo permitido para aprobación automática "
             f"({RULES['max_risk_score_auto_approve']})"
         )
 
     if not reasons:
-        reasons.append("All checks passed - eligible for automatic approval")
+        reasons.append("Todos los controles superados · apto para aprobación automática")
 
     return {
         "decision": decision,

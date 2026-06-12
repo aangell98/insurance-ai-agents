@@ -45,7 +45,7 @@ echo ""
 echo "📝 Creating .env file..."
 cat > .env << EOF
 AZURE_OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_DEPLOYMENT=gpt-5.4-mini
 APIM_GATEWAY_URL=${APIM_URL}
 ACR_NAME=${ACR_NAME}
 FRONTEND_URL=http://localhost:5173

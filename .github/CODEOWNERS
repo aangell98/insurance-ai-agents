@@ -4,27 +4,34 @@
 # Each agent domain is owned by its respective team.
 # All changes require review from the domain owner.
 # This enforces governance: no agent can change without team approval.
+#
+# NOTE: For the demo, every path is owned by @aangell98 (repo owner) so PRs
+# can be self-merged. In production, replace with real GitHub teams such as
+# @insurance-org/platform-team, @insurance-org/risk-team, etc.
 # ============================================================================
 
 # Platform team owns infrastructure and orchestration
-/infra/                         @platform-team
-/agents/orchestrator/           @platform-team
-/.github/                       @platform-team
-/backend/                       @platform-team
+/infra/                         @aangell98
+/agents/orchestrator/           @aangell98
+/.github/                       @aangell98
+/backend/                       @aangell98
 
 # Claims team owns the intake agent
-/agents/claims-intake/          @claims-team
+/agents/claims-intake/          @aangell98
 
 # Risk team owns the risk assessment agent
-/agents/risk-assessment/        @risk-team
+/agents/risk-assessment/        @aangell98
 
 # Compliance team owns the compliance agent — CRITICAL for regulatory changes
-/agents/compliance/             @compliance-team
+/agents/compliance/             @aangell98
+
+# Evals are guarded by all teams — a regression in any agent must be reviewed
+/evals/                         @aangell98
 
 # Dashboard is shared — any team lead can review
-/dashboard/                     @platform-team @claims-team
+/dashboard/                     @aangell98
 
 # Root config files require platform team approval
-/*.yaml                         @platform-team
-/*.bicep                        @platform-team
-/Dockerfile*                    @platform-team
+/*.yaml                         @aangell98
+/*.bicep                        @aangell98
+/Dockerfile*                    @aangell98

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" width="260" height="64" role="img" aria-label="Helix Insurance">
+  <title>Helix Insurance</title>
+
+  <!-- Brand mark: stylised double-helix / DNA strand -->
+  <g transform="translate(8, 6)">
+    <!-- Outer ring gradient simulation via two arcs -->
+    <circle cx="26" cy="26" r="24" fill="#0F172A"/>
+
+    <!-- Left strand arc (teal) -->
+    <path d="M14,8 C6,16 6,36 14,44" stroke="#06B6D4" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- Right strand arc (indigo) -->
+    <path d="M38,8 C46,16 46,36 38,44" stroke="#6366F1" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+    <!-- Cross-rungs -->
+    <line x1="13" y1="16" x2="39" y2="16" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <line x1="10" y1="26" x2="42" y2="26" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+    <line x1="13" y1="36" x2="39" y2="36" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(74, 0)">
+    <text
+      x="0" y="33"
+      font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+      font-size="24" font-weight="700"
+      fill="#0F172A"
+    >Helix</text>
+    <text
+      x="0" y="52"
+      font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+      font-size="10" font-weight="600"
+      fill="#475569"
+      letter-spacing="3"
+    >INSURANCE</text>
+  </g>
+</svg>
