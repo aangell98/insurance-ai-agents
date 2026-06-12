@@ -47,7 +47,7 @@ export const BRAND: BrandConfig = {
   productName: 'Insurance AI',
   productNameAccent: 'Claims Intelligence',
   voiceAssistantName: 'Leo',
-  logoUrl: '/brand-logo.svg',
+  logoUrl: '/brand-logo.png',
   logoAlt: 'Helix Insurance',
   tagline: 'Plataforma comercial para tramitación inteligente de siniestros',
   caseStudyDescription:
