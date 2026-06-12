@@ -319,15 +319,18 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
           </div>
 
           <div className="space-y-4">
-            <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-3 shadow-md">
+            <div className="mx-auto mb-4 inline-flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-3 shadow-md">
               <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-10 w-auto" />
+              {!BRAND.logoHasWordmark && (
+                <span className="text-2xl font-bold tracking-tight text-gray-900">{BRAND.name}</span>
+              )}
             </div>
             <h2 className="text-4xl font-semibold tracking-tight md:text-6xl">
               <span className="text-gray-900">{BRAND.productName}</span>{' '}
               <span className="text-primary-600">{BRAND.productNameAccent}</span>
             </h2>
             <p className="mx-auto max-w-3xl text-lg leading-relaxed text-gray-600 md:text-xl">
-              Caso de uso: {BRAND.name} — {BRAND.caseStudyDescription}
+              Caso de uso: {BRAND.name} · {BRAND.caseStudyDescription}
             </p>
           </div>
 

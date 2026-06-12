@@ -97,7 +97,7 @@ function extractInsight(stage: string, data: Record<string, unknown>): { summary
     const details: string[] = [];
     if (decision) {
       const label = { approve: '✅ APROBADO', human_review: '⚠️ REVISIÓN HUMANA', reject: '❌ RECHAZADO' }[decision] || decision;
-      details.push(`${label} — ${((confidence || 0) * 100).toFixed(0)}% confianza`);
+      details.push(`${label} · ${((confidence || 0) * 100).toFixed(0)}% confianza`);
     }
     return { summary: reasoning, details };
   }
