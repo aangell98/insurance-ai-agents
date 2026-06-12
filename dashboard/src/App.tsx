@@ -241,18 +241,21 @@ export default function App() {
       {/* Header */}
       <header className="border-b border-gray-200 bg-white/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <img
               src={BRAND.logoUrl}
               alt={BRAND.logoAlt}
               className="h-10 w-auto"
             />
+            {!BRAND.logoHasWordmark && (
+              <span className="text-lg font-bold tracking-tight text-gray-900">{BRAND.name}</span>
+            )}
             <div className="hidden md:block h-10 w-px bg-gray-200" />
             <div className="hidden md:block">
               <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
                 {BRAND.productName} <span className="text-primary-600">{BRAND.productNameAccent}</span>
               </h1>
-              <p className="text-xs text-gray-500">Multi-Agent Decision Platform — Governed &amp; Auditable</p>
+              <p className="text-xs text-gray-500">Multi-Agent Decision Platform · Governed &amp; Auditable</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-600">

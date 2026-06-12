@@ -117,7 +117,7 @@ export default function PolicyView() {
                 required
                 disabled={noCustomers}
               >
-                <option value="">— Selecciona un cliente —</option>
+                <option value="">Selecciona un cliente</option>
                 {customers.map((customer) => (
                   <option key={customer.customer_id} value={customer.customer_id}>
                     {customer.customer_id} · {customer.name} ({customer.risk_profile})

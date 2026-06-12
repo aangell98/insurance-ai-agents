@@ -329,7 +329,7 @@ function DecisionsByDayChart({ days }: { days: DailyDecisionPoint[] }) {
         {days.map((day, index) => {
           const x = padding.left + (index * groupWidth) + ((groupWidth - barWidth) / 2);
           let accumulatedHeight = 0;
-          const tooltip = `${day.fullLabel} — ${formatNumber(day.total, 0)} decisiones (${formatCurrency(day.amount)} procesados)`;
+          const tooltip = `${day.fullLabel} · ${formatNumber(day.total, 0)} decisiones (${formatCurrency(day.amount)} procesados)`;
 
           return (
             <g key={day.key}>
