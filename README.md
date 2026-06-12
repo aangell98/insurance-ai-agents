@@ -59,7 +59,7 @@ sequenceDiagram
     participant R as 📊 Risk
     participant K as ✅ Compliance
     participant G as 🛡️ APIM Gateway
-    participant M as 🧠 GPT-4o
+    participant M as 🧠 GPT-5.4-mini
 
     C->>D: Reporta siniestro + evidencias
     D->>B: POST /api/claims (JWT)
@@ -88,7 +88,7 @@ sequenceDiagram
 ### 0. Prerequisitos
 - **Python 3.12+** y **Node 20+**
 - **Azure CLI** autenticado (`az login`)
-- (Opcional) Suscripción Azure con cuota para OpenAI GPT-4o + APIM Standard
+- (Opcional) Suscripción Azure con cuota para OpenAI GPT-5.4-mini + APIM Standard
 
 ### 1. Backend
 ```powershell
@@ -183,7 +183,7 @@ Cada agente está bajo el control de un equipo distinto. Un cambio en `agents/co
 > *En esta demo todos los paths apuntan a `@aangell98` para permitir self-merge. En producción se sustituye por equipos reales.*
 
 ### Eval Gate en cada PR
-El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.yml) se dispara automáticamente cuando se tocan `agents/**` o `evals/**`. Ejecuta el dataset dorado contra GPT-4o real y publica un comentario en el PR con:
+El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.yml) se dispara automáticamente cuando se tocan `agents/**` o `evals/**`. Ejecuta el dataset dorado contra GPT-5.4-mini real y publica un comentario en el PR con:
 
 | Caso | Decisión | Confianza | Risk | Security |
 |------|----------|-----------|------|----------|
@@ -234,7 +234,7 @@ El cambio:
 | Capa | Tecnología |
 |------|-----------|
 | **Orquestación** | Microsoft Agent Framework v1.4 (con fallback a orquestador propio) |
-| **Modelo** | Azure OpenAI GPT-4o (vía APIM Gateway) |
+| **Modelo** | Azure OpenAI GPT-5.4-mini (vía APIM Gateway) |
 | **Gateway** | Azure API Management (Standard + políticas custom) |
 | **Backend** | FastAPI 0.115 · WebSocket streaming · Pydantic v2 |
 | **Frontend** | React 18 · TypeScript · Tailwind 3 · Vite 6 · Lucide |

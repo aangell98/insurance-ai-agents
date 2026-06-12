@@ -36,15 +36,15 @@ export interface BrandConfig {
 }
 
 export const BRAND: BrandConfig = {
-  name: 'Acme Insurance',
-  shortName: 'Acme',
+  name: 'Helix Insurance',
+  shortName: 'Helix',
   productName: 'Insurance AI',
   productNameAccent: 'Claims Intelligence',
   voiceAssistantName: 'Leo',
   logoUrl: '/brand-logo.svg',
-  logoAlt: 'Acme Insurance',
+  logoAlt: 'Helix Insurance',
   tagline: 'Plataforma comercial para tramitación inteligente de siniestros',
   caseStudyDescription:
     'Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.',
-  partnerBannerName: 'Acme Insurance',
+  partnerBannerName: 'Helix Insurance',
 };

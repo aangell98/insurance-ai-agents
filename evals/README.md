@@ -8,7 +8,7 @@ pull request that touches the agents.
 - Loads `golden_dataset.json` — a curated set of claim scenarios with
   expected outcomes (decision, risk score, security flagging).
 - Runs the full multi-agent pipeline (`orchestrator → intake → risk → compliance`)
-  against each scenario, calling the real Azure OpenAI GPT-4o.
+  against each scenario, calling the real Azure OpenAI GPT-5.4-mini.
 - Asserts the result against the expectations and writes
   `last_report.json` with per-case detail and an aggregate pass rate.
 - In CI (`.github/workflows/eval-on-pr.yml`) the workflow:
