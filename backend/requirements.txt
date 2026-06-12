@@ -12,6 +12,8 @@ aiohttp>=3.9.0
 # Persistencia y autenticación
 azure-cosmos>=4.7.0
 PyJWT[crypto]>=2.9.0
+# Observabilidad: trazas distribuidas a Application Insights (FastAPI + httpx)
+azure-monitor-opentelemetry>=1.6.0
 # Microsoft Agent Framework — sólo los sub-paquetes que importa el código.
 # Evitamos el meta-paquete `agent-framework[all]` porque arrastra ~25 deps
 # beta cuyas versiones nuevas (foundry 1.5+, etc.) requieren core>=1.5 y
