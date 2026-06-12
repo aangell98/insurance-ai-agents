@@ -39,8 +39,8 @@ _PROCESS_CLAIM = None
 _FOUNDRY_TOKEN = None
 
 DEFAULT_FOUNDRY_ENDPOINT = (
-    "https://ins-ai-demo-ais-jii435hjlwyyc.services.ai.azure.com/api/projects/"
-    "insurance-agents/agents/insurance-claims-orchestrator/endpoint/protocols/invocations"
+    "https://ai-account-kzrzuypevlok4.services.ai.azure.com/api/projects/"
+    "ai-project-ins-ai-foundry/agents/insurance-claims-orchestrator/endpoint/protocols/invocations"
 )
 
 
