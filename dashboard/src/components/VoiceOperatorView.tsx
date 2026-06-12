@@ -303,7 +303,7 @@ export default function VoiceOperatorView({ sessionId }: { sessionId: string }) 
 
   const statusBadge = useMemo(() => {
     if (status === 'connecting')
-      return { label: 'Conectando al canal…', cls: 'bg-blue-50 text-blue-700 ring-blue-200', icon: <Loader2 className="h-4 w-4 animate-spin" /> };
+      return { label: 'Conectando al canal…', cls: 'bg-primary-50 text-primary-700 ring-primary-200', icon: <Loader2 className="h-4 w-4 animate-spin" /> };
     if (status === 'live')
       return { label: 'Llamada en directo', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: <Activity className="h-4 w-4 animate-pulse" /> };
     if (status === 'ended')
@@ -419,14 +419,14 @@ export default function VoiceOperatorView({ sessionId }: { sessionId: string }) 
                       s === 'done'
                         ? 'bg-emerald-100 text-emerald-700'
                         : s === 'running'
-                          ? 'bg-blue-100 text-blue-700'
+                          ? 'bg-primary-100 text-primary-700'
                           : 'bg-gray-200 text-gray-500'
                     }`}>
                       {s === 'running' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : STAGE_ICON[stage]}
                     </span>
                     <span className="flex-1 text-sm font-medium text-gray-800">{STAGE_LABEL[stage]}</span>
                     <span className={`text-[11px] font-semibold uppercase tracking-wide ${
-                      s === 'done' ? 'text-emerald-700' : s === 'running' ? 'text-blue-700' : 'text-gray-400'
+                      s === 'done' ? 'text-emerald-700' : s === 'running' ? 'text-primary-700' : 'text-gray-400'
                     }`}>
                       {s === 'done' ? 'Listo' : s === 'running' ? 'En curso' : 'En espera'}
                     </span>

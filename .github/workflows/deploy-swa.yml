@@ -2,7 +2,7 @@ name: Deploy Dashboard to Static Web App
 
 on:
   push:
-    branches: [feat/whitelabel-preset, main]
+    branches: [main, santander]
     paths:
       - 'dashboard/**'
   workflow_dispatch:
@@ -25,6 +25,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: dashboard/package-lock.json
 
+      - name: Resolve backend URL per brand
+        id: backend
+        shell: bash
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/santander" ]; then
+            echo "url=https://insurance-ai-backend.lemonsky-1778099a.swedencentral.azurecontainerapps.io" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://insurance-ai-backend-acme.lemonsky-1778099a.swedencentral.azurecontainerapps.io" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
         working-directory: dashboard
         run: npm ci
@@ -32,12 +42,12 @@ jobs:
       - name: Build dashboard
         working-directory: dashboard
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_URL: ${{ steps.backend.outputs.url }}
         run: npm run build
 
-      # feat/whitelabel-preset -> SWA Helix (ins-ai-demo-swa-acme)
-      - name: Deploy to SWA (Helix / whitelabel)
-        if: github.ref == 'refs/heads/feat/whitelabel-preset'
+      # main -> SWA Helix / white-label (ins-ai-demo-swa-acme)
+      - name: Deploy to SWA (Helix / white-label)
+        if: github.ref == 'refs/heads/main'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
@@ -47,9 +57,9 @@ jobs:
           output_location: dist
           skip_app_build: true
 
-      # main -> SWA Santander (ins-ai-demo-swa-jii435hjlwyyc)
+      # santander -> SWA Santander (ins-ai-demo-swa-jii435hjlwyyc / red-cliff)
       - name: Deploy to SWA (Santander)
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/santander'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SANTANDER }}

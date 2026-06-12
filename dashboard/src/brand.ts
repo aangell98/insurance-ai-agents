@@ -33,6 +33,12 @@ export interface BrandConfig {
   caseStudyDescription: string;
   /** Label used for the "powered by partner" badge in the hero use-case grid. */
   partnerBannerName: string;
+  /**
+   * Primary brand color as a hex string, for raw SVG/canvas fills that cannot
+   * use Tailwind classes. Keep in sync with the `primary-600` value in
+   * `tailwind.config.js`.
+   */
+  primaryHex: string;
 }
 
 export const BRAND: BrandConfig = {
@@ -47,4 +53,5 @@ export const BRAND: BrandConfig = {
   caseStudyDescription:
     'Procesamiento de partes de seguro automatizado con IA gobernada. Resolución de siniestros auditable, trazable y en segundos.',
   partnerBannerName: 'Helix Insurance',
+  primaryHex: '#2563EB',
 };

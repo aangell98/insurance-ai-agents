@@ -1,5 +1,6 @@
 import { ShieldAlert, ShieldCheck, AlertOctagon, Loader2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { BRAND } from '../../brand';
 
 export type FraudProbability = 'low' | 'medium' | 'high';
 
@@ -111,7 +112,7 @@ export default function RiskGaugePanel({
   const warmingUp = active && targetScore === null && fraudProbability === null;
   const fraudMeta = active && fraudProbability ? FRAUD_META[fraudProbability] : null;
   const fillScale = fraudMeta?.scale ?? (fraudPending ? 0.14 : 0);
-  const fillColor = fraudMeta?.color ?? (warmingUp ? '#2563EB' : fraudPending ? '#2563EB' : '#94a3b8');
+  const fillColor = fraudMeta?.color ?? (warmingUp ? BRAND.primaryHex : fraudPending ? BRAND.primaryHex : '#94a3b8');
   const pillLabel = fraudMeta?.label ?? (fraudPending ? 'CALCULANDO' : '—');
   const pillTone = fraudMeta?.pill ?? (fraudPending
     ? `border-primary-200 bg-primary-50 text-primary-700${warmingUp ? '' : ' animate-pulse'}`
@@ -259,16 +260,16 @@ export default function RiskGaugePanel({
                   />
                   <line
                     x1="150" y1="150" x2="234" y2="150"
-                    stroke={active ? '#2563EB' : '#94a3b8'}
+                    stroke={active ? BRAND.primaryHex : '#94a3b8'}
                     strokeWidth="5" strokeLinecap="round"
                   />
-                  <circle cx="234" cy="150" r="3" fill={active ? '#2563EB' : '#94a3b8'} />
+                  <circle cx="234" cy="150" r="3" fill={active ? BRAND.primaryHex : '#94a3b8'} />
                 </g>
               ) : null}
               {/* Pivot */}
               <circle cx="150" cy="150" r="13" fill="#ffffff" stroke="#e5e7eb" strokeWidth="2" />
               {!warmingUp ? (
-                <circle cx="150" cy="150" r="6" fill={active ? '#2563EB' : '#94a3b8'} />
+                <circle cx="150" cy="150" r="6" fill={active ? BRAND.primaryHex : '#94a3b8'} />
               ) : null}
             </svg>
 
@@ -341,7 +342,7 @@ export default function RiskGaugePanel({
                 {warmingUp ? (
                   <g clipPath={`url(#${clipPathId})`}>
                     {/* Pequeño "charco" rojo pulsante en la base del bulbo */}
-                    <circle cx="50" cy="220" r="14" fill="#2563EB" opacity="0.18">
+                    <circle cx="50" cy="220" r="14" fill={BRAND.primaryHex} opacity="0.18">
                       <animate
                         attributeName="opacity"
                         values="0.12;0.32;0.12"
@@ -363,7 +364,7 @@ export default function RiskGaugePanel({
                       { delay: '1.6s', dur: '2.6s', x: 48, r: 3.8, drift: -2 },
                       { delay: '2.0s', dur: '2.5s', x: 52, r: 3,   drift: 2.5 },
                     ].map((b, i) => (
-                      <circle key={i} cx={b.x} cy={210} r={b.r} fill="#2563EB" opacity="0">
+                      <circle key={i} cx={b.x} cy={210} r={b.r} fill={BRAND.primaryHex} opacity="0">
                         <animate
                           attributeName="cy"
                           values="216;28"
