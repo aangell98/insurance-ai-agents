@@ -659,10 +659,15 @@ def _build_workflow() -> Any:
         },
     )
 
-    return SequentialBuilder(
-        participants=[intake_agent, risk_agent, compliance_agent],
-        intermediate_outputs=True,
-    ).build()
+    participants = [intake_agent, risk_agent, compliance_agent]
+    # `intermediate_outputs=True` (agent-framework 1.4.x) was renamed to
+    # `intermediate_output_from="all"` in 1.8.x. The backend pins 1.4.x while the
+    # Foundry hosted-agent runtime requires core>=1.8.1, so support both.
+    try:
+        builder = SequentialBuilder(participants=participants, intermediate_output_from="all")
+    except TypeError:
+        builder = SequentialBuilder(participants=participants, intermediate_outputs=True)
+    return builder.build()
 
 
 def _response_from_completion_items(

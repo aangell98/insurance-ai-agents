@@ -16,6 +16,8 @@ dashboard/.vite/
 infra/
 scripts/
 docs/
+video/
+**/.venv*/
 *.md
 LICENSE
 .env
