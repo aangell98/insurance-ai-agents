@@ -27,6 +27,9 @@ load_dotenv(override=False)
 logger = logging.getLogger(__name__)
 
 USE_MAF_ORCHESTRATOR = os.environ.get("USE_MAF_ORCHESTRATOR", "false").lower() == "true"
+# When true, route claims to the deployed Foundry hosted agent (see foundry_client).
+# Both brand backends set this identically, guaranteeing parity — only branding differs.
+USE_FOUNDRY_AGENT = os.environ.get("USE_FOUNDRY_AGENT", "false").lower() == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +199,12 @@ def _determine_final_decision(
 
 
 async def process_claim(claim_input: dict, progress_callback=None) -> dict:
+    if USE_FOUNDRY_AGENT:
+        try:
+            from .foundry_client import process_claim_foundry
+            return await process_claim_foundry(claim_input, progress_callback)
+        except Exception:
+            logger.exception("Foundry agent call failed, falling back to in-process orchestrator")
     if USE_MAF_ORCHESTRATOR:
         try:
             from .maf_agent import process_claim_maf

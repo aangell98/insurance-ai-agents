@@ -45,6 +45,29 @@ load_dotenv(override=False)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+
+def _configure_tracing() -> None:
+    """Export distributed traces to Application Insights when configured.
+
+    Reliable here because the backend is a long-running container (unlike the
+    ephemeral hosted-agent sandbox). configure_azure_monitor auto-instruments
+    FastAPI (incoming claims) and httpx (the outbound call to the Foundry agent),
+    so each claim shows up as a request + a dependency span in App Insights.
+    """
+    conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
+    if not conn:
+        return
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+
+        configure_azure_monitor(connection_string=conn)
+        logger.info("Azure Monitor tracing configured (App Insights)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Azure Monitor tracing setup failed, continuing without traces: %s", exc)
+
+
+_configure_tracing()
+
 # In-memory stores for demo
 claims_store: dict[str, dict] = {}
 policies_store: dict[str, dict] = dict(POLICIES)  # mutable copy
@@ -83,6 +106,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Trace incoming claims (FastAPI) and the outbound call to the Foundry agent (httpx)
+# so each claim is a full distributed trace in App Insights: request -> Foundry agent.
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip():
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app)
+        HTTPXClientInstrumentor().instrument()
+        logger.info("OpenTelemetry instrumentation enabled (FastAPI + httpx)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OTel FastAPI/httpx instrumentation failed: %s", exc)
 
 
 # ── Models ──

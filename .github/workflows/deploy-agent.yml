@@ -82,6 +82,12 @@ jobs:
 
       - name: Build and push to ACR
         run: |
+          # The orchestrator now deploys to Foundry via direct-code (agents/hosted),
+          # so it has no per-agent Dockerfile. Skip image build when none exists.
+          if [ ! -f "agents/${{ matrix.agent }}/Dockerfile" ]; then
+            echo "No agents/${{ matrix.agent }}/Dockerfile — deployed via direct-code (agents/hosted/scripts/deploy.ps1). Skipping image build."
+            exit 0
+          fi
           TAG=$(date +%Y%m%d%H%M%S)
           IMAGE="${ACR_NAME}.azurecr.io/insurance-ai/${{ matrix.agent }}:${TAG}"
 
