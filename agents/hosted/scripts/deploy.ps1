@@ -17,6 +17,8 @@ param(
   [string]$ApiVersion = "2025-11-15-preview",
   [string]$AppInsightsName = "appi-kzrzuypevlok4",
   [string]$AppInsightsResourceGroup = "rg-ins-ai-foundry",
+  [string]$SecondaryAppInsightsName = "ins-ai-demo-ai-jii435hjlwyyc",
+  [string]$SecondaryAppInsightsResourceGroup = "rg-insurance-ai-demo",
   [switch]$NoTracing
 )
 $ErrorActionPreference = "Stop"
@@ -40,9 +42,20 @@ if (-not $NoTracing) {
   if ($conn) {
     $m = Get-Content $metadata -Raw | ConvertFrom-Json
     $m.definition.environment_variables | Add-Member -NotePropertyName APPLICATIONINSIGHTS_CONNECTION_STRING -NotePropertyValue $conn -Force
+    Write-Host "Tracing: injected App Insights connection from '$AppInsightsName'."
+    # Dual-export: also send the same agent traces to the demo's shared App Insights,
+    # so the waterfall is visible BOTH in the Foundry Tracing tab and the main workspace.
+    if ($SecondaryAppInsightsName) {
+      $conn2 = & $az resource show -g $SecondaryAppInsightsResourceGroup -n $SecondaryAppInsightsName --resource-type "microsoft.insights/components" --query "properties.ConnectionString" -o tsv 2>$null
+      if ($conn2 -and $conn2 -ne $conn) {
+        $m.definition.environment_variables | Add-Member -NotePropertyName APPLICATIONINSIGHTS_CONNECTION_STRING_SECONDARY -NotePropertyValue $conn2 -Force
+        Write-Host "Tracing: dual-export also to '$SecondaryAppInsightsName'."
+      } else {
+        Write-Host "Tracing: secondary App Insights '$SecondaryAppInsightsName' not found or same as primary; single-export."
+      }
+    }
     $effMetadata = Join-Path $env:TEMP "insurance-agent-metadata.json"
     $m | ConvertTo-Json -Depth 10 | Set-Content $effMetadata -Encoding utf8
-    Write-Host "Tracing: injected App Insights connection from '$AppInsightsName'."
   } else {
     Write-Host "Tracing: App Insights '$AppInsightsName' not found; deploying without tracing."
   }
