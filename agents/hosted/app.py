@@ -66,11 +66,14 @@ logger = logging.getLogger("insurance.hosted")
 
 app = InvocationAgentServerHost()
 
-# The hosted runtime sets up the global OpenTelemetry provider (so the agent's own
-# configure_azure_monitor is a no-op). To make the per-agent spans (intake/risk/
-# compliance) also land in Application Insights — without the project↔App Insights
-# connection, which is unavailable on lite accounts — attach an Azure Monitor exporter
-# to the existing provider on first invocation.
+# Export the agent's OTel spans (workflow.run / invoke_agent / chat / execute_tool)
+# to Application Insights so each claim shows up in the Foundry project's Tracing tab.
+#
+# The Foundry hosted runtime installs a MeterProvider (runtime metrics land in the
+# project's App Insights) but leaves the global *tracer* provider as a Proxy/NoOp, so a
+# plain add_span_processor has nothing real to attach to. We therefore install a real
+# SDK TracerProvider when needed. A secondary connection string enables dual-export so
+# the same trace is visible BOTH in Foundry and in the demo's shared App Insights.
 _appinsights_attached = False
 
 
@@ -79,22 +82,65 @@ def _attach_appinsights_exporter() -> None:
     if _appinsights_attached:
         return
     _appinsights_attached = True
-    conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
-    if not conn:
+
+    conns: list[str] = []
+    primary = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
+    if primary:
+        conns.append(primary)
+    secondary = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING_SECONDARY", "").strip()
+    if secondary and secondary != primary:
+        conns.append(secondary)
+    if not conns:
+        logger.warning("No APPLICATIONINSIGHTS_CONNECTION_STRING set; agent traces will not be exported")
         return
+
     try:
         from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
         from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
         provider = trace.get_tracer_provider()
-        if hasattr(provider, "add_span_processor"):
+        # The Foundry runtime already attaches its own exporter to the project's App
+        # Insights (primary) on a real provider. In that case we must NOT re-export to
+        # the primary (it would duplicate every span); we only add the extra targets.
+        # If instead the global tracer is a Proxy/NoOp, the runtime is not exporting
+        # traces, so we install our own provider and own ALL targets (incl. primary).
+        runtime_exports_primary = hasattr(provider, "add_span_processor")
+        if not runtime_exports_primary:
+            logger.info("Global tracer provider is %s; installing an SDK TracerProvider for export", type(provider).__name__)
+            provider = TracerProvider()
+            trace.set_tracer_provider(provider)
+
+        targets = [c for c in conns if c != primary]  # secondary/extra targets
+        if not runtime_exports_primary and primary:
+            targets.insert(0, primary)
+        for conn in targets:
             provider.add_span_processor(BatchSpanProcessor(AzureMonitorTraceExporter(connection_string=conn)))
-            logger.info("Attached Azure Monitor trace exporter to the agent tracer provider")
-        else:
-            logger.warning("Tracer provider %s has no add_span_processor; cannot attach App Insights exporter", type(provider).__name__)
+        logger.info("Attached %d Azure Monitor trace exporter(s) to %s (runtime_exports_primary=%s)", len(targets), type(provider).__name__, runtime_exports_primary)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Could not attach App Insights exporter: %s", exc)
+
+    # Ensure the agent_framework gen_ai instrumentation is active so the spans are
+    # actually created (idempotent with the in-process MAF observability setup).
+    try:
+        from agent_framework.observability import enable_instrumentation
+
+        enable_instrumentation()
+        logger.info("agent_framework instrumentation enabled (hosted)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("enable_instrumentation failed (hosted): %s", exc)
+
+    # This function fully owns observability for the hosted agent. Mark the in-process
+    # MAF orchestrator's setup as already done so it does NOT call configure_azure_monitor
+    # again — that would attach a second exporter to the primary connection and duplicate
+    # every span in the Foundry project's App Insights.
+    try:
+        from agents.orchestrator import maf_agent
+
+        maf_agent._OBSERVABILITY_CONFIGURED = True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not mark MAF observability as configured: %s", exc)
 
 
 _CLAIM_FIELDS = (
