@@ -46,7 +46,7 @@
     <symbol id="logoBrand" viewBox="0 0 100 100">
       <polygon points="50,6 89,28 89,72 50,94 11,72 11,28" fill="#1E40AF"/>
       <polygon points="50,18 78,34 78,66 50,82 22,66 22,34" fill="#2563EB"/>
-      <text x="50" y="64" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="38" font-weight="700" fill="#FFFFFF">A</text>
+      <text x="50" y="64" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="38" font-weight="700" fill="#FFFFFF">H</text>
     </symbol>
 
     <symbol id="iconReact" viewBox="0 0 24 24">
@@ -164,7 +164,7 @@
   <text x="104" y="60" font-size="22" font-weight="600" fill="#1F1F1F">Microsoft</text>
   <text x="232" y="64" font-size="30" font-weight="200" fill="#9AA0A6">×</text>
   <use href="#logoBrand" x="264" y="24" width="56" height="56"/>
-  <text x="332" y="60" font-size="22" font-weight="600" fill="#1E40AF">Acme Insurance</text>
+  <text x="332" y="60" font-size="22" font-weight="600" fill="#1E40AF">Helix Insurance</text>
 
   <text x="860" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1F1F1F">Insurance AI Agents</text>
   <text x="860" y="76" text-anchor="middle" font-size="12" font-weight="400" letter-spacing="3" fill="#5A5A5A">GESTIÓN DE SINIESTROS MULTI-AGENTE GOBERNADA · ARQUITECTURA DE REFERENCIA</text>
@@ -309,7 +309,7 @@
   <g filter="url(#cardShadow)"><rect x="1280" y="585" width="320" height="120" rx="12" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/></g>
   <use href="#iconAOAI" x="1300" y="605" width="56" height="56"/>
   <text x="1370" y="618" font-size="15" font-weight="700" fill="#1F1F1F">Azure OpenAI</text>
-  <text x="1370" y="638" font-size="11" fill="#5A5A5A">GPT-4o · gpt-4o-mini</text>
+  <text x="1370" y="638" font-size="11" fill="#5A5A5A">gpt-5.4-mini · gpt-realtime-mini</text>
   <text x="1300" y="666" font-size="11" fill="#444">endpoint privado · auth MI · streaming</text>
   <text x="1300" y="686" font-size="10" font-style="italic" fill="#888">DefaultAzureCredential / fallback az CLI</text>
   <circle cx="1300" cy="600" r="13" fill="#0078D4"/>

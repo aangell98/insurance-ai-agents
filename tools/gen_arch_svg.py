@@ -15,8 +15,8 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 # Brand tokens — edit these to rebrand the architecture diagram.
-BRAND_NAME = "Acme Insurance"
-BRAND_MARK_LETTER = "A"
+BRAND_NAME = "Helix Insurance"
+BRAND_MARK_LETTER = "H"
 BRAND_PRIMARY = "#2563EB"   # main brand color (blue-600), replaces former {BRAND_PRIMARY}
 BRAND_PRIMARY_DARK = "#1E40AF"   # dark brand color (blue-800), replaces former {BRAND_PRIMARY_DARK}
 
@@ -535,7 +535,7 @@ def build_svg(s: dict[str, str]) -> str:
   <g filter="url(#cardShadow)"><rect x="1280" y="585" width="320" height="120" rx="12" fill="#FFFFFF" stroke="#0078D4" stroke-width="1.5"/></g>
   <use href="#iconAOAI" x="1300" y="605" width="56" height="56"/>
   <text x="1370" y="618" font-size="15" font-weight="700" fill="#1F1F1F">Azure OpenAI</text>
-  <text x="1370" y="638" font-size="11" fill="#5A5A5A">GPT-4o · gpt-4o-mini</text>
+  <text x="1370" y="638" font-size="11" fill="#5A5A5A">gpt-5.4-mini · gpt-realtime-mini</text>
   <text x="1300" y="666" font-size="11" fill="#444">{s['aoai_desc_1']}</text>
   <text x="1300" y="686" font-size="10" font-style="italic" fill="#888">{s['aoai_desc_2']}</text>
   <circle cx="1300" cy="600" r="13" fill="#0078D4"/>

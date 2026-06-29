@@ -1,7 +1,7 @@
 # Whitelabel guide — rebranding the Insurance AI demo
 
 This demo is shipped as a **brand-agnostic preset**. The bundled brand is
-`Acme Insurance` (a generic placeholder). To present this platform to a
+`Helix Insurance` (a generic placeholder). To present this platform to a
 different audience, swap the brand in a few minutes by editing the files
 listed below.
 
@@ -14,16 +14,16 @@ dashboard:
 
 ```ts
 export const BRAND: BrandConfig = {
-  name: 'Acme Insurance',                  // Full legal/marketing name
-  shortName: 'Acme',                       // Compact label
+  name: 'Helix Insurance',                  // Full legal/marketing name
+  shortName: 'Helix',                       // Compact label
   productName: 'Insurance AI',             // Dashboard header
   productNameAccent: 'Claims Intelligence',// Accent fragment (primary color)
   voiceAssistantName: 'Leo',               // Voice IVR character
-  logoUrl: '/brand-logo.svg',              // Header / hero / autoplay logo
-  logoAlt: 'Acme Insurance',
+  logoUrl: '/brand-logo.png',              // Header / hero / autoplay logo
+  logoAlt: 'Helix Insurance',
   tagline: 'Plataforma comercial …',
   caseStudyDescription: 'Procesamiento de partes …',
-  partnerBannerName: 'Acme Insurance',
+  partnerBannerName: 'Helix Insurance',
 };
 ```
 
@@ -36,7 +36,7 @@ needed):
 
 | File | What it is | Recommended size |
 |---|---|---|
-| `dashboard/public/brand-logo.svg` | Horizontal logo shown in header, hero card, autoplay header. | viewBox ~240×64. |
+| `dashboard/public/brand-logo.png` | Horizontal logo shown in header, hero card, autoplay header. | viewBox ~240×64. |
 | `dashboard/public/favicon.svg` | Browser tab icon. | 48×48 square or smaller. |
 
 If you only have a raster logo (PNG/JPG), drop it into `public/`, name it
@@ -78,7 +78,7 @@ configuration) **before** importing the services:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `BRAND_NAME` | `Acme Insurance` | Spoken brand name (voice IVR + analyzer description). |
+| `BRAND_NAME` | `Helix Insurance` | Spoken brand name (voice IVR + analyzer description). |
 | `VOICE_ASSISTANT_NAME` | `Leo` | First name of the voice IVR character. |
 
 Source: `agents/shared/brand.py`. The `SYSTEM_PROMPT` (voice agent) and
@@ -129,7 +129,7 @@ with the `primary` palette.
 ## Quick rebrand checklist
 
 1. `dashboard/src/brand.ts` ← edit BRAND object
-2. `dashboard/public/brand-logo.svg` ← drop in new logo
+2. `dashboard/public/brand-logo.png` ← drop in new logo
 3. `dashboard/public/favicon.svg` ← drop in new favicon
 4. `dashboard/tailwind.config.js` ← replace `primary` palette hex
 5. `dashboard/src/index.css` ← search-and-replace `rgba(37, 99, 235`
@@ -140,3 +140,4 @@ with the `primary` palette.
 10. `cd dashboard && npm run build` to validate the frontend
 11. `python -m py_compile agents/voice/__init__.py agents/content_understanding/agent.py`
     to validate the backend
+
