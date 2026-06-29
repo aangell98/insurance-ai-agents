@@ -117,10 +117,13 @@ Abre el dashboard y pulsa **"Ver demo automática"** desde la pantalla principal
 - Notificaciones flotantes cuando un agente termina
 - Posibilidad de revisitar slides anteriores mientras los demás siguen ejecutando
 
-### 4. Despliegue Azure (opcional)
+### 4. Despliegue completo en Azure (un comando)
+Despliega **toda** la plataforma (infra + backend + dashboard) sin Docker local:
 ```powershell
-.\scripts\deploy-infra.ps1 -ResourceGroup rg-insurance-ai-demo -Location swedencentral
+az login
+.\scripts\deploy.ps1 -ResourceGroup rg-helix-demo -Location swedencentral
 ```
+El script provisiona la infra (Bicep), construye el backend en ACR y lo publica en Container Apps, y compila el dashboard contra esa API y lo sube a Static Web Apps. Al terminar imprime la URL de la app y de la API. Para reskinear pasa `-BrandName "Tu Marca"`. Solo infra base: `.\scripts\deploy-infra.ps1`.
 
 ---
 
