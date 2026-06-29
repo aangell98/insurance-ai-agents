@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" width="720" height="120" role="img" aria-label="Microsoft × Helix Insurance">
-  <title>Microsoft × Helix Insurance</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" width="720" height="120" role="img" aria-label="Microsoft × Santander Insurance">
+  <title>Microsoft × Santander Insurance</title>
 
   <!-- Microsoft 4-square logo (vibrant colors visible on any background) -->
   <g transform="translate(40, 30)">
@@ -23,5 +23,5 @@
   </g>
 
   <!-- Brand wordmark -->
-  <text x="450" y="70" font-family="'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="600" fill="#1E3A8A">Helix Insurance</text>
+  <text x="450" y="70" font-family="'Segoe UI', system-ui, sans-serif" font-size="34" font-weight="600" fill="#1E3A8A">Santander Insurance</text>
 </svg>

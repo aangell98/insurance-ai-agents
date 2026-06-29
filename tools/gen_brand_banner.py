@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "images" / "brand-banner.svg"
 
 # Brand tokens — edit here to rebrand the banner.
-BRAND_NAME = "Helix Insurance"
+BRAND_NAME = "Santander Insurance"
 BRAND_MARK_LETTER = "A"
 BRAND_PRIMARY = "#2563EB"   # blue-600
 BRAND_PRIMARY_DARK = "#1E40AF"   # blue-800
@@ -50,4 +50,5 @@ SVG = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 120\" widt
 
 OUT.write_text(SVG, encoding="utf-8")
 print(f"Wrote {OUT.relative_to(ROOT)} - {len(SVG):,} chars")
+
 

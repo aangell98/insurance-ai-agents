@@ -15,8 +15,8 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 # Brand tokens — edit these to rebrand the architecture diagram.
-BRAND_NAME = "Helix Insurance"
-BRAND_MARK_LETTER = "H"
+BRAND_NAME = "Santander Insurance"
+BRAND_MARK_LETTER = "S"
 BRAND_PRIMARY = "#2563EB"   # main brand color (blue-600), replaces former {BRAND_PRIMARY}
 BRAND_PRIMARY_DARK = "#1E40AF"   # dark brand color (blue-800), replaces former {BRAND_PRIMARY_DARK}
 
@@ -661,3 +661,4 @@ if __name__ == "__main__":
         svg = build_svg(STRINGS[lang])
         out_path.write_text(svg, encoding="utf-8")
         print(f"Wrote {out_path.relative_to(ROOT)} ({lang}) - {len(svg):,} chars")
+
