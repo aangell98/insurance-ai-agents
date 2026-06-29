@@ -1,9 +1,9 @@
 <div align="center">
 
-<img src="images/brand-banner.svg" alt="Microsoft × Acme Insurance" width="540" />
+<img src="images/brand-banner.svg" alt="Microsoft × Helix Insurance" width="540" />
 
 # Insurance AI Agents
-### Governed Multi-Agent Claims Processing — Whitelabel Demo
+### Governed Multi-Agent Claims Processing · Whitelabel Demo
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
 [![Azure](https://img.shields.io/badge/Azure-AI%20Foundry-0078D4?style=flat-square&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/ai-foundry/)
@@ -12,9 +12,9 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![MAF](https://img.shields.io/badge/Microsoft%20Agent%20Framework-1.4.0-5C2D91?style=flat-square&logo=microsoft&logoColor=white)](https://learn.microsoft.com/azure/ai-foundry/agents/)
 
-> **Cómo una organización puede crear, gobernar y operar agentes de IA sobre procesos críticos** — gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software empresarial.
+> **Cómo una organización puede crear, gobernar y operar agentes de IA sobre procesos críticos**: gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software empresarial.
 >
-> 🎨 **Whitelabel preset** — Esta demo está empaquetada como plantilla reskinneable. La marca "Acme Insurance" es un placeholder; reemplázala con la tuya en pocos minutos. Ver **[BRANDING.md](BRANDING.md)**.
+> 🎨 **Whitelabel preset** · Esta demo está empaquetada como plantilla reskinneable. La marca por defecto "Helix Insurance" es un placeholder; reemplázala con la tuya en pocos minutos. Ver **[BRANDING.md](BRANDING.md)**. Existe una segunda marca (Santander) en la rama `santander`, misma app y solo branding distinto.
 
 </div>
 
@@ -27,6 +27,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 | Pilar | Cómo se materializa en la demo |
 |---|---|
 | 🤖 **Multi-agente** | 3 agentes especializados (Intake, Risk, Compliance) orquestados con **Microsoft Agent Framework** |
+| 🎙️ **Multicanal** | Mismo pipeline por web y por **voz en tiempo real** (Azure OpenAI gpt-realtime-mini) |
 | 🛡️ **AI Gateway** | Azure APIM con políticas de Content Safety, token limits, audit logs y managed identity |
 | 📜 **Gobernanza** | CODEOWNERS por dominio + Eval Gate automatizado en cada PR contra dataset dorado |
 | 🔐 **Identidad** | Entra ID (OIDC) para usuarios y federated identity para CI/CD |
@@ -39,7 +40,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 
 <div align="center">
 
-<img src="images/architecture.svg" alt="Insurance AI Agents — Arquitectura de referencia" />
+<img src="images/architecture.svg" alt="Insurance AI Agents · Arquitectura de referencia" />
 
 <sub>🇪🇸 Versión en español arriba · 🇬🇧 <a href="images/architecture-en.svg">English version</a></sub>
 
@@ -134,6 +135,9 @@ insurance-ai-agents/
 │   ├── orchestrator/         # Coordinación multi-agente
 │   │   ├── agent.py          # Orquestador legacy (fallback)
 │   │   └── maf_agent.py      # Microsoft Agent Framework v1.4
+│   ├── voice/                # Canal de voz (gpt-realtime-mini, mismo pipeline)
+│   ├── content_understanding/# Extracción schema-based desde documentos
+│   ├── hosted/               # Agente hosteado en Azure AI Foundry
 │   └── shared/               # Mock data, schemas, common
 ├── backend/
 │   ├── main.py               # FastAPI + WebSocket streaming
@@ -148,7 +152,7 @@ insurance-ai-agents/
 │   │   ├── OperatorView.tsx          # Cola de revisión humana
 │   │   ├── PolicyView.tsx            # Catálogo de pólizas
 │   │   └── SecurityView.tsx          # Eventos APIM + Content Safety
-│   └── public/                       # brand-logo.svg, favicon.svg (whitelabel)
+│   └── public/                       # brand-logo.png, favicon (whitelabel)
 ├── infra/
 │   ├── main.bicep            # APIM + AOAI + Cosmos + Managed Identity
 │   └── apim-policy.xml       # Políticas del AI Gateway
@@ -169,7 +173,7 @@ insurance-ai-agents/
 
 ## 🛡️ Gobernanza enterprise
 
-Esta plataforma no es un PoC más — está diseñada para superar una **revisión de TI bancaria**:
+Esta plataforma no es un PoC más: está diseñada para superar una **revisión de TI bancaria**:
 
 ### CODEOWNERS por dominio
 Cada agente está bajo el control de un equipo distinto. Un cambio en `agents/compliance/` exige aprobación del **equipo de compliance**, no se puede mergear sin ella.
@@ -194,7 +198,7 @@ El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.ym
 
 Si el pass-rate baja, el merge se bloquea.
 
-### APIM AI Gateway — políticas activas
+### APIM AI Gateway · políticas activas
 Definidas en [`infra/apim-policy.xml`](infra/apim-policy.xml) y aplicadas por Bicep:
 
 | Política | Función |
@@ -235,6 +239,8 @@ El cambio:
 |------|-----------|
 | **Orquestación** | Microsoft Agent Framework v1.4 (con fallback a orquestador propio) |
 | **Modelo** | Azure OpenAI GPT-5.4-mini (vía APIM Gateway) |
+| **Voz** | Azure OpenAI gpt-realtime-mini (IVR en tiempo real sobre el mismo pipeline) |
+| **Despliegue** | Static Web Apps (dashboard) · Container Apps (backend) · Foundry (agente hosteado) |
 | **Gateway** | Azure API Management (Standard + políticas custom) |
 | **Backend** | FastAPI 0.115 · WebSocket streaming · Pydantic v2 |
 | **Frontend** | React 18 · TypeScript · Tailwind 3 · Vite 6 · Lucide |
