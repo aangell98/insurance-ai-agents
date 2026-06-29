@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "images" / "brand-banner.svg"
 
 # Brand tokens — edit here to rebrand the banner.
-BRAND_NAME = "Acme Insurance"
+BRAND_NAME = "Helix Insurance"
 BRAND_MARK_LETTER = "A"
 BRAND_PRIMARY = "#2563EB"   # blue-600
 BRAND_PRIMARY_DARK = "#1E40AF"   # blue-800
