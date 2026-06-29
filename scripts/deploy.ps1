@@ -38,15 +38,23 @@ Write-Host "Building backend image in ACR..." -ForegroundColor Yellow
 az acr build -r $acr -t "insurance-ai-backend:latest" -f "$root/backend/Dockerfile" $root -o none
 
 $be = "insurance-ai-backend"
-$exists = az containerapp show -n $be -g $ResourceGroup -o none 2>$null; $ok = $?
-$envVars = "AZURE_OPENAI_ENDPOINT=$openai AZURE_OPENAI_DEPLOYMENT=gpt-5.4-mini USE_MAF_ORCHESTRATOR=true COSMOS_ENDPOINT=$cosmos APPLICATIONINSIGHTS_CONNECTION_STRING=$ai BRAND_NAME=`"$BrandName`" FRONTEND_URL=*"
+az containerapp show -n $be -g $ResourceGroup -o none 2>$null; $ok = $?
+$envVars = @(
+    "AZURE_OPENAI_ENDPOINT=$openai",
+    "AZURE_OPENAI_DEPLOYMENT=gpt-5.4-mini",
+    "USE_MAF_ORCHESTRATOR=true",
+    "COSMOS_ENDPOINT=$cosmos",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING=$ai",
+    "BRAND_NAME=$BrandName",
+    "FRONTEND_URL=*"
+)
 if (-not $ok) {
     az containerapp create -n $be -g $ResourceGroup --environment $caeId `
         --image "$acr.azurecr.io/insurance-ai-backend:latest" --registry-server "$acr.azurecr.io" `
         --target-port 8000 --ingress external --min-replicas 1 --cpu 1 --memory 2Gi `
-        --env-vars $envVars.Split(' ') -o none
+        --env-vars $envVars -o none
 } else {
-    az containerapp update -n $be -g $ResourceGroup --image "$acr.azurecr.io/insurance-ai-backend:latest" --set-env-vars $envVars.Split(' ') -o none
+    az containerapp update -n $be -g $ResourceGroup --image "$acr.azurecr.io/insurance-ai-backend:latest" --set-env-vars $envVars -o none
 }
 $beUrl = "https://" + (az containerapp show -n $be -g $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
 Write-Host "Backend: $beUrl" -ForegroundColor Green
