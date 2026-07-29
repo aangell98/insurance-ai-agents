@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_framework import AgentResponse, AgentResponseUpdate, Content, Message, detect_media_type_from_base64
 from agent_framework.openai import OpenAIChatCompletionClient
 from agent_framework.orchestrations import SequentialBuilder
-from azure.identity import DefaultAzureCredential
+from agents.shared.identity import get_azure_credential
 
 from .agent import _detect_prompt_injection, _determine_final_decision, _make_audit_entry
 
@@ -122,67 +122,15 @@ class ComplianceResultModel(BaseModel):
     reasoning: str = ""
 
 
-def _ensure_azure_cli_on_path() -> None:
-    if sys.platform != "win32":
-        return
-    candidates = [
-        r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin",
-        r"C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin",
-    ]
-    current = os.environ.get("PATH", "")
-    parts = current.split(os.pathsep)
-    for candidate in candidates:
-        if os.path.isfile(os.path.join(candidate, "az.cmd")) and candidate not in parts:
-            os.environ["PATH"] = candidate + os.pathsep + current
-            current = os.environ["PATH"]
-            parts = current.split(os.pathsep)
-
-
 def _use_apim() -> bool:
-    return os.environ.get("USE_APIM_GATEWAY", "false").lower() in {"1", "true", "yes"}
+    from agents.shared.provider_config import selected_provider
+    return selected_provider() == "azure_apim"
 
 
-def _get_token_via_default_credential(credential: DefaultAzureCredential) -> str | None:
-    try:
-        return credential.get_token("https://cognitiveservices.azure.com/.default").token
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("DefaultAzureCredential failed, falling back to az CLI: %s", exc)
-        return None
-
-
-def _get_token_via_cli() -> str:
-    for az_path in [
-        r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd",
-        "az",
-    ]:
-        try:
-            result = subprocess.run(
-                [
-                    az_path,
-                    "account",
-                    "get-access-token",
-                    "--resource",
-                    "https://cognitiveservices.azure.com",
-                    "--query",
-                    "accessToken",
-                    "-o",
-                    "tsv",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            continue
-    raise RuntimeError("Could not get Azure token for MAF. Run 'az login' first.")
-
-
-def _get_azure_token(credential: DefaultAzureCredential) -> str:
+def _get_azure_token(credential: Any) -> str:
     global _CACHED_AZURE_TOKEN, _AZURE_TOKEN_EXPIRES_AT
     if _CACHED_AZURE_TOKEN is None or time.time() > _AZURE_TOKEN_EXPIRES_AT:
-        _CACHED_AZURE_TOKEN = _get_token_via_default_credential(credential) or _get_token_via_cli()
+        _CACHED_AZURE_TOKEN = credential.get_token("https://cognitiveservices.azure.com/.default").token
         _AZURE_TOKEN_EXPIRES_AT = time.time() + 3000
     return _CACHED_AZURE_TOKEN
 
@@ -499,7 +447,6 @@ def _configure_observability_once() -> None:
 
 
 def _build_chat_client() -> OpenAIChatCompletionClient:
-    _ensure_azure_cli_on_path()
     model = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
 
     if _use_apim():
@@ -514,14 +461,14 @@ def _build_chat_client() -> OpenAIChatCompletionClient:
             "X-Agent-Id": os.environ.get("AGENT_ID", "orchestrator-maf"),
         }
         async_client = AsyncAzureOpenAI(
-            azure_endpoint=apim_url,
+            azure_endpoint=f"{apim_url}/openai-gov",
             api_key="apim-managed",
             api_version=_API_VERSION,
             http_client=httpx.AsyncClient(verify=False, headers=headers),
         )
         return OpenAIChatCompletionClient(
             model=model,
-            azure_endpoint=apim_url,
+            azure_endpoint=f"{apim_url}/openai-gov",
             api_key="apim-managed",
             api_version=_API_VERSION,
             default_headers=headers,
@@ -529,7 +476,7 @@ def _build_chat_client() -> OpenAIChatCompletionClient:
         )
 
     azure_endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
-    credential = DefaultAzureCredential()
+    credential = get_azure_credential()
     async_client = AsyncAzureOpenAI(
         azure_endpoint=azure_endpoint,
         azure_ad_token_provider=lambda: _get_azure_token(credential),

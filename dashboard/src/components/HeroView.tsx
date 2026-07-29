@@ -319,7 +319,7 @@ export default function HeroView({ onCTAClick }: HeroViewProps) {
 
           <div className="space-y-4">
             <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-3 shadow-md">
-              <img src="/santander-logo.avif" alt="Santander" className="h-10 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}santander-logo.avif`} alt="Santander" className="h-10 w-auto" />
             </div>
             <h2 className="text-4xl font-semibold tracking-tight md:text-6xl">
               <span className="text-gray-900">Insurance AI</span>{' '}

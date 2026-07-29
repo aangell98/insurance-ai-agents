@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import uuid
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -20,13 +21,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agents.orchestrator.agent import process_claim
 from agents.shared.mock_data import DEMO_SCENARIOS, POLICIES, CUSTOMER_HISTORY
-from claims_repository import get_repo
+from claims_repository import ClaimConflictError, get_repo
+from demo_state_repository import DemoStateRepository, StateMapping
+from evidence_store import CLAIM_ID_PATTERN, EvidenceConflictError, EvidenceStore
 from auth import (
     AUTH_ENABLED,
     Principal,
     enforce_self_or_operator,
     require_customer_or_operator,
     require_operator,
+    principal_from_authorization,
 )
 
 load_dotenv(override=False)
@@ -36,14 +40,44 @@ logger = logging.getLogger(__name__)
 
 # In-memory stores for demo
 claims_store: dict[str, dict] = {}
-policies_store: dict[str, dict] = dict(POLICIES)  # mutable copy
-customers_store: dict[str, dict] = dict(CUSTOMER_HISTORY)  # mutable copy
-image_store: dict[str, str] = {}  # claim_id -> base64 image
-security_incidents: list[dict] = []  # registry of detected manipulation/injection attempts
+demo_state = DemoStateRepository()
+evidence_store = EvidenceStore()
+policies_store = StateMapping(demo_state, "policies")
+customers_store = StateMapping(demo_state, "customers")
+image_store = StateMapping(demo_state, "evidence")
+security_incidents = StateMapping(demo_state, "incidents")
+websocket_tickets: dict[str, dict] = {}
+claim_reservations: dict[str, dict] = {}
+
+
+def persist_incident(payload: dict) -> None:
+    try:
+        demo_state.put("incidents", str(uuid.uuid4()), payload)
+    except Exception:
+        logger.exception(
+            "Incident persistence failed after claim %s completed",
+            payload.get("claim_id"),
+        )
+
+
+def open_incident_count() -> int:
+    try:
+        return sum(
+            1 for incident in security_incidents.values()
+            if incident.get("status") == "open"
+        )
+    except Exception:
+        logger.exception("Unable to read incident count")
+        return 0
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from agents.shared.mock_data import POLICIES as AGENT_POLICIES, CUSTOMER_HISTORY as AGENT_CUSTOMERS
+    AGENT_POLICIES.clear()
+    AGENT_POLICIES.update({item["policy_id"]: item for item in demo_state.values("policies")})
+    AGENT_CUSTOMERS.clear()
+    AGENT_CUSTOMERS.update({item["customer_id"]: item for item in demo_state.values("customers")})
     logger.info("Insurance AI Claims API starting up")
     yield
     logger.info("Insurance AI Claims API shutting down")
@@ -56,13 +90,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+frontend_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    os.environ.get("FRONTEND_URL", ""),
+    *[origin.strip() for origin in os.environ.get("FRONTEND_URLS", "").split(",") if origin.strip()],
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        os.environ.get("FRONTEND_URL", ""),
-    ],
+    allow_origins=frontend_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,7 +113,11 @@ class ClaimRequest(BaseModel):
     incident_type: str = Field(..., description="Type of incident", examples=["collision"])
     description: str = Field(..., description="Free-text claim description", min_length=10)
     estimated_amount: float = Field(..., gt=0, description="Estimated claim amount in EUR")
-    claim_id: str | None = Field(None, description="Optional pre-generated claim ID for WebSocket sync")
+    claim_id: str | None = Field(
+        None,
+        description="Optional pre-generated claim ID for WebSocket sync",
+        pattern=CLAIM_ID_PATTERN.pattern,
+    )
     image_b64: str | None = Field(None, description="Base64-encoded evidence image")
 
 
@@ -112,6 +152,10 @@ class ClaimResponse(BaseModel):
     metadata: dict = Field(default_factory=dict)
     timestamp: str
 
+class WebSocketTicketRequest(BaseModel):
+    claim_id: str = Field(..., pattern=CLAIM_ID_PATTERN.pattern)
+    customer_id: str
+
 
 # ── WebSocket connection manager ──
 
@@ -143,6 +187,20 @@ manager = ConnectionManager()
 @app.get("/api/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+@app.post("/api/ws-ticket")
+async def create_websocket_ticket(request: WebSocketTicketRequest, principal: Principal = Depends(require_customer_or_operator)):
+    enforce_self_or_operator(principal, request.customer_id)
+    existing = claim_reservations.get(request.claim_id)
+    if (
+        (existing and existing["expires"] >= time.time())
+        or demo_state.get("claim_ids", request.claim_id)
+    ):
+        raise HTTPException(status_code=409, detail="claim_id_already_reserved")
+    ticket = uuid.uuid4().hex
+    websocket_tickets[ticket] = {"claim_id": request.claim_id, "customer_id": request.customer_id, "principal": principal.sub, "expires": time.time() + 60}
+    claim_reservations[request.claim_id] = websocket_tickets[ticket]
+    return {"ticket": ticket, "expires_in": 60}
 
 
 @app.get("/api/scenarios")
@@ -269,7 +327,17 @@ async def evaluate_claim(
     debe coincidir con el UPN del token (un cliente sólo crea siniestros suyos).
     """
     enforce_self_or_operator(principal, request.customer_id)
-    claim_id = request.claim_id or f"CLM-{uuid.uuid4().hex[:8].upper()}"
+    policy = policies_store.get(request.policy_id)
+    if not policy:
+        raise HTTPException(status_code=404, detail="policy_not_found")
+    if policy.get("customer_id") != request.customer_id:
+        raise HTTPException(status_code=403, detail="policy_customer_mismatch")
+    supplied_claim_id = request.claim_id is not None
+    claim_id = request.claim_id or f"CLM-{uuid.uuid4()}"
+    if AUTH_ENABLED and supplied_claim_id:
+        reservation = claim_reservations.get(claim_id)
+        if not reservation or reservation["expires"] < time.time() or reservation["customer_id"] != request.customer_id or reservation["principal"] != principal.sub:
+            raise HTTPException(status_code=409, detail="claim_reservation_conflict")
 
     claim_input = {
         "claim_id": claim_id,
@@ -280,9 +348,12 @@ async def evaluate_claim(
         "estimated_amount": request.estimated_amount,
     }
 
-    # Store image if provided
+    # Validate image before the expensive pipeline; upload happens only after processing.
     if request.image_b64:
-        image_store[claim_id] = request.image_b64
+        try:
+            evidence_store.validate(claim_id, request.image_b64)
+        except ValueError as error:
+            raise HTTPException(status_code=413, detail=str(error)) from error
         claim_input["image_b64"] = request.image_b64
 
     async def progress_callback(stage: str, status: str, data: dict):
@@ -316,17 +387,45 @@ async def evaluate_claim(
     result["policy_id"] = request.policy_id
     result["estimated_amount"] = request.estimated_amount
     result["incident_type"] = request.incident_type
-    claims_store[claim_id] = result
+    if not demo_state.reserve_claim_id(claim_id, request.customer_id):
+        raise HTTPException(status_code=409, detail="claim_conflict")
 
-    # Persist to Cosmos (no-op si COSMOS_ENDPOINT no está configurado)
+    object_ref = None
+    if request.image_b64:
+        try:
+            object_ref = evidence_store.put(claim_id, request.image_b64)
+        except EvidenceConflictError as error:
+            demo_state.release_claim_id(claim_id)
+            raise HTTPException(status_code=409, detail="evidence_conflict") from error
+        except Exception:
+            demo_state.release_claim_id(claim_id)
+            raise
+        result["evidence_object_ref"] = object_ref
+
+    # Persist before mutating process-local state; a duplicate must be a 409.
     try:
         get_repo().save(result)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"Cosmos persist failó: {e}")
+    except ClaimConflictError as error:
+        if object_ref:
+            evidence_store.delete(object_ref)
+        demo_state.release_claim_id(claim_id)
+        raise HTTPException(status_code=409, detail="claim_conflict") from error
+    except Exception as error:
+        if object_ref:
+            evidence_store.delete(object_ref)
+        demo_state.release_claim_id(claim_id)
+        raise HTTPException(status_code=503, detail="claim_persistence_failed") from error
+    claims_store[claim_id] = result
+    claim_reservations.pop(claim_id, None)
+    if object_ref:
+        try:
+            image_store[claim_id] = {"object_ref": object_ref}
+        except Exception:
+            logger.warning("Evidence reference cache failed for claim %s", claim_id)
 
     # Register security incident if the pipeline flagged a manipulation attempt
     if result.get("security_flagged"):
-        security_incidents.append({
+        persist_incident({
             "claim_id": claim_id,
             "policy_id": request.policy_id,
             "customer_id": request.customer_id,
@@ -342,7 +441,7 @@ async def evaluate_claim(
         })
         logger.warning(
             f"🛡️ SECURITY INCIDENT REGISTERED: claim={claim_id} customer={request.customer_id} "
-            f"policy={request.policy_id} (total open: {len([i for i in security_incidents if i['status']=='open'])})"
+            f"policy={request.policy_id} (total open: {open_incident_count()})"
         )
     else:
         # Register a fraud-suspected incident if Risk flagged high fraud probability
@@ -358,7 +457,7 @@ async def evaluate_claim(
             if image_mismatch:
                 concerns = intake.get("image_concerns") or "imagen no relacionada con el siniestro descrito"
                 reasons.append(f"Imagen aportada no coherente: {concerns}")
-            security_incidents.append({
+            persist_incident({
                 "claim_id": claim_id,
                 "policy_id": request.policy_id,
                 "customer_id": request.customer_id,
@@ -381,6 +480,9 @@ async def evaluate_claim(
 async def get_audit_trail(claim_id: str, _: Principal = Depends(require_operator)):
     """Get the complete audit trail for a processed claim."""
     result = claims_store.get(claim_id)
+    repo = get_repo()
+    if not result and repo.is_enabled:
+        result = repo.get_by_claim_id(claim_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Claim {claim_id} not found")
 
@@ -402,7 +504,7 @@ async def get_audit_trail(claim_id: str, _: Principal = Depends(require_operator
         "risk_result": result["risk_result"],
         "compliance_result": result["compliance_result"],
         "metadata": result.get("metadata", {}),
-        "has_image": claim_id in image_store,
+        "has_image": bool(result.get("evidence_object_ref") or image_store.get(claim_id)),
         "policy": policy,
         "customer_history": customer,
     }
@@ -413,8 +515,19 @@ async def get_claim_image(claim_id: str, _: Principal = Depends(require_operator
     """Return the base64 evidence image attached to a claim, if any."""
     img = image_store.get(claim_id)
     if not img:
+        persisted = get_repo().get_by_claim_id(claim_id)
+        if persisted and persisted.get("evidence_object_ref"):
+            img = {"object_ref": persisted["evidence_object_ref"]}
+    if not img:
         raise HTTPException(status_code=404, detail="No image for this claim")
-    return {"claim_id": claim_id, "image_b64": img}
+    object_ref = img.get("object_ref")
+    if not object_ref:
+        raise HTTPException(status_code=404, detail="No image for this claim")
+    return {
+        "claim_id": claim_id,
+        "image_b64": evidence_store.get(object_ref),
+        "object_ref": object_ref,
+    }
 
 
 @app.get("/api/claims")
@@ -521,8 +634,8 @@ async def list_security_incidents(_: Principal = Depends(require_operator)):
     """List all detected security incidents (manipulation / prompt-injection attempts)."""
     return {
         "total": len(security_incidents),
-        "open": sum(1 for i in security_incidents if i["status"] == "open"),
-        "incidents": list(reversed(security_incidents)),  # newest first
+        "open": sum(1 for i in security_incidents.values() if i["status"] == "open"),
+        "incidents": list(reversed(security_incidents.values())),  # newest first
     }
 
 
@@ -544,7 +657,16 @@ async def governance_status(_: Principal = Depends(require_operator)):
         except Exception:
             git_sha = "local-dev"
 
-    apim_enabled = os.environ.get("USE_APIM_GATEWAY", "false").lower() in ("1", "true", "yes")
+    from agents.shared.provider_config import selected_provider
+    provider = selected_provider()
+    apim_enabled = provider == "azure_apim"
+    model = (
+        os.environ.get("BEDROCK_MODEL_ID")
+        if provider == "bedrock"
+        else "deterministic-mock"
+        if provider == "mock"
+        else os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+    )
     apim_url = os.environ.get("APIM_GATEWAY_URL", "")
     if apim_url:
         # mask middle part
@@ -594,18 +716,18 @@ async def governance_status(_: Principal = Depends(require_operator)):
     return {
         "pipeline_version": "1.0.0",
         "git_commit": git_sha,
-        "model": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+        "model": model,
         "deployed_at": datetime.now(timezone.utc).isoformat(),
         "apim": {
             "enabled": apim_enabled,
             "gateway_url": apim_url_masked,
             "policies": [
-                {"id": "managed-identity",  "name": "Managed Identity → Azure OpenAI",            "active": True},
-                {"id": "audit-log",         "name": "Audit Trace (request + response)",            "active": True},
-                {"id": "content-safety",    "name": "LLM Content Safety (Hate/Sexual/SH/Violence)","active": True},
-                {"id": "token-limit",       "name": "Azure OpenAI Token Limit (per agent)",        "active": True},
-                {"id": "emit-token-metric", "name": "Token metrics → App Insights",                "active": True},
-                {"id": "error-handling",    "name": "On-error fallback (429 + safety)",            "active": True},
+                {"id": "managed-identity",  "name": "Managed Identity → Azure OpenAI",            "active": apim_enabled},
+                {"id": "audit-log",         "name": "Audit Trace (request + response)",            "active": apim_enabled},
+                {"id": "content-safety",    "name": "LLM Content Safety (Hate/Sexual/SH/Violence)","active": apim_enabled},
+                {"id": "token-limit",       "name": "Azure OpenAI Token Limit (per agent)",        "active": apim_enabled},
+                {"id": "emit-token-metric", "name": "Token metrics → App Insights",                "active": apim_enabled},
+                {"id": "error-handling",    "name": "On-error fallback (429 + safety)",            "active": apim_enabled},
             ],
         },
         "evals": {
@@ -628,22 +750,24 @@ async def governance_status(_: Principal = Depends(require_operator)):
 @app.get("/api/stats")
 async def get_statistics(_: Principal = Depends(require_operator)):
     """Get dashboard statistics for the operator view."""
-    total = len(claims_store)
-    approved = sum(1 for r in claims_store.values() if r["decision"] == "approve")
-    review = sum(1 for r in claims_store.values() if r["decision"] == "human_review")
-    rejected = sum(1 for r in claims_store.values() if r["decision"] == "reject")
+    repo = get_repo()
+    items = repo.list_all() if repo.is_enabled else list(claims_store.values())
+    total = len(items)
+    approved = sum(1 for r in items if r["decision"] == "approve")
+    review = sum(1 for r in items if r["decision"] == "human_review")
+    rejected = sum(1 for r in items if r["decision"] == "reject")
     avg_duration = (
-        sum(r["total_duration_ms"] for r in claims_store.values()) / total
+        sum(r["total_duration_ms"] for r in items) / total
         if total > 0 else 0
     )
     total_amount = sum(
         r.get("intake_result", {}).get("extracted_data", {}).get("estimated_amount", 0)
         or 0
-        for r in claims_store.values()
+        for r in items
     )
     avg_risk = 0
     risk_count = 0
-    for r in claims_store.values():
+    for r in items:
         rs = r.get("risk_result", {}).get("risk_score")
         if rs:
             avg_risk += rs
@@ -668,11 +792,19 @@ async def get_statistics(_: Principal = Depends(require_operator)):
 
 
 @app.websocket("/ws/claims/{claim_id}")
-async def claim_websocket(websocket: WebSocket, claim_id: str):
+async def claim_websocket(websocket: WebSocket, claim_id: str, ticket: str = ""):
     """WebSocket endpoint for real-time pipeline progress updates.
     
     Connect before calling /api/claims/evaluate to receive stage-by-stage updates.
     """
+    try:
+        ticket_data = websocket_tickets.pop(ticket, None)
+        if not ticket_data or ticket_data["expires"] < time.time() or ticket_data["claim_id"] != claim_id:
+            await websocket.close(code=1008)
+            return
+    except HTTPException:
+        await websocket.close(code=1008)
+        return
     await manager.connect(claim_id, websocket)
     try:
         while True:

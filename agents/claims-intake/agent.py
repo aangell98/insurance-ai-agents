@@ -135,7 +135,7 @@ async def run(claim_input: dict) -> dict:
     Returns:
         Dict with intake analysis result
     """
-    client = await get_openai_client()
+    client = await get_openai_client("claims_intake")
 
     user_text = (
         f"Analiza el siguiente siniestro:\n\n"

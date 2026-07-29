@@ -15,6 +15,7 @@ permissions:
 
 env:
   AZURE_OPENAI_DEPLOYMENT: gpt-4o
+  AZURE_AUTH_MODE: azure_cli
 
 jobs:
   eval:
@@ -48,6 +49,7 @@ jobs:
           USE_APIM_GATEWAY: ${{ vars.USE_APIM_GATEWAY || 'false' }}
           APIM_GATEWAY_URL: ${{ vars.APIM_GATEWAY_URL }}
           APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
+          AZURE_AUTH_MODE: azure_cli
         run: |
           python -m evals.run_evals --report evals/last_report.json
         continue-on-error: false

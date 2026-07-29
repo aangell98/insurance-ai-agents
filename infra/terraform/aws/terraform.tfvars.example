@@ -1,0 +1,4 @@
+prefix = "insurance-ai-demo"
+region = "eu-west-1"
+profile = "economy"
+container_image = "REPLACE_WITH_ECR_IMAGE"

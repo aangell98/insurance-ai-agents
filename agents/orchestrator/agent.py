@@ -196,7 +196,14 @@ def _determine_final_decision(
 
 
 async def process_claim(claim_input: dict, progress_callback=None) -> dict:
-    if USE_MAF_ORCHESTRATOR:
+    from agents.shared.provider_config import selected_provider
+    if selected_provider() == "mock":
+        from agents.shared.mock_pipeline import process_claim_mock
+        return await process_claim_mock(claim_input, progress_callback)
+    if selected_provider() == "bedrock":
+        from agents.shared.bedrock_pipeline import process_claim_bedrock
+        return await process_claim_bedrock(claim_input, progress_callback)
+    if USE_MAF_ORCHESTRATOR and selected_provider() in {"azure_openai", "azure_apim"}:
         try:
             from .maf_agent import process_claim_maf
             return await process_claim_maf(claim_input, progress_callback)

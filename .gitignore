@@ -10,9 +10,9 @@ dist/
 .azure/
 *.tfstate
 *.tfstate.backup
+.terraform/
 .DS_Store
 Thumbs.db
 
 # Eval reports — generated per CI run, uploaded as artifact
 evals/last_report.json
-

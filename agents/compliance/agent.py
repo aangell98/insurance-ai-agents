@@ -99,7 +99,7 @@ async def run(claim_input: dict, intake_result: dict, risk_result: dict) -> dict
     Returns:
         Dict with compliance validation result
     """
-    client = await get_openai_client()
+    client = await get_openai_client("compliance")
 
     risk_score = risk_result.get("risk_score", 5)
     fraud_prob = risk_result.get("fraud_probability", "medium")

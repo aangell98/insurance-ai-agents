@@ -60,6 +60,8 @@
         <!-- ═══════════════════════════════════════════════════════════ -->
         <!-- 5. BACKEND SELECTION                                       -->
         <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- API receives /openai/deployments/... from the SDK. The backend base
+             is the Azure endpoint root, so forwarding produces one /openai. -->
         <set-backend-service backend-id="openai-backend" />
 
         <!-- ═══════════════════════════════════════════════════════════ -->
@@ -74,7 +76,8 @@
     </inbound>
 
     <backend>
-        <forward-request timeout="120" />
+        <!-- Do not buffer SSE/token streams: policies above execute before the backend call. -->
+        <forward-request timeout="120" buffer-response="false" />
     </backend>
 
     <outbound>

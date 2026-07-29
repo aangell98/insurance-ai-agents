@@ -16,7 +16,7 @@ import AutoPlayDemo from './components/AutoPlayDemo';
 import Toast from './components/Toast';
 import type { ActivityEvent } from './components/ActivityFeed';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, SecurityIncident } from './api';
-import { evaluateClaim, connectWebSocket, getSecurityIncidents } from './api';
+import { evaluateClaim, connectWebSocket, getSecurityIncidents, isOfflineMode, resetOfflineDemo } from './api';
 import { useAuth } from './auth/useAuth';
 
 type Stage = 'intake' | 'risk_assessment' | 'compliance' | 'decision';
@@ -164,15 +164,26 @@ export default function App() {
     setError('');
   }, []);
 
+  const resetDemo = useCallback(() => {
+    resetOfflineDemo();
+    resetPipeline();
+    setIncidents([]);
+    setSeenIds(new Set());
+    setToasts([]);
+    try { localStorage.removeItem('security_seen_ids'); } catch { /* unavailable storage */ }
+  }, [resetPipeline]);
+
   const handleSubmit = useCallback(async (req: ClaimRequest) => {
     resetPipeline();
     setLoading(true);
 
     // Generate claim ID shared between WebSocket and REST call
-    const claimId = `CLM-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
+    const claimId = `CLM-${crypto.randomUUID().toUpperCase()}`;
 
-    // Connect WebSocket FIRST for real-time stage updates
-    const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
+    let ws: WebSocket | undefined;
+    try {
+      // Connect WebSocket FIRST for real-time stage updates
+      const connection = await connectWebSocket(claimId, (update: PipelineUpdate) => {
       if (update.type === 'progress') {
         if (!isStage(update.stage)) return;
 
@@ -208,11 +219,10 @@ export default function App() {
           [stage]: `${prev[stage]}${update.text}`,
         }));
       }
-    });
-
-    try {
+      }, req.customer_id);
+      ws = connection.ws as WebSocket;
       // Wait for WebSocket to be ready before sending the HTTP request
-      await ready;
+      await connection.ready;
       // Send claim_id so backend uses the same ID as the WebSocket
       const res = await evaluateClaim({ ...req, claim_id: claimId });
       setResult(res);
@@ -230,7 +240,7 @@ export default function App() {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
       setLoading(false);
-      ws.close();
+      ws?.close();
     }
   }, [resetPipeline]);
 
@@ -241,7 +251,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
-              src="/santander-logo.avif"
+              src={`${import.meta.env.BASE_URL}santander-logo.avif`}
               alt="Santander"
               className="h-10 w-auto"
             />
@@ -255,7 +265,16 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-600">
             <Activity className="w-3.5 h-3.5 text-green-600" />
-            <span>Pipeline Active</span>
+            <span>{isOfflineMode ? 'Offline simulation' : 'Pipeline Active'}</span>
+            {isOfflineMode && (
+              <button
+                onClick={resetDemo}
+                className="rounded border border-amber-300 bg-amber-50 px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
+                title="Restablece los fixtures públicos y reinicia la reproducción"
+              >
+                Reset / replay
+              </button>
+            )}
             <span className="mx-2 text-gray-300">|</span>
             <span>v1.0.0</span>
             {auth.isOperator && auth.authenticated && (
@@ -343,10 +362,15 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {isOfflineMode && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Simulación offline preservada.</strong> Usa fixtures sintéticos deterministas en el navegador; no envía datos ni llama a Azure.
+          </div>
+        )}
         {/* Login gate cuando AUTH_ENABLED y no autenticado */}
         {auth.enabled && !auth.authenticated && (
           <div className="max-w-md mx-auto mt-12 p-8 rounded-xl border border-gray-200 bg-white shadow-md text-center">
-            <img src="/santander-logo.avif" alt="Santander" className="h-12 w-auto mx-auto mb-4" />
+            <img src={`${import.meta.env.BASE_URL}santander-logo.avif`} alt="Santander" className="h-12 w-auto mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Acceso restringido</h2>
             <p className="text-sm text-gray-600 mb-6">Inicia sesión con tu cuenta corporativa para acceder a la plataforma.</p>
             <button

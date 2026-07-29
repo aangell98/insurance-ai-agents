@@ -160,6 +160,20 @@ def _extract_bearer(request: Request) -> Optional[str]:
     return parts[1].strip() or None
 
 
+def principal_from_authorization(authorization: str | None) -> Principal:
+    """Validate a WebSocket/HTTP Authorization header without a Request object."""
+    if not AUTH_ENABLED:
+        return _DEMO_PRINCIPAL
+    if not TENANT_ID or not CLIENT_ID:
+        raise HTTPException(status_code=500, detail="auth_misconfigured")
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing_bearer_token")
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_bearer_token")
+    return _validate_token(parts[1])
+
+
 # ── FastAPI dependencies ──────────────────────────────────────────────────────
 
 def get_principal(request: Request) -> Principal:
@@ -214,7 +228,7 @@ def require_customer_or_operator(
 
 
 def enforce_self_or_operator(principal: Principal, customer_id: str) -> None:
-    """Si el principal es customer-puro, exige que `customer_id` coincida con su UPN."""
+    """Bind a customer caller to its internal customer ID or verified username."""
     if not AUTH_ENABLED:
         return
     if principal.is_operator:
@@ -223,6 +237,7 @@ def enforce_self_or_operator(principal: Principal, customer_id: str) -> None:
     # case-insensitive contra varios candidatos del token.
     candidates = {
         principal.upn.lower(),
+        str(principal.raw.get("customer_id", "")).lower(),
         str(principal.raw.get("preferred_username", "")).lower(),
         str(principal.raw.get("email", "")).lower(),
     }

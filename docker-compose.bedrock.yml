@@ -1,0 +1,7 @@
+services:
+  backend:
+    environment:
+      LLM_PROVIDER: bedrock
+      AWS_WEB_IDENTITY_TOKEN_FILE: /var/run/secrets/aws/token
+    volumes:
+      - ${AWS_WEB_IDENTITY_TOKEN_FILE:?set an OIDC token file}:/var/run/secrets/aws/token:ro

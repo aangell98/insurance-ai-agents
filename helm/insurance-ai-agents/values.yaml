@@ -1,0 +1,35 @@
+profile: economy
+image:
+  repository: insurance-ai-agents
+  tag: latest
+  pullPolicy: IfNotPresent
+replicaCount: 1
+service:
+  type: ClusterIP
+  port: 8000
+llm:
+  provider: mock
+  model: gpt-4o
+aws:
+  region: ""
+state:
+  backend: memory
+  claimsTable: ""
+  dynamodbTable: ""
+  cosmosContainer: demo-state
+evidence:
+  backend: local
+  bucket: ""
+  blobEndpoint: ""
+  blobContainer: evidence
+auth:
+  enabled: false
+  tenantId: ""
+  clientId: ""
+identity:
+  azureClientId: ""
+  awsRoleArn: ""
+existingSecret: ""
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: 500m, memory: 512Mi }

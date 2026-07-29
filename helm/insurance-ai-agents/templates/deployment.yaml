@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "insurance-ai-agents.fullname" . }}
+  labels: {{- include "insurance-ai-agents.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "insurance-ai-agents.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "insurance-ai-agents.selectorLabels" . | nindent 8 }}
+        {{- if .Values.identity.azureClientId }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+      {{- if .Values.identity.awsRoleArn }}
+      annotations:
+        eks.amazonaws.com/role-arn: {{ .Values.identity.awsRoleArn | quote }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "insurance-ai-agents.fullname" . }}
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8000 }]
+          env:
+            - name: LLM_PROVIDER
+              value: {{ .Values.llm.provider | quote }}
+            - name: BEDROCK_MODEL_ID
+              value: {{ .Values.llm.model | quote }}
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: {{ .Values.llm.model | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.aws.region | quote }}
+            - name: STATE_BACKEND
+              value: {{ .Values.state.backend | quote }}
+            - name: DYNAMODB_STATE_TABLE
+              value: {{ .Values.state.dynamodbTable | quote }}
+            - name: DYNAMODB_TABLE
+              value: {{ .Values.state.claimsTable | quote }}
+            - name: COSMOS_STATE_CONTAINER
+              value: {{ .Values.state.cosmosContainer | quote }}
+            - name: EVIDENCE_BACKEND
+              value: {{ .Values.evidence.backend | quote }}
+            - name: EVIDENCE_BUCKET
+              value: {{ .Values.evidence.bucket | quote }}
+            - name: BLOB_ENDPOINT
+              value: {{ .Values.evidence.blobEndpoint | quote }}
+            - name: BLOB_CONTAINER
+              value: {{ .Values.evidence.blobContainer | quote }}
+            - name: AUTH_ENABLED
+              value: {{ .Values.auth.enabled | quote }}
+            - name: AUTH_TENANT_ID
+              value: {{ .Values.auth.tenantId | quote }}
+            - name: AUTH_CLIENT_ID
+              value: {{ .Values.auth.clientId | quote }}
+            - name: AZURE_AUTH_MODE
+              value: workload_identity
+            - name: AZURE_CLIENT_ID
+              value: {{ .Values.identity.azureClientId | quote }}
+          {{- if .Values.existingSecret }}
+          envFrom: [{ secretRef: { name: {{ .Values.existingSecret | quote }} } }]
+          {{- end }}
+          livenessProbe: { httpGet: { path: /api/health, port: http } }
+          readinessProbe: { httpGet: { path: /api/health, port: http } }
+          resources: {{- toYaml .Values.resources | nindent 12 }}

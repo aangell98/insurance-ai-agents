@@ -9,8 +9,9 @@ import {
   X,
 } from 'lucide-react';
 import type { ClaimRequest, ClaimResult, PipelineUpdate, Scenario } from '../api';
-import { connectWebSocket, getScenarios } from '../api';
+import { connectWebSocket, evaluateClaim, getScenarios } from '../api';
 import { AUTH_ENABLED, acquireApiToken } from '../auth/msalConfig';
+import type { DemoSocket } from '../offline/transport';
 import LiveStatsTicker from './autoplay/LiveStatsTicker';
 import AgentThinkingPanel from './autoplay/AgentThinkingPanel';
 import type { AgentName, AgentStatus } from './autoplay/AgentThinkingPanel';
@@ -24,7 +25,6 @@ import SlideNavigator from './autoplay/SlideNavigator';
 import type { SlideDescriptor, SlideStatus } from './autoplay/SlideNavigator';
 import DecisionSlidePanel from './autoplay/DecisionSlidePanel';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
 const DEMO_ORDER = ['low_risk', 'high_amount', 'human_review', 'fraudulent', 'prompt_injection'] as const;
 
 const STAGE_TO_AGENT: Record<Stage, AgentName> = {
@@ -474,25 +474,10 @@ function nextStageStatuses(previous: Record<Stage, StageStatus>, stage: Stage, s
 }
 
 async function evaluateClaimAbortable(req: ClaimRequest, signal: AbortSignal): Promise<ClaimResult> {
-  const headers = new Headers({ 'Content-Type': 'application/json' });
-  const token = await acquireApiToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-
-  const response = await fetch(`${API_BASE}/api/claims/evaluate`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(req),
-    signal,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    const error = new Error(typeof errorBody?.detail === 'string' ? errorBody.detail : 'Evaluation failed') as ApiError;
-    error.status = response.status;
-    throw error;
-  }
-
-  return response.json() as Promise<ClaimResult>;
+  if (signal.aborted) throw new DOMException('Demo cancelled', 'AbortError');
+  const result = await evaluateClaim(req, signal);
+  if (signal.aborted) throw new DOMException('Demo cancelled', 'AbortError');
+  return result;
 }
 
 function buildAgentSnapshot(
@@ -557,7 +542,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
   const onCloseRef = useRef(onClose);
   const demoRunRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const wsRef = useRef<DemoSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const pausedRef = useRef(false);
   const closeRequestedRef = useRef(false);
@@ -808,7 +793,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         if (demoRunRef.current !== runId || closeRequestedRef.current) return;
 
         const demoScenario = ordered[index];
-        const claimId = `CLM-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+        const claimId = `CLM-${crypto.randomUUID().toUpperCase()}`;
         const startedAt = Date.now();
 
         cleanupActiveCase(false, true);
@@ -838,7 +823,9 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
         currentScenarioAmountRef.current = demoScenario.scenario.estimated_amount;
         setConsolidationPhase(null);
 
-        const { ws, ready } = connectWebSocket(claimId, (update: PipelineUpdate) => {
+        let skippedCurrent = false;
+        try {
+          const { ws, ready } = await connectWebSocket(claimId, (update: PipelineUpdate) => {
           if (demoRunRef.current !== runId) return;
           if (update.type === 'progress') {
             const stage = update.stage as Stage;
@@ -866,18 +853,16 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
             if (stage === null) return;
             setStageTokens((previous) => ({ ...previous, [stage as Stage]: previous[stage as Stage] + update.text }));
           }
-        });
+          }, demoScenario.scenario.customer_id);
 
-        wsRef.current = ws;
-        pingIntervalRef.current = window.setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) ws.send('ping');
-        }, 10000);
+          wsRef.current = ws;
+          pingIntervalRef.current = window.setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) ws.send('ping');
+          }, 10000);
 
-        const controller = new AbortController();
-        controllerRef.current = controller;
-        let skippedCurrent = false;
+          const controller = new AbortController();
+          controllerRef.current = controller;
 
-        try {
           await Promise.race([
             ready,
             sleep(1500),
@@ -1303,7 +1288,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
             <div className="flex items-start gap-3">
               <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-200">
-                <img src="/santander-logo.avif" alt="Santander" className="h-6 w-auto" />
+                <img src={`${import.meta.env.BASE_URL}santander-logo.avif`} alt="Santander" className="h-6 w-auto" />
               </div>
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática — 5 casos reales</h2>

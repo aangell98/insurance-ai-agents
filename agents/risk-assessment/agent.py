@@ -205,7 +205,7 @@ async def run(claim_input: dict, intake_result: dict) -> dict:
     Returns:
         Dict with risk assessment result
     """
-    client = await get_openai_client()
+    client = await get_openai_client("risk_assessment")
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},

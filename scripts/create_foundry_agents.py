@@ -9,15 +9,20 @@ These agents run on Azure AI Agent Service with GPT-4o.
 """
 
 import os, sys, json
-from azure.identity import DefaultAzureCredential
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from agents.shared.identity import get_azure_credential
 from azure.ai.agents import AgentsClient
 from azure.ai.agents.models import (
     FunctionTool,
     ToolSet,
 )
 
-ENDPOINT = "https://ins-ai-demo-ais-jii435hjlwyyc.cognitiveservices.azure.com/"
-MODEL = "gpt-4o"
+ENDPOINT = os.environ.get("FOUNDRY_PROJECT_ENDPOINT", "")
+MODEL = os.environ.get("FOUNDRY_MODEL_DEPLOYMENT", "gpt-4o")
 
 # ── Agent definitions ──
 
@@ -62,7 +67,9 @@ Responde SIEMPRE en formato JSON:
 
 
 def main():
-    credential = DefaultAzureCredential()
+    if not ENDPOINT:
+        raise SystemExit("FOUNDRY_PROJECT_ENDPOINT is required; this script never targets an existing project by default.")
+    credential = get_azure_credential()
     client = AgentsClient(endpoint=ENDPOINT, credential=credential)
 
     created = {}

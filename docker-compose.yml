@@ -1,0 +1,60 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      USE_MAF_ORCHESTRATOR: ${USE_MAF_ORCHESTRATOR:-false}
+      USE_APIM_GATEWAY: ${USE_APIM_GATEWAY:-false}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_TENANT_ID: ${AUTH_TENANT_ID:-}
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID:-}
+      FRONTEND_URL: http://localhost:8080
+      AZURE_AUTH_MODE: ${AZURE_AUTH_MODE:-managed_identity}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_FEDERATED_TOKEN_FILE: ${AZURE_FEDERATED_TOKEN_FILE:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      APIM_GATEWAY_URL: ${APIM_GATEWAY_URL:-}
+      APIM_SUBSCRIPTION_KEY: ${APIM_SUBSCRIPTION_KEY:-}
+      OPENAI_COMPATIBLE_BASE_URL: ${OPENAI_COMPATIBLE_BASE_URL:-}
+      AWS_ROLE_ARN: ${AWS_ROLE_ARN:-}
+      AWS_WEB_IDENTITY_TOKEN_FILE: ${AWS_WEB_IDENTITY_TOKEN_FILE:-}
+      AWS_REGION: ${AWS_REGION:-}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-}
+      STATE_BACKEND: ${STATE_BACKEND:-memory}
+      DYNAMODB_TABLE: ${DYNAMODB_TABLE:-}
+      DYNAMODB_STATE_TABLE: ${DYNAMODB_STATE_TABLE:-}
+      COSMOS_ENDPOINT: ${COSMOS_ENDPOINT:-}
+      COSMOS_DATABASE: ${COSMOS_DATABASE:-insurance-claims}
+      COSMOS_CONTAINER: ${COSMOS_CONTAINER:-claims}
+      COSMOS_STATE_CONTAINER: ${COSMOS_STATE_CONTAINER:-demo-state}
+      EVIDENCE_BACKEND: ${EVIDENCE_BACKEND:-local}
+      EVIDENCE_BUCKET: ${EVIDENCE_BUCKET:-}
+      BLOB_ENDPOINT: ${BLOB_ENDPOINT:-}
+      BLOB_CONTAINER: ${BLOB_CONTAINER:-evidence}
+      EVIDENCE_LOCAL_DIR: /app/.evidence
+    volumes:
+      - evidence-data:/app/.evidence
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    profiles: ["mock", "parity"]
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+      args:
+        VITE_OFFLINE_MODE: ${VITE_OFFLINE_MODE:-false}
+        VITE_AUTH_ENABLED: ${VITE_AUTH_ENABLED:-false}
+        VITE_AUTH_TENANT_ID: ${VITE_AUTH_TENANT_ID:-}
+        VITE_AUTH_CLIENT_ID: ${VITE_AUTH_CLIENT_ID:-}
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${DASHBOARD_PORT:-8080}:80"
+    profiles: ["mock", "parity"]
+volumes:
+  evidence-data:

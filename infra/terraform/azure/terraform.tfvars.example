@@ -1,0 +1,4 @@
+prefix = "insurance-ai-demo"
+location = "westeurope"
+profile = "economy"
+apim_publisher_email = "platform@example.com"

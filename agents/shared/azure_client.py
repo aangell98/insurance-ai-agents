@@ -1,141 +1,63 @@
-"""Shared Azure OpenAI client.
+"""Legacy OpenAI SDK adapter with explicit identity and portable routing.
 
-Two routing modes controlled by env var ``USE_APIM_GATEWAY``:
-
-1. ``false`` (default): direct call to Azure OpenAI using a bearer token
-   obtained via ``az account get-access-token``. Used for local dev when APIM
-   is not yet provisioned.
-
-2. ``true``: route through APIM AI Gateway (managed-identity auth, content
-   safety, token-limits, telemetry). The agent only carries an APIM
-   subscription key — secrets stay inside the gateway.
-
-Required env vars:
-- ``AZURE_OPENAI_ENDPOINT`` (always, even in APIM mode for legacy callers)
-- ``USE_APIM_GATEWAY``      (optional, default ``false``)
-- ``APIM_GATEWAY_URL``      (when APIM is on) — e.g. ``https://my-apim.azure-api.net``
-- ``APIM_SUBSCRIPTION_KEY`` (when APIM is on) — Ocp-Apim-Subscription-Key header
-- ``AGENT_ID``              (optional, default ``unknown``) — emitted as ``X-Agent-Id``
-                            so APIM can rate-limit and meter per agent
+New integrations should use :mod:`agents.shared.llm_provider`; this adapter
+keeps the existing tool-calling agents working with Azure OpenAI, APIM, Ollama,
+and vLLM while preserving their OpenAI SDK contract.
 """
 
+from __future__ import annotations
+
 import os
-import subprocess
-import logging
-import time
+from typing import Any
+
 import httpx
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, AsyncOpenAI
 
-# Corp network MITMs TLS — for demo we skip verify (endpoint is private Azure).
-_http_client = httpx.AsyncClient(verify=False)
+from agents.shared.identity import get_azure_credential
+from agents.shared.provider_config import selected_provider
 
-logger = logging.getLogger(__name__)
-
-_cached_token: str | None = None
-_token_expires: float = 0
-_client: AsyncAzureOpenAI | None = None
+_clients: dict[str, Any] = {}
 
 
-def _use_apim() -> bool:
-    return os.environ.get("USE_APIM_GATEWAY", "false").lower() in ("1", "true", "yes")
-
-
-def _get_token_via_default_credential() -> str | None:
-    """Try azure-identity DefaultAzureCredential.
-
-    Works in CI (federated OIDC via azure/login) and on dev boxes with az CLI.
-    Returns None if azure-identity is not installed (fall back to az CLI).
-    """
-    try:
-        from azure.identity import DefaultAzureCredential  # type: ignore
-    except ImportError:
-        return None
-    try:
-        cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
-        token = cred.get_token("https://cognitiveservices.azure.com/.default")
-        logger.info("Got Azure token via DefaultAzureCredential")
-        return token.token
-    except Exception as e:  # noqa: BLE001
-        logger.warning("DefaultAzureCredential failed: %s", e)
-        return None
-
-
-def _get_token_via_cli() -> str:
-    """Get an Azure AD token by calling az CLI synchronously (local fallback)."""
-    for az_path in [
-        r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd",
-        "az",
-    ]:
-        try:
-            result = subprocess.run(
-                [az_path, "account", "get-access-token",
-                 "--resource", "https://cognitiveservices.azure.com",
-                 "--query", "accessToken", "-o", "tsv"],
-                capture_output=True, text=True, timeout=30,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                logger.info("Got Azure token via az CLI")
-                return result.stdout.strip()
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            continue
-
-    raise RuntimeError("Could not get Azure token. Run 'az login' first.")
-
-
-def _get_token() -> str:
-    """Get an Azure AD token preferring DefaultAzureCredential, falling back to az CLI."""
-    token = _get_token_via_default_credential()
-    if token:
-        return token
-    return _get_token_via_cli()
-
-
-async def get_openai_client() -> AsyncAzureOpenAI:
-    """Get a configured AsyncAzureOpenAI client.
-
-    Uses APIM AI Gateway when ``USE_APIM_GATEWAY=true``, otherwise calls
-    Azure OpenAI directly with a cached AAD token.
-    """
-    global _cached_token, _token_expires, _client
-
-    if _use_apim():
-        if _client is None:
-            apim_url = os.environ.get("APIM_GATEWAY_URL", "").rstrip("/")
-            apim_key = os.environ.get("APIM_SUBSCRIPTION_KEY", "")
-            if not apim_url or not apim_key:
-                raise RuntimeError(
-                    "USE_APIM_GATEWAY=true requires APIM_GATEWAY_URL and "
-                    "APIM_SUBSCRIPTION_KEY environment variables."
-                )
-            agent_id = os.environ.get("AGENT_ID", "unknown")
-            apim_http = httpx.AsyncClient(
-                verify=False,
-                headers={
-                    "Ocp-Apim-Subscription-Key": apim_key,
-                    "X-Agent-Id": agent_id,
-                },
-            )
-            _client = AsyncAzureOpenAI(
-                azure_endpoint=apim_url,
-                api_key="apim-managed",  # ignored; subscription key is in header
-                api_version="2024-12-01-preview",
-                http_client=apim_http,
-            )
-            logger.info("OpenAI client routed through APIM gateway (agent=%s)", agent_id)
-        return _client
-
-    if _cached_token is None or time.time() > _token_expires:
-        _cached_token = _get_token()
-        _token_expires = time.time() + 3000
-        _client = None  # force new client with fresh token
-
-    if _client is None:
-        _client = AsyncAzureOpenAI(
-            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-            azure_ad_token=_cached_token,
-            api_version="2024-12-01-preview",
-            http_client=_http_client,
+async def get_openai_client(agent_id: str = "orchestrator") -> Any:
+    """Return an OpenAI-compatible client without DefaultAzureCredential fallback."""
+    cache_key = agent_id.lower().replace("-", "_")
+    if cache_key in _clients:
+        return _clients[cache_key]
+    provider = selected_provider()
+    http_client = httpx.AsyncClient(timeout=60)
+    if provider in {"ollama", "vllm", "openai_compatible"}:
+        base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL", "").rstrip("/")
+        if not base_url:
+            raise RuntimeError("OPENAI_COMPATIBLE_BASE_URL is required for Ollama/vLLM.")
+        _clients[cache_key] = AsyncOpenAI(base_url=base_url, api_key=os.environ.get("OPENAI_COMPATIBLE_API_KEY", "local-no-key"), http_client=http_client)
+        return _clients[cache_key]
+    if provider == "azure_apim":
+        gateway = os.environ.get("APIM_GATEWAY_URL", "").rstrip("/")
+        key = (
+            os.environ.get(f"APIM_SUBSCRIPTION_KEY_{cache_key.upper()}")
+            or os.environ.get("APIM_SUBSCRIPTION_KEY", "")
         )
+        if not gateway or not key:
+            raise RuntimeError("azure_apim requires APIM_GATEWAY_URL and APIM_SUBSCRIPTION_KEY injected by the secret provider.")
+        _clients[cache_key] = AsyncAzureOpenAI(
+            azure_endpoint=f"{gateway}/openai-gov", api_key="apim-subscription", api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+            default_headers={"Ocp-Apim-Subscription-Key": key, "X-Agent-Id": agent_id},
+            http_client=http_client,
+        )
+        return _clients[cache_key]
+    if provider != "azure_openai":
+        raise RuntimeError("Legacy adapter supports azure_openai, azure_apim, ollama, vllm, and openai_compatible. Use llm_provider for Bedrock.")
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
+    if not endpoint:
+        raise RuntimeError("AZURE_OPENAI_ENDPOINT is required for azure_openai.")
+    # azure_ad_token_provider is invoked by the SDK as needed, so long-running
+    # streams refresh rather than retaining one startup token.
+    def token_provider() -> str:
+        return get_azure_credential().get_token("https://cognitiveservices.azure.com/.default").token
 
-    return _client
-
+    _clients[cache_key] = AsyncAzureOpenAI(
+        azure_endpoint=endpoint, azure_ad_token_provider=token_provider,
+        api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"), http_client=http_client,
+    )
+    return _clients[cache_key]
