@@ -11,6 +11,7 @@ import {
 import type { ClaimRequest, ClaimResult, PipelineUpdate, Scenario } from '../api';
 import { connectWebSocket, evaluateClaim, getScenarios } from '../api';
 import { AUTH_ENABLED, acquireApiToken } from '../auth/msalConfig';
+import { BRAND } from '../brand';
 import type { DemoSocket } from '../offline/transport';
 import LiveStatsTicker from './autoplay/LiveStatsTicker';
 import AgentThinkingPanel from './autoplay/AgentThinkingPanel';
@@ -1288,7 +1289,7 @@ export default function AutoPlayDemo({ open, onClose }: Props) {
           <div className="mx-auto flex w-full max-w-[1600px] items-start justify-between gap-6">
             <div className="flex items-start gap-3">
               <div className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-200">
-                <img src={`${import.meta.env.BASE_URL}santander-logo.avif`} alt="Santander" className="h-6 w-auto" />
+                <img src={BRAND.logoUrl} alt={BRAND.logoAlt} className="h-6 w-auto" />
               </div>
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Demo automática — 5 casos reales</h2>

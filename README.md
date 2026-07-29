@@ -1,18 +1,20 @@
 <div align="center">
 
-<img src="images/brand-banner.svg" alt="Microsoft × Santander" width="540" />
+<img src="images/brand-banner.svg" alt="Microsoft × Helix Insurance" width="540" />
 
 # Insurance AI Agents
-### Governed Multi-Agent Claims Processing — Demo Santander
+### Governed Multi-Agent Claims Processing · Whitelabel Demo
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-EC0000?style=flat-square)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
 [![Azure](https://img.shields.io/badge/Azure-AI%20Foundry-0078D4?style=flat-square&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/ai-foundry/)
 [![GitHub](https://img.shields.io/badge/GitHub-Enterprise-181717?style=flat-square&logo=github)](https://github.com/enterprise)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![MAF](https://img.shields.io/badge/Microsoft%20Agent%20Framework-1.4.0-5C2D91?style=flat-square&logo=microsoft&logoColor=white)](https://learn.microsoft.com/azure/ai-foundry/agents/)
 
-> **Cómo una entidad financiera puede crear, gobernar y operar agentes de IA sobre procesos críticos** — gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software bancario.
+> **Cómo una organización puede crear, gobernar y operar agentes de IA sobre procesos críticos**: gestión de siniestros end-to-end, con control regulatorio, trazabilidad y la misma rigurosidad que se exige al software empresarial.
+>
+> 🎨 **Whitelabel preset** · Esta demo está empaquetada como plantilla reskinneable. La marca por defecto "Helix Insurance" es un placeholder; reemplázala con la tuya en pocos minutos. Ver **[BRANDING.md](BRANDING.md)**. Existe una segunda marca (Santander) en la rama `santander`, misma app y solo branding distinto.
 
 </div>
 
@@ -25,11 +27,12 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 | Pilar | Cómo se materializa en la demo |
 |---|---|
 | 🤖 **Multi-agente** | 3 agentes especializados (Intake, Risk, Compliance) orquestados con **Microsoft Agent Framework** |
+| 🎙️ **Multicanal** | Mismo pipeline por web y por **voz en tiempo real** (Azure OpenAI gpt-realtime-mini) |
 | 🛡️ **AI Gateway** | Azure APIM con políticas de Content Safety, token limits, audit logs y managed identity |
 | 📜 **Gobernanza** | CODEOWNERS por dominio + Eval Gate automatizado en cada PR contra dataset dorado |
 | 🔐 **Identidad** | Entra ID (OIDC) para usuarios y federated identity para CI/CD |
 | 📊 **Persistencia auditada** | Cosmos DB con audit trail completo de cada decisión |
-| 🎨 **UX bancaria** | Dashboard React con rebranding Santander, demo automática slide-based y vistas por rol |
+| 🎨 **UX configurable** | Dashboard React whitelabel (paleta + logo + nombre via `brand.ts`), demo automática slide-based y vistas por rol |
 
 ---
 
@@ -37,7 +40,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 
 <div align="center">
 
-<img src="images/architecture.svg" alt="Insurance AI Agents — Arquitectura de referencia" />
+<img src="images/architecture.svg" alt="Insurance AI Agents · Arquitectura de referencia" />
 
 <sub>🇪🇸 Versión en español arriba · 🇬🇧 <a href="images/architecture-en.svg">English version</a></sub>
 
@@ -46,7 +49,7 @@ Esta demo enseña, en un caso de uso real (siniestros de auto), **el ciclo compl
 ### Flujo de un siniestro
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#EC0000','primaryTextColor':'#fff','lineColor':'#1F1F1F','actorBkg':'#EC0000','actorTextColor':'#fff','actorBorder':'#B00000','signalColor':'#1F1F1F','signalTextColor':'#1F1F1F','sequenceNumberColor':'#fff','noteBkgColor':'#FFE5E5','noteTextColor':'#1F1F1F','noteBorderColor':'#EC0000','fontFamily':'Inter, system-ui, sans-serif'} }}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2563EB','primaryTextColor':'#fff','lineColor':'#0F172A','actorBkg':'#2563EB','actorTextColor':'#fff','actorBorder':'#1E40AF','signalColor':'#0F172A','signalTextColor':'#0F172A','sequenceNumberColor':'#fff','noteBkgColor':'#DBEAFE','noteTextColor':'#0F172A','noteBorderColor':'#2563EB','fontFamily':'Inter, system-ui, sans-serif'} }}%%
 sequenceDiagram
     autonumber
     participant C as 🏦 Cliente
@@ -57,7 +60,7 @@ sequenceDiagram
     participant R as 📊 Risk
     participant K as ✅ Compliance
     participant G as 🛡️ APIM Gateway
-    participant M as 🧠 GPT-4o
+    participant M as 🧠 GPT-5.4-mini
 
     C->>D: Reporta siniestro + evidencias
     D->>B: POST /api/claims (JWT)
@@ -86,7 +89,7 @@ sequenceDiagram
 ### 0. Prerequisitos
 - **Python 3.12+** y **Node 20+**
 - **Azure CLI** autenticado (`az login`)
-- (Opcional) Suscripción Azure con cuota para OpenAI GPT-4o + APIM Standard
+- (Opcional) Suscripción Azure con cuota para OpenAI GPT-5.4-mini + APIM Standard
 
 ### 1. Backend
 ```powershell
@@ -114,10 +117,13 @@ Abre el dashboard y pulsa **"Ver demo automática"** desde la pantalla principal
 - Notificaciones flotantes cuando un agente termina
 - Posibilidad de revisitar slides anteriores mientras los demás siguen ejecutando
 
-### 4. Despliegue Azure (opcional)
+### 4. Despliegue completo en Azure (un comando)
+Despliega **toda** la plataforma (infra + backend + dashboard) sin Docker local:
 ```powershell
-.\scripts\deploy-infra.ps1 -ResourceGroup rg-insurance-ai-demo -Location swedencentral
+az login
+.\scripts\deploy.ps1 -ResourceGroup rg-helix-demo -Location swedencentral
 ```
+El script provisiona la infra (Bicep), construye el backend en ACR y lo publica en Container Apps, y compila el dashboard contra esa API y lo sube a Static Web Apps. Al terminar imprime la URL de la app y de la API. Para reskinear pasa `-BrandName "Tu Marca"`. Solo infra base: `.\scripts\deploy-infra.ps1`.
 
 ---
 
@@ -132,6 +138,9 @@ insurance-ai-agents/
 │   ├── orchestrator/         # Coordinación multi-agente
 │   │   ├── agent.py          # Orquestador legacy (fallback)
 │   │   └── maf_agent.py      # Microsoft Agent Framework v1.4
+│   ├── voice/                # Canal de voz (gpt-realtime-mini, mismo pipeline)
+│   ├── content_understanding/# Extracción schema-based desde documentos
+│   ├── hosted/               # Agente hosteado en Azure AI Foundry
 │   └── shared/               # Mock data, schemas, common
 ├── backend/
 │   ├── main.py               # FastAPI + WebSocket streaming
@@ -146,7 +155,7 @@ insurance-ai-agents/
 │   │   ├── OperatorView.tsx          # Cola de revisión humana
 │   │   ├── PolicyView.tsx            # Catálogo de pólizas
 │   │   └── SecurityView.tsx          # Eventos APIM + Content Safety
-│   └── public/favicon.png            # Branding Santander
+│   └── public/                       # brand-logo.png, favicon (whitelabel)
 ├── infra/
 │   ├── main.bicep            # APIM + AOAI + Cosmos + Managed Identity
 │   └── apim-policy.xml       # Políticas del AI Gateway
@@ -167,7 +176,7 @@ insurance-ai-agents/
 
 ## 🛡️ Gobernanza enterprise
 
-Esta plataforma no es un PoC más — está diseñada para superar una **revisión de TI bancaria**:
+Esta plataforma no es un PoC más: está diseñada para superar una **revisión de TI bancaria**:
 
 ### CODEOWNERS por dominio
 Cada agente está bajo el control de un equipo distinto. Un cambio en `agents/compliance/` exige aprobación del **equipo de compliance**, no se puede mergear sin ella.
@@ -181,7 +190,7 @@ Cada agente está bajo el control de un equipo distinto. Un cambio en `agents/co
 > *En esta demo todos los paths apuntan a `@aangell98` para permitir self-merge. En producción se sustituye por equipos reales.*
 
 ### Eval Gate en cada PR
-El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.yml) se dispara automáticamente cuando se tocan `agents/**` o `evals/**`. Ejecuta el dataset dorado contra GPT-4o real y publica un comentario en el PR con:
+El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.yml) se dispara automáticamente cuando se tocan `agents/**` o `evals/**`. Ejecuta el dataset dorado contra GPT-5.4-mini real y publica un comentario en el PR con:
 
 | Caso | Decisión | Confianza | Risk | Security |
 |------|----------|-----------|------|----------|
@@ -192,7 +201,7 @@ El workflow [`.github/workflows/eval-on-pr.yml`](.github/workflows/eval-on-pr.ym
 
 Si el pass-rate baja, el merge se bloquea.
 
-### APIM AI Gateway — políticas activas
+### APIM AI Gateway · políticas activas
 Definidas en [`infra/apim-policy.xml`](infra/apim-policy.xml) y aplicadas por Bicep:
 
 | Política | Función |
@@ -232,7 +241,9 @@ El cambio:
 | Capa | Tecnología |
 |------|-----------|
 | **Orquestación** | Microsoft Agent Framework v1.4 (con fallback a orquestador propio) |
-| **Modelo** | Azure OpenAI GPT-4o (vía APIM Gateway) |
+| **Modelo** | Azure OpenAI GPT-5.4-mini (vía APIM Gateway) |
+| **Voz** | Azure OpenAI gpt-realtime-mini (IVR en tiempo real sobre el mismo pipeline) |
+| **Despliegue** | Static Web Apps (dashboard) · Container Apps (backend) · Foundry (agente hosteado) |
 | **Gateway** | Azure API Management (Standard + políticas custom) |
 | **Backend** | FastAPI 0.115 · WebSocket streaming · Pydantic v2 |
 | **Frontend** | React 18 · TypeScript · Tailwind 3 · Vite 6 · Lucide |
