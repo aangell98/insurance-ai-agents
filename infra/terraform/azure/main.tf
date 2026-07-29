@@ -184,12 +184,6 @@ resource "azurerm_role_assignment" "backend_acr_pull" {
   principal_id         = azurerm_user_assigned_identity.backend.principal_id
 }
 
-resource "azurerm_role_assignment" "backend_openai_user" {
-  scope                = azurerm_cognitive_account.openai.id
-  role_definition_name = "Cognitive Services OpenAI User"
-  principal_id         = azurerm_user_assigned_identity.backend.principal_id
-}
-
 resource "azurerm_cosmosdb_account" "this" {
   name                             = "${local.name}-cosmos"
   location                         = var.location
@@ -249,7 +243,7 @@ resource "azurerm_storage_container" "evidence" {
 }
 
 resource "azurerm_role_assignment" "backend_evidence_contributor" {
-  scope                = azurerm_storage_account.evidence.id
+  scope                = "${azurerm_storage_account.evidence.id}/blobServices/default/containers/${azurerm_storage_container.evidence.name}"
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_user_assigned_identity.backend.principal_id
 }
@@ -259,7 +253,7 @@ resource "azurerm_cosmosdb_sql_role_assignment" "backend_data_contributor" {
   account_name        = azurerm_cosmosdb_account.this.name
   role_definition_id  = "${azurerm_cosmosdb_account.this.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002"
   principal_id        = azurerm_user_assigned_identity.backend.principal_id
-  scope               = azurerm_cosmosdb_account.this.id
+  scope               = "${azurerm_cosmosdb_account.this.id}/dbs/${azurerm_cosmosdb_sql_database.claims.name}"
 }
 
 resource "azurerm_cognitive_account" "openai" {
@@ -374,7 +368,7 @@ resource "azurerm_api_management_subscription" "backend" {
   api_management_name = azurerm_api_management.this.name
   resource_group_name = azurerm_resource_group.this.name
   display_name        = "Backend agent runtime"
-  product_id          = azurerm_api_management_product.agents.product_id
+  product_id          = azurerm_api_management_product.agents.id
   state               = "active"
 }
 

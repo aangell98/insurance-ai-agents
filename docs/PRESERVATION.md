@@ -53,5 +53,9 @@ environment and backend identity, ACR, OpenAI/deployments, AI Services,
 Content Safety, Cosmos, App Insights/Log Analytics, and APIM API/product/
 subscriptions/policy. APIM keeps managed identity before audit, safety, token
 limits, backend selection and metrics; its backend forwarding disables response
-buffering for streaming. Foundry project and Entra application registration
+buffering for streaming. The SWA SKU defaults to `Free` for deployed parity and
+can be set to `Standard` when the target subscription has exhausted its Free-site
+quota. Backend data roles are scoped to the evidence container and
+`insurance-claims` database; only APIM receives model and Content Safety access
+in gateway mode. Foundry project and Entra application registration
 require tenant-level privileges and are documented in `docs/ENTRA.md`.

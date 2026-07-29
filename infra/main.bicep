@@ -31,6 +31,14 @@ param cosmosDataPlanePrincipalId string = ''
 
 @description('Public, non-secret container image used until a pipeline publishes the backend image to ACR.')
 param backendImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
+@description('Static Web App SKU. Free preserves deployed parity; use Standard when the target subscription has exhausted its Free-site quota.')
+@allowed([
+  'Free'
+  'Standard'
+])
+param staticWebAppSku string = 'Free'
+
 @description('Entra tenant ID required for externally exposed runtime authentication.')
 param authTenantId string
 @description('Entra API app client ID required for externally exposed runtime authentication.')
@@ -554,19 +562,9 @@ resource backendAcrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2
   }
 }
 
-resource backendOpenAiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: openAi
-  name: guid(openAi.id, backendIdentity.id, cognitiveServicesUserRole)
-  properties: {
-    roleDefinitionId: cognitiveServicesUserRole
-    principalId: backendIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 resource backendEvidenceRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(evidenceStorage.id, backendIdentity.id, 'Storage Blob Data Contributor')
-  scope: evidenceStorage
+  name: guid(evidenceContainer.id, backendIdentity.id, 'Storage Blob Data Contributor')
+  scope: evidenceContainer
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
@@ -585,8 +583,8 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: staticWebAppName
   location: 'westeurope'
   sku: {
-    name: 'Free'
-    tier: 'Free'
+    name: staticWebAppSku
+    tier: staticWebAppSku
   }
 
   properties: {}
@@ -596,7 +594,7 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 resource operatorStaticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: '${baseName}-operator-swa-${uniqueSuffix}'
   location: 'westeurope'
-  sku: { name: 'Free', tier: 'Free' }
+  sku: { name: staticWebAppSku, tier: staticWebAppSku }
   properties: {}
 }
 // ============================================================================
@@ -681,25 +679,26 @@ resource cosmosDemoStateContainer 'Microsoft.DocumentDB/databaseAccounts/sqlData
 
 // Built-in Cosmos DB Data Contributor (data-plane RBAC, NOT ARM RBAC)
 var cosmosDataContributorRoleId = '${cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+var cosmosDatabaseScope = '${cosmos.id}/dbs/${cosmosDb.name}'
 
 resource cosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(cosmosDataPlanePrincipalId)) {
   parent: cosmos
-  name: guid(cosmos.id, cosmosDataPlanePrincipalId, 'data-contributor')
+  name: guid(cosmosDatabaseScope, cosmosDataPlanePrincipalId, 'data-contributor')
   properties: {
     roleDefinitionId: cosmosDataContributorRoleId
     principalId: cosmosDataPlanePrincipalId
-    scope: cosmos.id
+    scope: cosmosDatabaseScope
   }
 
 }
 
 resource backendCosmosDataPlaneRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
   parent: cosmos
-  name: guid(cosmos.id, backendIdentity.id, 'data-contributor')
+  name: guid(cosmosDatabaseScope, backendIdentity.id, 'data-contributor')
   properties: {
     roleDefinitionId: cosmosDataContributorRoleId
     principalId: backendIdentity.properties.principalId
-    scope: cosmos.id
+    scope: cosmosDatabaseScope
   }
 }
 
